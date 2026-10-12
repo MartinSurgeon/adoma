@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Documents\VoucherNumbers;
 use App\Domain\Ledgers\ChartOfAccounts;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
@@ -33,6 +34,8 @@ class DemoSeeder extends Seeder
         // New businesses get this when they are created. Running it again fills in
         // anything an older business is missing, and does nothing if it is all there.
         ChartOfAccounts::seedFor($tenant);
+        VoucherNumbers::ensureFor($central);
+        VoucherNumbers::ensureFor($kumasi);
 
         $this->ledgers($tenant, $central, $kumasi);
 

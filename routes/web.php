@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Auth\ForcedPasswordController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ProfileController;
@@ -20,6 +21,9 @@ Route::middleware('auth')->group(function () {
     // Temporary passwords: people choose their own before they can do anything else.
     Route::get('/password/change', [ForcedPasswordController::class, 'edit'])->name('password.force.edit');
     Route::put('/password/change', [ForcedPasswordController::class, 'update'])->name('password.force.update');
+
+    // Who did what. For owners and admins, read only.
+    Route::get('/activity', [ActivityController::class, 'index'])->name('activity.index');
 
     // Ledgers: customers, suppliers, banks, cash accounts and expenses. Rules live in LedgerPolicy.
     Route::prefix('ledgers')->name('ledgers.')->group(function () {

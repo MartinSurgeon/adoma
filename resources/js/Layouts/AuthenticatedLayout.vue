@@ -54,6 +54,13 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Users
                                 </NavLink>
+                                <NavLink
+                                    v-if="$page.props.tenancy?.can_view_all"
+                                    :href="route('activity.index')"
+                                    :active="route().current('activity.*')"
+                                >
+                                    Activity
+                                </NavLink>
                             </div>
                         </div>
 

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Ledgers;
 
+use App\Domain\Audit\Auditable;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\BelongsToTenant;
 use App\Domain\Tenancy\TenancyViolation;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Ledger extends Model
 {
-    use BelongsToTenant;
+    use Auditable, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id', 'branch_id', 'is_shared', 'group_id', 'kind', 'name', 'phone',

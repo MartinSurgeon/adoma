@@ -2,11 +2,14 @@
 
 namespace App\Domain\Tenancy;
 
+use App\Domain\Audit\Auditable;
 use App\Domain\Ledgers\ChartOfAccounts;
 use Illuminate\Database\Eloquent\Model;
 
 class Tenant extends Model
 {
+    use Auditable;
+
     protected $fillable = ['name', 'plan', 'base_currency', 'status'];
 
     protected static function booted(): void

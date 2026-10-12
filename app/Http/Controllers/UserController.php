@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Audit\Audit;
 use App\Domain\Tenancy\Role;
 use App\Http\Requests\SaveUserRequest;
 use App\Models\User;
@@ -70,6 +71,8 @@ class UserController extends Controller
 
         $this->syncOffices($user, $request);
 
+        Audit::record('access_changed', $user, [], ['offices' => $this->officeMap($user)]);
+
         return redirect()->route('users.index')
             ->with('success', "Account created for {$user->name}.")
             ->with('credentials', ['name' => $user->name, 'email' => $user->email, 'password' => $temporary]);
@@ -95,6 +98,7 @@ class UserController extends Controller
     public function update(SaveUserRequest $request, int $user): RedirectResponse
     {
         $target = $this->managed($request, $user);
+        $officesBefore = $this->officeMap($target);
 
         $target->forceFill([
             'name' => $request->validated('name'),
@@ -103,6 +107,12 @@ class UserController extends Controller
         ])->save();
 
         $this->syncOffices($target, $request);
+
+        // Which offices someone can use, and in what role, is the most sensitive thing on this screen.
+        $officesAfter = $this->officeMap($target);
+        if ($officesBefore !== $officesAfter) {
+            Audit::record('access_changed', $target, ['offices' => $officesBefore], ['offices' => $officesAfter]);
+        }
 
         return redirect()->route('users.index')->with('success', "Saved changes for {$target->name}.");
     }
@@ -154,6 +164,17 @@ class UserController extends Controller
             ->all();
 
         $user->branches()->sync($offices);
+    }
+
+    /** [office name => role], in a fixed order so two of them can be compared. */
+    private function officeMap(User $user): array
+    {
+        $map = $user->branches()->withoutGlobalScopes()->get()
+            ->mapWithKeys(fn ($branch) => [$branch->name => $branch->pivot->role])->all();
+
+        ksort($map);
+
+        return $map;
     }
 
     private function endSessions(User $user): void
