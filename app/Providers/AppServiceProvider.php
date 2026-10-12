@@ -12,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Scoped, not singleton: a fresh, empty context for every request, job and test.
+        $this->app->scoped(\App\Domain\Tenancy\TenantContext::class);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -34,6 +35,28 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Closures run when the page renders, after the context has been set.
+            'tenancy' => fn () => $this->tenancy($request),
+        ];
+    }
+
+    /** What the top bar needs: the business, the active office and the offices to switch to. */
+    private function tenancy(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user || $user->tenant_id === null) {
+            return null;
+        }
+
+        $context = app(TenantContext::class);
+
+        return [
+            'tenant' => $context->tenant()?->name,
+            'branch' => $context->branch()?->only(['id', 'code', 'name']),
+            'all_branches' => $context->viewingAllBranches(),
+            'can_view_all' => $user->isTenantAdmin(),
+            'branches' => $user->accessibleBranches()->map->only(['id', 'code', 'name'])->values(),
         ];
     }
 }
