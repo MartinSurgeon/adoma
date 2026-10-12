@@ -1,7 +1,8 @@
 <?php
 
+use App\Http\Controllers\Auth\ForcedPasswordController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -15,9 +16,23 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::post('/branch/switch', \App\Http\Controllers\BranchSwitchController::class)->name('branch.switch');
 
+    // Temporary passwords: people choose their own before they can do anything else.
+    Route::get('/password/change', [ForcedPasswordController::class, 'edit'])->name('password.force.edit');
+    Route::put('/password/change', [ForcedPasswordController::class, 'update'])->name('password.force.update');
+
+    // Admin-created accounts. Rules live in UserPolicy.
+    Route::prefix('settings/users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->whereNumber('user')->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->whereNumber('user')->name('update');
+        Route::patch('/{user}/status', [UserController::class, 'toggle'])->whereNumber('user')->name('toggle');
+        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->whereNumber('user')->name('reset');
+    });
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';

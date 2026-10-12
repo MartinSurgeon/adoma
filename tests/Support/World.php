@@ -22,6 +22,7 @@ final class World
     public Branch $kumasi;
     public Branch $otherBranch;
     public User $owner;
+    public User $admin;
     public User $kumasiClerk;
     public User $centralManager;
     public User $otherAdmin;
@@ -38,6 +39,7 @@ final class World
         $w->otherBranch = Branch::create(['tenant_id' => $w->other->id, 'code' => 'MAIN', 'name' => 'Main', 'is_head_office' => true]);
 
         $w->owner = self::user($w->adoma, Role::Owner);
+        $w->admin = self::user($w->adoma, Role::Admin);
         $w->otherAdmin = self::user($w->other, Role::Admin);
 
         $w->kumasiClerk = self::user($w->adoma);

@@ -40,6 +40,13 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    v-if="$page.props.tenancy?.can_view_all"
+                                    :href="route('users.index')"
+                                    :active="route().current('users.*')"
+                                >
+                                    Users
+                                </NavLink>
                             </div>
                         </div>
 
@@ -149,6 +156,13 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.tenancy?.can_view_all"
+                            :href="route('users.index')"
+                            :active="route().current('users.*')"
+                        >
+                            Users
                         </ResponsiveNavLink>
                     </div>
 

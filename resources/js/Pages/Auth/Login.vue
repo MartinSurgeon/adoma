@@ -78,7 +78,7 @@ const submit = () => {
                 </label>
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div class="mt-4 flex items-center justify-between">
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
@@ -86,9 +86,12 @@ const submit = () => {
                 >
                     Forgot your password?
                 </Link>
+                <p v-else class="text-sm text-gray-600">
+                    Forgot your password? Ask your admin to reset it.
+                </p>
 
                 <PrimaryButton
-                    class="ms-4"
+                    class="ms-4 min-h-[44px]"
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >

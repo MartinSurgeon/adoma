@@ -37,6 +37,11 @@ class HandleInertiaRequests extends Middleware
             ],
             // Closures run when the page renders, after the context has been set.
             'tenancy' => fn () => $this->tenancy($request),
+            // One-time messages. "credentials" holds a temporary password, shown once.
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'credentials' => fn () => $request->session()->get('credentials'),
+            ],
         ];
     }
 

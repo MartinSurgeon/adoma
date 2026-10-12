@@ -19,7 +19,9 @@ class AuthenticatedSessionController extends Controller
     public function create(): Response
     {
         return Inertia::render('Auth/Login', [
-            'canResetPassword' => Route::has('password.request'),
+            // Accounts are created and reset by an admin, and no email is sent yet,
+            // so the "forgot password" link stays hidden until email is set up.
+            'canResetPassword' => false,
             'status' => session('status'),
         ]);
     }
