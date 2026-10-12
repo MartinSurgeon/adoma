@@ -20,7 +20,6 @@ function switchOffice(event) {
 <template>
     <div v-if="tenancy" class="flex items-center gap-2">
         <label for="office-switcher" class="sr-only">Active office</label>
-        <span class="hidden text-sm text-gray-500 lg:inline">{{ tenancy.tenant }}</span>
         <select
             id="office-switcher"
             :value="current"

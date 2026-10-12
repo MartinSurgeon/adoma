@@ -1,242 +1,157 @@
 <script setup>
-import { ref } from 'vue';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import OfficeSwitcher from '@/Components/OfficeSwitcher.vue';
-import { Link } from '@inertiajs/vue3';
 
-const showingNavigationDropdown = ref(false);
+const page = usePage();
+const tenancy = computed(() => page.props.tenancy);
+const isAdmin = computed(() => Boolean(tenancy.value?.can_view_all));
+
+// Icons are 24 x 24 outlines. Each page that exists gets one entry; more arrive with each phase.
+const icons = {
+    home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
+    ledgers: 'M5 4h12a2 2 0 012 2v14H7a2 2 0 01-2-2V4zM9 8h6M9 12h6',
+    users: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3 3 0 100-6 3 3 0 000 6zM20 20v-1a3 3 0 00-2-2.8M15 5.2a3 3 0 010 5.6',
+    activity: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+};
+
+// Predictable and shallow: one level, grouped the way the work is done.
+const sections = computed(() =>
+    [
+        {
+            title: null,
+            items: [{ label: 'Home', href: route('dashboard'), active: route().current('dashboard'), icon: 'home', show: true }],
+        },
+        {
+            title: 'Find',
+            items: [{ label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value) }],
+        },
+        {
+            title: 'Settings',
+            items: [
+                { label: 'Users', href: route('users.index'), active: route().current('users.*'), icon: 'users', show: isAdmin.value },
+                { label: 'Activity', href: route('activity.index'), active: route().current('activity.*'), icon: 'activity', show: isAdmin.value },
+            ],
+        },
+    ]
+        .map((section) => ({ ...section, items: section.items.filter((item) => item.show) }))
+        .filter((section) => section.items.length > 0),
+);
+
+const allItems = computed(() => sections.value.flatMap((section) => section.items));
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
-            >
-                <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
-                                </Link>
-                            </div>
+    <div class="min-h-screen bg-gray-50">
+        <a
+            href="#main"
+            class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-teal-900 focus:shadow"
+        >
+            Skip to content
+        </a>
 
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
+        <!-- Sidebar, large screens -->
+        <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-teal-900 lg:flex" aria-label="Main">
+            <div class="flex h-16 items-center px-6">
+                <Link :href="route('dashboard')" class="text-xl font-semibold tracking-tight text-white">
+                    Adoma<span class="text-amber-400">.</span>
+                </Link>
+            </div>
+
+            <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+                <div v-for="(section, index) in sections" :key="index">
+                    <p v-if="section.title" class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-teal-200">
+                        {{ section.title }}
+                    </p>
+                    <ul class="space-y-1">
+                        <li v-for="item in section.items" :key="item.label">
+                            <Link
+                                :href="item.href"
+                                :aria-current="item.active ? 'page' : undefined"
+                                class="group flex min-h-[44px] items-center gap-3 rounded-md px-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                                :class="item.active ? 'bg-teal-800 text-white' : 'text-teal-50 hover:bg-teal-800/60 hover:text-white'"
                             >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
-                                <NavLink
-                                    v-if="$page.props.tenancy"
-                                    :href="route('ledgers.index')"
-                                    :active="route().current('ledgers.*')"
-                                >
-                                    Ledgers
-                                </NavLink>
-                                <NavLink
-                                    v-if="$page.props.tenancy?.can_view_all"
-                                    :href="route('users.index')"
-                                    :active="route().current('users.*')"
-                                >
-                                    Users
-                                </NavLink>
-                                <NavLink
-                                    v-if="$page.props.tenancy?.can_view_all"
-                                    :href="route('activity.index')"
-                                    :active="route().current('activity.*')"
-                                >
-                                    Activity
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <!-- Active office -->
-                            <OfficeSwitcher />
-
-                            <!-- Settings Dropdown -->
-                            <div class="relative ms-3">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {{ $page.props.auth.user.name }}
-
-                                                <svg
-                                                    class="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button
-                                @click="
-                                    showingNavigationDropdown =
-                                        !showingNavigationDropdown
-                                "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    class="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        :class="{
-                                            hidden: showingNavigationDropdown,
-                                            'inline-flex':
-                                                !showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        :class="{
-                                            hidden: !showingNavigationDropdown,
-                                            'inline-flex':
-                                                showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
+                                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path :d="icons[item.icon]" />
                                 </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Responsive Navigation Menu -->
-                <div
-                    :class="{
-                        block: showingNavigationDropdown,
-                        hidden: !showingNavigationDropdown,
-                    }"
-                    class="sm:hidden"
-                >
-                    <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="$page.props.tenancy"
-                            :href="route('ledgers.index')"
-                            :active="route().current('ledgers.*')"
-                        >
-                            Ledgers
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="$page.props.tenancy?.can_view_all"
-                            :href="route('users.index')"
-                            :active="route().current('users.*')"
-                        >
-                            Users
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <!-- Active office on phones -->
-                    <div v-if="$page.props.tenancy" class="border-t border-gray-200 px-4 py-3">
-                        <OfficeSwitcher />
-                    </div>
-
-                    <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 pb-1 pt-4"
-                    >
-                        <div class="px-4">
-                            <div
-                                class="text-base font-medium text-gray-800"
-                            >
-                                {{ $page.props.auth.user.name }}
-                            </div>
-                            <div class="text-sm font-medium text-gray-500">
-                                {{ $page.props.auth.user.email }}
-                            </div>
-                        </div>
-
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
+                                {{ item.label }}
+                                <span v-if="item.active" class="ms-auto h-2 w-2 rounded-full bg-amber-400" aria-hidden="true"></span>
+                            </Link>
+                        </li>
+                    </ul>
                 </div>
             </nav>
+        </aside>
 
-            <!-- Page Heading -->
-            <header
-                class="bg-white shadow"
-                v-if="$slots.header"
-            >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
+        <div class="lg:pl-64">
+            <!-- Top bar -->
+            <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
+                <Link :href="route('dashboard')" class="text-lg font-semibold text-teal-900 lg:hidden">
+                    Adoma<span class="text-amber-500">.</span>
+                </Link>
+                <span class="hidden text-sm text-gray-600 lg:block">{{ tenancy?.tenant }}</span>
+
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <OfficeSwitcher />
+
+                    <Dropdown align="right" width="48">
+                        <template #trigger>
+                            <button
+                                type="button"
+                                class="inline-flex min-h-[44px] items-center gap-2 rounded-md px-3 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                            >
+                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-900" aria-hidden="true">
+                                    {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
+                                </span>
+                                <span class="hidden max-w-[10rem] truncate sm:inline">{{ $page.props.auth.user.name }}</span>
+                                <svg class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="sr-only">Account menu</span>
+                            </button>
+                        </template>
+
+                        <template #content>
+                            <div class="border-b border-gray-100 px-4 py-2 text-xs text-gray-500">{{ $page.props.auth.user.email }}</div>
+                            <DropdownLink :href="route('profile.edit')">My profile</DropdownLink>
+                            <DropdownLink :href="route('logout')" method="post" as="button">Log out</DropdownLink>
+                        </template>
+                    </Dropdown>
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main>
+            <!-- Page heading -->
+            <div v-if="$slots.header" class="border-b border-gray-200 bg-white">
+                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                    <slot name="header" />
+                </div>
+            </div>
+
+            <main id="main" class="pb-24 lg:pb-10">
                 <slot />
             </main>
         </div>
+
+        <!-- Bottom bar, phones and tablets -->
+        <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white lg:hidden" aria-label="Main">
+            <ul class="grid" :style="{ gridTemplateColumns: `repeat(${allItems.length}, minmax(0, 1fr))` }">
+                <li v-for="item in allItems" :key="item.label">
+                    <Link
+                        :href="item.href"
+                        :aria-current="item.active ? 'page' : undefined"
+                        class="flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
+                        :class="item.active ? 'text-teal-800' : 'text-gray-600'"
+                    >
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" :stroke-width="item.active ? 2.2 : 1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path :d="icons[item.icon]" />
+                        </svg>
+                        {{ item.label }}
+                        <span v-if="item.active" class="h-1 w-6 rounded-full bg-amber-400" aria-hidden="true"></span>
+                    </Link>
+                </li>
+            </ul>
+        </nav>
     </div>
 </template>

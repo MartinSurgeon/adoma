@@ -25,6 +25,12 @@ class LedgerPolicy
         return $this->activeRole($user) !== null;
     }
 
+    /** Can this person add at least one kind of ledger? Decides whether to show an Add button. */
+    public function createAny(User $user): bool
+    {
+        return collect(LedgerKind::creatable())->contains(fn (LedgerKind $kind) => $this->create($user, $kind->value));
+    }
+
     public function create(User $user, string $kind = 'customer', bool $shared = false): bool
     {
         $ledgerKind = LedgerKind::tryFrom($kind);

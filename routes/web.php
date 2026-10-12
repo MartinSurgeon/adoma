@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Auth\ForcedPasswordController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
@@ -11,9 +12,7 @@ use Inertia\Inertia;
 // The app has no public home page: staff go straight to sign in, or to the dashboard.
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::post('/branch/switch', \App\Http\Controllers\BranchSwitchController::class)->name('branch.switch');

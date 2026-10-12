@@ -53,7 +53,7 @@ class LedgerController extends Controller
             'ledgers' => $ledgers,
             'filters' => $filters,
             'kinds' => collect(LedgerKind::cases())->map(fn (LedgerKind $k) => ['value' => $k->value, 'label' => $k->label()])->values(),
-            'canCreate' => collect(LedgerKind::creatable())->contains(fn (LedgerKind $k) => $user->can('create', [Ledger::class, $k->value])),
+            'canCreate' => $user->can('createAny', Ledger::class),
         ]);
     }
 
