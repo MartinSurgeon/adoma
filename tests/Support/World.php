@@ -24,6 +24,8 @@ final class World
     public User $owner;
     public User $admin;
     public User $kumasiClerk;
+    public User $kumasiManager;
+    public User $kumasiViewer;
     public User $centralManager;
     public User $otherAdmin;
 
@@ -44,6 +46,12 @@ final class World
 
         $w->kumasiClerk = self::user($w->adoma);
         $w->kumasiClerk->branches()->attach($w->kumasi->id, ['role' => Role::Clerk->value]);
+
+        $w->kumasiManager = self::user($w->adoma);
+        $w->kumasiManager->branches()->attach($w->kumasi->id, ['role' => Role::Manager->value]);
+
+        $w->kumasiViewer = self::user($w->adoma);
+        $w->kumasiViewer->branches()->attach($w->kumasi->id, ['role' => Role::Viewer->value]);
 
         $w->centralManager = self::user($w->adoma);
         $w->centralManager->branches()->attach($w->central->id, ['role' => Role::Manager->value]);

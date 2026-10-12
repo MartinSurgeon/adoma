@@ -19,6 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Route model binding (a ledger found by its id) reads scoped models, so the
+        // business and office must be known first. Without this, every lookup fails closed.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: \App\Http\Middleware\ResolveTenantContext::class,
+        );
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {

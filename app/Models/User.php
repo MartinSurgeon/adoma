@@ -43,6 +43,9 @@ class User extends Authenticatable
         'is_active' => true,
     ];
 
+    /** @var array<int, Role>|null Filled by roleMap(). */
+    private ?array $roleMap = null;
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -106,20 +109,51 @@ class User extends Authenticatable
     }
 
     /** The user's role in one office, or null when they have no access to it. */
-    public function roleIn(Branch|int $branch): ?Role
+    public function roleIn(Branch|int|null $branch): ?Role
     {
-        $branchId = $branch instanceof Branch ? $branch->id : $branch;
-
-        if (! $this->accessibleBranches()->contains('id', $branchId)) {
+        if ($branch === null) {
             return null;
         }
 
-        if ($this->isTenantAdmin()) {
-            return Role::from($this->tenant_role);
+        return $this->roleMap()[$branch instanceof Branch ? $branch->id : $branch] ?? null;
+    }
+
+    /**
+     * The user's role in every office they can use, as [branch id => Role].
+     * Built once per user object, so listing 25 ledgers does not run 25 queries.
+     *
+     * @return array<int, Role>
+     */
+    public function roleMap(): array
+    {
+        return $this->roleMap ??= $this->buildRoleMap();
+    }
+
+    /** A refreshed user must not keep roles read before the refresh. */
+    public function refresh(): static
+    {
+        $this->roleMap = null;
+
+        return parent::refresh();
+    }
+
+    /** @return array<int, Role> */
+    private function buildRoleMap(): array
+    {
+        if ($this->tenant_id === null || ! $this->is_active) {
+            return [];
         }
 
-        $role = $this->branches()->withoutGlobalScopes()->whereKey($branchId)->first()?->pivot->role;
+        if ($this->isTenantAdmin()) {
+            $role = Role::from($this->tenant_role);
 
-        return $role === null ? null : Role::from($role);
+            return Branch::withoutGlobalScopes()->where('tenant_id', $this->tenant_id)->pluck('id')
+                ->mapWithKeys(fn ($id) => [(int) $id => $role])->all();
+        }
+
+        // Only offices of the user's own business count, whatever else is in the table.
+        return $this->branches()->withoutGlobalScopes()
+            ->where('branches.tenant_id', $this->tenant_id)->get()
+            ->mapWithKeys(fn (Branch $b) => [$b->id => Role::from($b->pivot->role)])->all();
     }
 }

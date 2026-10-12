@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\ForcedPasswordController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,16 @@ Route::middleware('auth')->group(function () {
     // Temporary passwords: people choose their own before they can do anything else.
     Route::get('/password/change', [ForcedPasswordController::class, 'edit'])->name('password.force.edit');
     Route::put('/password/change', [ForcedPasswordController::class, 'update'])->name('password.force.update');
+
+    // Ledgers: customers, suppliers, banks, cash accounts and expenses. Rules live in LedgerPolicy.
+    Route::prefix('ledgers')->name('ledgers.')->group(function () {
+        Route::get('/', [LedgerController::class, 'index'])->name('index');
+        Route::get('/create', [LedgerController::class, 'create'])->name('create');
+        Route::post('/', [LedgerController::class, 'store'])->name('store');
+        Route::get('/{ledger}/edit', [LedgerController::class, 'edit'])->whereNumber('ledger')->name('edit');
+        Route::put('/{ledger}', [LedgerController::class, 'update'])->whereNumber('ledger')->name('update');
+        Route::patch('/{ledger}/status', [LedgerController::class, 'toggle'])->whereNumber('ledger')->name('toggle');
+    });
 
     // Admin-created accounts. Rules live in UserPolicy.
     Route::prefix('settings/users')->name('users.')->group(function () {

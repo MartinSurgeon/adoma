@@ -2,11 +2,18 @@
 
 namespace App\Domain\Tenancy;
 
+use App\Domain\Ledgers\ChartOfAccounts;
 use Illuminate\Database\Eloquent\Model;
 
 class Tenant extends Model
 {
     protected $fillable = ['name', 'plan', 'base_currency', 'status'];
+
+    protected static function booted(): void
+    {
+        // Every business starts with the standard chart of accounts.
+        static::created(fn (Tenant $tenant) => ChartOfAccounts::seedFor($tenant));
+    }
 
     public function isActive(): bool
     {

@@ -41,6 +41,13 @@ const showingNavigationDropdown = ref(false);
                                     Dashboard
                                 </NavLink>
                                 <NavLink
+                                    v-if="$page.props.tenancy"
+                                    :href="route('ledgers.index')"
+                                    :active="route().current('ledgers.*')"
+                                >
+                                    Ledgers
+                                </NavLink>
+                                <NavLink
                                     v-if="$page.props.tenancy?.can_view_all"
                                     :href="route('users.index')"
                                     :active="route().current('users.*')"
@@ -156,6 +163,13 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.tenancy"
+                            :href="route('ledgers.index')"
+                            :active="route().current('ledgers.*')"
+                        >
+                            Ledgers
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             v-if="$page.props.tenancy?.can_view_all"

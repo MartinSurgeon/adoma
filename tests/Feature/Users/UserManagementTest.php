@@ -67,7 +67,7 @@ it('keeps managers and clerks out of the user screens', function (string $who) {
 it('lists only the people of the signed-in business', function () {
     $this->actingAs($this->w->owner)->get(route('users.index'))
         ->assertInertia(fn ($page) => $page
-            ->has('users', 4)
+            ->has('users', 6)
             ->where('users', fn ($users) => collect($users)->pluck('email')->doesntContain($this->w->otherAdmin->email)));
 });
 

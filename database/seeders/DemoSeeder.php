@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Ledgers\ChartOfAccounts;
+use App\Domain\Ledgers\Ledger;
+use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\Role;
 use App\Domain\Tenancy\Tenant;
@@ -27,6 +30,12 @@ class DemoSeeder extends Seeder
             ['name' => 'Kumasi', 'region' => 'Ashanti'],
         );
 
+        // New businesses get this when they are created. Running it again fills in
+        // anything an older business is missing, and does nothing if it is all there.
+        ChartOfAccounts::seedFor($tenant);
+
+        $this->ledgers($tenant, $central, $kumasi);
+
         $this->user($tenant, 'Owner', 'owner@adoma.test', Role::Owner);
         $this->user($tenant, 'Admin', 'admin@adoma.test', Role::Admin);
 
@@ -38,6 +47,30 @@ class DemoSeeder extends Seeder
 
         $this->user($tenant, 'Kumasi Viewer', 'viewer.kumasi@adoma.test')
             ->branches()->syncWithoutDetaching([$kumasi->id => ['role' => Role::Viewer->value]]);
+    }
+
+    /** A few sample ledgers, using names from the FileMaker file. */
+    private function ledgers(Tenant $tenant, Branch $central, Branch $kumasi): void
+    {
+        $samples = [
+            [$kumasi, LedgerKind::Customer, ['Passion Gold', 'Gold Mart', 'Mr Baffour', 'Bro Collins', 'Local Sales']],
+            [$kumasi, LedgerKind::Supplier, ['Black', 'Bro Foster', 'Bro Kojo', 'Huseini Goods', 'Bright Ofori']],
+            [$kumasi, LedgerKind::Cash, ['Cash Kumasi']],
+            [$kumasi, LedgerKind::Expense, ['Transport', 'Salaries']],
+            [$central, LedgerKind::Supplier, ['Nana Nkawkaw', 'Alpha Julia']],
+            [$central, LedgerKind::Cash, ['Cash HQ']],
+        ];
+
+        foreach ($samples as [$branch, $kind, $names]) {
+            $group = ChartOfAccounts::groupFor($tenant->id, $kind);
+
+            foreach ($names as $name) {
+                Ledger::withoutGlobalScopes()->firstOrCreate(
+                    ['tenant_id' => $tenant->id, 'branch_id' => $branch->id, 'name' => $name],
+                    ['is_shared' => false, 'group_id' => $group->id, 'kind' => $kind],
+                );
+            }
+        }
     }
 
     private function user(Tenant $tenant, string $name, string $email, ?Role $tenantRole = null): User
