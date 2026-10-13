@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Tenancy\Role;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -61,6 +62,10 @@ class HandleInertiaRequests extends Middleware
             'branch' => $context->branch()?->only(['id', 'code', 'name']),
             'all_branches' => $context->viewingAllBranches(),
             'can_view_all' => $user->isTenantAdmin(),
+            // Recording a transaction needs one office and at least a clerk's role in it.
+            'can_record' => ! $context->viewingAllBranches()
+                && $context->branchId() !== null
+                && ($user->roleIn($context->branchId())?->atLeast(Role::Clerk) ?? false),
             'branches' => $user->accessibleBranches()->map->only(['id', 'code', 'name'])->values(),
         ];
     }

@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Documents\DocumentType;
+use App\Domain\Documents\PostingService;
 use App\Domain\Documents\VoucherNumbers;
 use App\Domain\Ledgers\ChartOfAccounts;
 use App\Domain\Ledgers\Ledger;
@@ -9,6 +11,7 @@ use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\Role;
 use App\Domain\Tenancy\Tenant;
+use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -50,6 +53,45 @@ class DemoSeeder extends Seeder
 
         $this->user($tenant, 'Kumasi Viewer', 'viewer.kumasi@adoma.test')
             ->branches()->syncWithoutDetaching([$kumasi->id => ['role' => Role::Viewer->value]]);
+
+        $this->transactions($tenant, $central, $kumasi);
+    }
+
+    /**
+     * A few receipts and payments, so the screens have something to show. They are posted
+     * through the real posting service, each with a fixed request key, so running the
+     * seeder again adds nothing twice.
+     */
+    private function transactions(Tenant $tenant, Branch $central, Branch $kumasi): void
+    {
+        $context = app(TenantContext::class);
+        $posting = app(PostingService::class);
+        $clerk = User::where('email', 'clerk.kumasi@adoma.test')->firstOrFail();
+        $manager = User::where('email', 'manager.central@adoma.test')->firstOrFail();
+
+        // [branch, who, type, ledger name, cash account, pesewas, days ago, note, key]
+        $entries = [
+            [$kumasi, $clerk, DocumentType::Receipt, 'Mr Baffour', 'Cash Kumasi', 3000000, 12, 'Advance for the next lot', 'demo-1'],
+            [$kumasi, $clerk, DocumentType::Payment, 'Black', 'Cash Kumasi', 1200000, 9, 'Part payment for gold bought', 'demo-2'],
+            [$kumasi, $clerk, DocumentType::Receipt, 'Gold Mart', 'Cash Kumasi', 850050, 4, null, 'demo-3'],
+            [$kumasi, $clerk, DocumentType::Payment, 'Transport', 'Cash Kumasi', 35000, 2, 'Fuel for the trip to Obuasi', 'demo-4'],
+            [$central, $manager, DocumentType::Receipt, 'Nana Nkawkaw', 'Cash HQ', 500000, 6, null, 'demo-5'],
+        ];
+
+        foreach ($entries as [$branch, $by, $type, $partyName, $cashName, $cents, $daysAgo, $note, $key]) {
+            $context->set($tenant, $branch);
+
+            try {
+                $posting->postCash(
+                    $type, $branch, now()->subDays($daysAgo)->toDateString(),
+                    Ledger::where('name', $partyName)->firstOrFail(),
+                    Ledger::where('name', $cashName)->firstOrFail(),
+                    $cents, $note, $key, $by,
+                );
+            } finally {
+                $context->clear();
+            }
+        }
     }
 
     /** A few sample ledgers, using names from the FileMaker file. */

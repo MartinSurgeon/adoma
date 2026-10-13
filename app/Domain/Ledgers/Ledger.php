@@ -30,6 +30,18 @@ class Ledger extends Model
         'linked_branch_id', 'system_key', 'is_system',
     ];
 
+    /**
+     * In-memory defaults that match the database defaults, so a ledger that was just
+     * created behaves the same as one loaded from the database.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_active' => true,
+        'is_shared' => false,
+        'is_system' => false,
+    ];
+
     protected function casts(): array
     {
         return [

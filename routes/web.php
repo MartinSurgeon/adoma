@@ -2,8 +2,12 @@
 
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Auth\ForcedPasswordController;
+use App\Http\Controllers\CashDocumentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\LedgerSearchController;
+use App\Http\Controllers\LedgerStatementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -24,7 +28,25 @@ Route::middleware('auth')->group(function () {
     // Who did what. For owners and admins, read only.
     Route::get('/activity', [ActivityController::class, 'index'])->name('activity.index');
 
+    // Receipts and payments. The route says which, and DocumentPolicy decides who may record one.
+    foreach (['receipt' => 'receipts', 'payment' => 'payments'] as $type => $path) {
+        Route::get("/$path/create", [CashDocumentController::class, 'create'])->defaults('type', $type)->name("$path.create");
+        Route::post("/$path", [CashDocumentController::class, 'store'])->defaults('type', $type)->name("$path.store");
+    }
+
+    // Finding, reading, printing and reversing transactions.
+    Route::prefix('transactions')->name('documents.')->group(function () {
+        Route::get('/', [DocumentController::class, 'index'])->name('index');
+        Route::get('/{document}', [DocumentController::class, 'show'])->whereNumber('document')->name('show');
+        Route::get('/{document}/print', [DocumentController::class, 'print'])->whereNumber('document')->name('print');
+        Route::post('/{document}/reverse', [DocumentController::class, 'reverse'])->whereNumber('document')->name('reverse');
+    });
+
+    // The type-ahead for choosing a ledger, and a ledger's statement.
+    Route::get('/ledger-search', LedgerSearchController::class)->name('ledgers.search');
+
     // Ledgers: customers, suppliers, banks, cash accounts and expenses. Rules live in LedgerPolicy.
+    Route::get('/ledgers/{ledger}/statement', LedgerStatementController::class)->whereNumber('ledger')->name('ledgers.statement');
     Route::prefix('ledgers')->name('ledgers.')->group(function () {
         Route::get('/', [LedgerController::class, 'index'])->name('index');
         Route::get('/create', [LedgerController::class, 'create'])->name('create');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Audit\AuditLog;
+use App\Domain\Documents\Document;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\TenantContext;
@@ -58,6 +59,7 @@ class DashboardController extends Controller
             ])->values(),
             'recent' => $recent,
             'canCreate' => $user->can('createAny', Ledger::class),
+            'canRecord' => $user->can('create', [Document::class, 'receipt']),
             'activity' => $user->can('viewAny', AuditLog::class)
                 ? AuditLog::query()->orderByDesc('id')->limit(5)->get()->map(fn (AuditLog $log) => [
                     'id' => $log->id,

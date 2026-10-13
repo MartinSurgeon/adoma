@@ -25,6 +25,12 @@ class LedgerPolicy
         return $this->activeRole($user) !== null;
     }
 
+    /** A ledger that is visible to someone can be read by them, including its statement. */
+    public function view(User $user, Ledger $ledger): bool
+    {
+        return $this->activeRole($user) !== null;
+    }
+
     /** Can this person add at least one kind of ledger? Decides whether to show an Add button. */
     public function createAny(User $user): bool
     {

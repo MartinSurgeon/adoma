@@ -28,4 +28,10 @@ enum DocumentType: string
     {
         return ucfirst($this->value);
     }
+
+    /** Money in or out against a ledger and a cash or bank account, with no gold involved. */
+    public function isCash(): bool
+    {
+        return $this === self::Receipt || $this === self::Payment;
+    }
 }

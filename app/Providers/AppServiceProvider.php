@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Domain\Audit\Audit;
 use App\Domain\Audit\AuditLog;
+use App\Domain\Documents\Document;
 use App\Domain\Ledgers\Ledger;
 use App\Models\User;
 use App\Policies\AuditLogPolicy;
+use App\Policies\DocumentPolicy;
 use App\Policies\LedgerPolicy;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -37,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
         // Ledger lives under app/Domain, so Laravel cannot guess its policy.
         Gate::policy(Ledger::class, LedgerPolicy::class);
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
+        Gate::policy(Document::class, DocumentPolicy::class);
 
         // Who signed in, who signed out, and failed attempts, in the same log as every change.
         Event::listen(Login::class, fn (Login $event) => Audit::record('login', $event->user, actor: $event->user));

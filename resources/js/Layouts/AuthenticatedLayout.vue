@@ -8,10 +8,14 @@ import OfficeSwitcher from '@/Components/OfficeSwitcher.vue';
 const page = usePage();
 const tenancy = computed(() => page.props.tenancy);
 const isAdmin = computed(() => Boolean(tenancy.value?.can_view_all));
+const canRecord = computed(() => Boolean(tenancy.value?.can_record));
 
 // Icons are 24 x 24 outlines. Each page that exists gets one entry; more arrive with each phase.
 const icons = {
     home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
+    receipt: 'M12 4v10m0 0l-4-4m4 4l4-4M5 20h14',
+    payment: 'M12 20V10m0 0l-4 4m4-4l4 4M5 4h14',
+    transactions: 'M5 6h14M5 12h14M5 18h9',
     ledgers: 'M5 4h12a2 2 0 012 2v14H7a2 2 0 01-2-2V4zM9 8h6M9 12h6',
     users: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3 3 0 100-6 3 3 0 000 6zM20 20v-1a3 3 0 00-2-2.8M15 5.2a3 3 0 010 5.6',
     activity: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
@@ -22,17 +26,27 @@ const sections = computed(() =>
     [
         {
             title: null,
-            items: [{ label: 'Home', href: route('dashboard'), active: route().current('dashboard'), icon: 'home', show: true }],
+            items: [{ label: 'Home', href: route('dashboard'), active: route().current('dashboard'), icon: 'home', show: true, mobile: true }],
+        },
+        {
+            title: 'New',
+            items: [
+                { label: 'Receipt', href: route('receipts.create'), active: route().current('receipts.*'), icon: 'receipt', show: canRecord.value, mobile: true },
+                { label: 'Payment', href: route('payments.create'), active: route().current('payments.*'), icon: 'payment', show: canRecord.value, mobile: true },
+            ],
         },
         {
             title: 'Find',
-            items: [{ label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value) }],
+            items: [
+                { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: true },
+                { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: true },
+            ],
         },
         {
             title: 'Settings',
             items: [
-                { label: 'Users', href: route('users.index'), active: route().current('users.*'), icon: 'users', show: isAdmin.value },
-                { label: 'Activity', href: route('activity.index'), active: route().current('activity.*'), icon: 'activity', show: isAdmin.value },
+                { label: 'Users', href: route('users.index'), active: route().current('users.*'), icon: 'users', show: isAdmin.value, mobile: false },
+                { label: 'Activity', href: route('activity.index'), active: route().current('activity.*'), icon: 'activity', show: isAdmin.value, mobile: false },
             ],
         },
     ]
@@ -40,7 +54,9 @@ const sections = computed(() =>
         .filter((section) => section.items.length > 0),
 );
 
-const allItems = computed(() => sections.value.flatMap((section) => section.items));
+// A phone's bottom bar holds five at most. The settings pages move into the account menu there.
+const phoneItems = computed(() => sections.value.flatMap((section) => section.items).filter((item) => item.mobile).slice(0, 5));
+const phoneSettings = computed(() => sections.value.flatMap((section) => section.items).filter((item) => item.mobile === false));
 </script>
 
 <template>
@@ -115,6 +131,9 @@ const allItems = computed(() => sections.value.flatMap((section) => section.item
 
                         <template #content>
                             <div class="border-b border-gray-100 px-4 py-2 text-xs text-gray-500">{{ $page.props.auth.user.email }}</div>
+                            <div v-if="phoneSettings.length" class="lg:hidden">
+                                <DropdownLink v-for="item in phoneSettings" :key="item.label" :href="item.href">{{ item.label }}</DropdownLink>
+                            </div>
                             <DropdownLink :href="route('profile.edit')">My profile</DropdownLink>
                             <DropdownLink :href="route('logout')" method="post" as="button">Log out</DropdownLink>
                         </template>
@@ -136,8 +155,8 @@ const allItems = computed(() => sections.value.flatMap((section) => section.item
 
         <!-- Bottom bar, phones and tablets -->
         <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white lg:hidden" aria-label="Main">
-            <ul class="grid" :style="{ gridTemplateColumns: `repeat(${allItems.length}, minmax(0, 1fr))` }">
-                <li v-for="item in allItems" :key="item.label">
+            <ul class="grid" :style="{ gridTemplateColumns: `repeat(${phoneItems.length}, minmax(0, 1fr))` }">
+                <li v-for="item in phoneItems" :key="item.label">
                     <Link
                         :href="item.href"
                         :aria-current="item.active ? 'page' : undefined"

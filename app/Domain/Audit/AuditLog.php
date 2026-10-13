@@ -23,7 +23,7 @@ class AuditLog extends Model
     ];
 
     /** Friendly names for the kinds of record, used in sentences. */
-    private const SUBJECTS = ['Ledger' => 'ledger', 'User' => 'user', 'Branch' => 'office', 'Tenant' => 'business'];
+    private const SUBJECTS = ['Ledger' => 'ledger', 'User' => 'user', 'Branch' => 'office', 'Tenant' => 'business', 'Document' => 'document'];
 
     private const FIELDS = [
         'name' => 'name', 'phone' => 'phone', 'email' => 'email',
@@ -94,6 +94,10 @@ class AuditLog extends Model
 
         if (array_key_exists('password', $new)) {
             return "changed the password of $thing";
+        }
+
+        if (($new['status'] ?? null) === 'reversed') {
+            return "marked $thing as reversed";
         }
 
         $fields = collect(array_keys($new))

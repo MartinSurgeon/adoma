@@ -9,6 +9,7 @@ const props = defineProps({
     stats: Array,
     recent: Array,
     canCreate: Boolean,
+    canRecord: Boolean,
     activity: { type: Array, default: null },
 });
 
@@ -44,7 +45,24 @@ const ago = (iso) =>
                 </ul>
             </section>
 
-            <!-- Next step: one main action, one quieter one. -->
+            <!-- Record money: one main action, one quieter one. -->
+            <section v-if="canRecord" aria-labelledby="record-heading" class="rounded-lg bg-white p-6 shadow-sm">
+                <h2 id="record-heading" class="text-base font-semibold text-gray-900">Record money</h2>
+                <p class="mt-1 text-sm text-gray-600">Money that came in, or money you paid out.</p>
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <Link :href="route('receipts.create')">
+                        <PrimaryButton class="min-h-[44px]" type="button">Record a receipt</PrimaryButton>
+                    </Link>
+                    <Link
+                        :href="route('payments.create')"
+                        class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        Record a payment
+                    </Link>
+                </div>
+            </section>
+
+            <!-- Ledgers: one main action, one quieter one. -->
             <section aria-labelledby="next-heading" class="rounded-lg bg-white p-6 shadow-sm">
                 <h2 id="next-heading" class="text-base font-semibold text-gray-900">
                     {{ isEmpty ? 'Start by adding your first ledger' : 'What would you like to do?' }}

@@ -108,6 +108,7 @@ function toggle(ledger) {
                             <th scope="col" class="px-4 py-3">Type</th>
                             <th scope="col" class="px-4 py-3">Group</th>
                             <th scope="col" class="px-4 py-3">Office</th>
+                            <th scope="col" class="px-4 py-3">Balance</th>
                             <th scope="col" class="px-4 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -123,8 +124,15 @@ function toggle(ledger) {
                             <td class="px-4 py-3">{{ ledger.kind_label }}</td>
                             <td class="px-4 py-3">{{ ledger.group }}</td>
                             <td class="px-4 py-3">{{ ledger.office }}</td>
+                            <td class="whitespace-nowrap px-4 py-3 tabular-nums text-gray-800">{{ ledger.balance }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap justify-end gap-2">
+                                    <Link
+                                        :href="route('ledgers.statement', ledger.id)"
+                                        class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-3 text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Statement
+                                    </Link>
                                     <Link
                                         v-if="ledger.can_edit"
                                         :href="route('ledgers.edit', ledger.id)"
@@ -147,7 +155,7 @@ function toggle(ledger) {
                         </tr>
 
                         <tr v-if="!ledgers.data.length">
-                            <td colspan="5" class="px-4 py-10 text-center">
+                            <td colspan="6" class="px-4 py-10 text-center">
                                 <p class="text-gray-600">
                                     {{ hasFilter ? 'No ledgers match your search.' : 'No ledgers yet.' }}
                                 </p>

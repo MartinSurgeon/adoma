@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Documents\LedgerBalances;
 use App\Domain\Ledgers\ChartOfAccounts;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
@@ -34,20 +35,25 @@ class LedgerController extends Controller
             ->when(! $filters['show_off'], fn ($q) => $q->where('is_active', true))
             ->orderBy('name')
             ->paginate(25)
-            ->withQueryString()
-            ->through(fn (Ledger $ledger) => [
-                'id' => $ledger->id,
-                'name' => $ledger->name,
-                'phone' => $ledger->phone,
-                'kind' => $ledger->kind->value,
-                'kind_label' => $ledger->kind->label(),
-                'group' => $ledger->group->path(),
-                'office' => $ledger->is_shared ? 'All offices' : $ledger->branch?->name,
-                'is_active' => $ledger->is_active,
-                'is_system' => $ledger->is_system,
-                'can_edit' => $user->can('update', $ledger),
-                'can_toggle' => $user->can('toggle', $ledger),
-            ]);
+            ->withQueryString();
+
+        // One query gives the balance of every ledger on the page.
+        $balances = LedgerBalances::cents($ledgers->pluck('id')->all());
+
+        $ledgers = $ledgers->through(fn (Ledger $ledger) => [
+            'id' => $ledger->id,
+            'name' => $ledger->name,
+            'phone' => $ledger->phone,
+            'kind' => $ledger->kind->value,
+            'kind_label' => $ledger->kind->label(),
+            'group' => $ledger->group->path(),
+            'office' => $ledger->is_shared ? 'All offices' : $ledger->branch?->name,
+            'balance' => LedgerBalances::describe($ledger->kind, $balances[$ledger->id]),
+            'is_active' => $ledger->is_active,
+            'is_system' => $ledger->is_system,
+            'can_edit' => $user->can('update', $ledger),
+            'can_toggle' => $user->can('toggle', $ledger),
+        ]);
 
         return Inertia::render('Ledgers/Index', [
             'ledgers' => $ledgers,
