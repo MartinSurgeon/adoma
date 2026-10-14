@@ -6,6 +6,8 @@ use App\Domain\Audit\AuditLog;
 use App\Domain\Documents\Document;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
+use App\Domain\Stock\StockLot;
+use App\Domain\Support\Money;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -50,8 +52,12 @@ class DashboardController extends Controller
                 'added' => $ledger->created_at->toIso8601String(),
             ]);
 
+        // Gold in stock, for the offices in context: the number an owner looks for first.
+        $goldInStock = StockLot::query()->where('remaining_g', '>', 0)->sum('remaining_g');
+
         return Inertia::render('Dashboard', [
             'where' => $context->viewingAllBranches() ? 'All offices' : $context->branch()?->name,
+            'goldInStock' => Money::format(Money::fromDb($goldInStock)),
             'stats' => collect(self::STATS)->map(fn (array $stat) => [
                 'label' => $stat['label'],
                 'count' => (int) ($counts[$stat['kind']->value] ?? 0),

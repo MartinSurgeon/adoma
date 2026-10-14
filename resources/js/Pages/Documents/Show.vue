@@ -8,6 +8,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 const props = defineProps({
     document: Object,
     party_balance: String,
+    gold: { type: Object, default: null },
+    profit: { type: Object, default: null },
     lines: Array,
     canReverse: Boolean,
     canRecordAnother: Boolean,
@@ -18,6 +20,7 @@ const page = usePage();
 const success = computed(() => page.props.flash?.success);
 const reversed = computed(() => props.document.status === 'reversed');
 const noun = computed(() => props.document.type_label.toLowerCase());
+const partyLabel = computed(() => ({ receipt: 'Received from', payment: 'Paid to', purchase: 'Bought from', sale: 'Sold to' })[props.document.type] ?? 'With');
 
 const reverseForm = useForm({ reason: '' });
 
@@ -69,15 +72,15 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
                 <dl class="mt-6 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
                     <div>
-                        <dt class="text-gray-600">{{ document.type === 'receipt' ? 'Received from' : 'Paid to' }}</dt>
+                        <dt class="text-gray-600">{{ partyLabel }}</dt>
                         <dd class="mt-0.5 font-medium text-gray-900">
                             <Link v-if="document.party" :href="route('ledgers.statement', document.party.id)" class="text-teal-800 hover:underline">{{ document.party.name }}</Link>
                         </dd>
                         <dd v-if="party_balance" class="text-xs text-gray-600">Now: {{ party_balance }}</dd>
                     </div>
-                    <div>
+                    <div v-if="document.cash">
                         <dt class="text-gray-600">{{ document.type === 'receipt' ? 'Paid into' : 'Paid from' }}</dt>
-                        <dd class="mt-0.5 font-medium text-gray-900">{{ document.cash?.name }}</dd>
+                        <dd class="mt-0.5 font-medium text-gray-900">{{ document.cash.name }}</dd>
                     </div>
                     <div>
                         <dt class="text-gray-600">Date</dt>
@@ -96,6 +99,26 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <dd class="mt-0.5 text-gray-900">{{ document.recorded_by ?? 'Unknown' }}</dd>
                     </div>
                 </dl>
+            </section>
+
+            <!-- The weighing, for a purchase or a sale. -->
+            <section v-if="gold" aria-labelledby="gold-heading" class="rounded-lg bg-white p-6 shadow-sm">
+                <h2 id="gold-heading" class="text-base font-semibold text-gray-900">The gold</h2>
+                <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 text-sm sm:grid-cols-3">
+                    <div><dt class="text-gray-600">Form</dt><dd class="mt-0.5 font-medium capitalize text-gray-900">{{ gold.form }}</dd></div>
+                    <div><dt class="text-gray-600">Weight</dt><dd class="mt-0.5 font-medium tabular-nums text-gray-900">{{ gold.weight }} g</dd></div>
+                    <div v-if="gold.water_weight"><dt class="text-gray-600">Water weight</dt><dd class="mt-0.5 font-medium tabular-nums text-gray-900">{{ gold.water_weight }} g</dd></div>
+                    <div><dt class="text-gray-600">Pounds</dt><dd class="mt-0.5 font-medium tabular-nums text-gray-900">{{ gold.pounds }}</dd></div>
+                    <div v-if="gold.density"><dt class="text-gray-600">Density</dt><dd class="mt-0.5 font-medium tabular-nums text-gray-900">{{ gold.density }}</dd></div>
+                    <div><dt class="text-gray-600">Karat</dt><dd class="mt-0.5 font-medium tabular-nums text-gray-900">{{ gold.karat }}</dd></div>
+                    <div class="col-span-2 sm:col-span-3"><dt class="text-gray-600">Price per pound at {{ gold.base_karat }} karat</dt><dd class="mt-0.5 font-medium tabular-nums text-gray-900">{{ gold.price }}</dd></div>
+                </dl>
+                <p class="mt-3 text-xs text-gray-500">Worked out with gold formulas version {{ gold.formula_version }}.</p>
+
+                <div v-if="profit" class="mt-4 rounded-md p-3 text-sm" :class="profit.is_loss ? 'bg-red-50 text-red-900' : 'bg-green-50 text-green-900'">
+                    This gold had cost {{ profit.cost }}. {{ profit.is_loss ? 'The sale made a loss of' : 'The sale made a profit of' }}
+                    <span class="font-semibold">{{ profit.profit }}</span>.
+                </div>
             </section>
 
             <!-- One main action, one quieter one. -->

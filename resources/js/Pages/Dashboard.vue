@@ -6,6 +6,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 
 const props = defineProps({
     where: String,
+    goldInStock: String,
     stats: Array,
     recent: Array,
     canCreate: Boolean,
@@ -32,7 +33,13 @@ const ago = (iso) =>
             <!-- What you have. Most important first. -->
             <section aria-labelledby="have-heading">
                 <h2 id="have-heading" class="text-base font-semibold text-gray-900">What you have</h2>
-                <ul class="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <ul class="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
+                    <li class="col-span-2 lg:col-span-1">
+                        <div class="block min-h-[44px] rounded-lg bg-teal-700 p-4 text-white shadow-sm">
+                            <p class="text-sm text-teal-50">Gold in stock</p>
+                            <p class="mt-1 text-3xl font-semibold tabular-nums">{{ goldInStock }}<span class="ms-1 text-base font-normal text-teal-100">g</span></p>
+                        </div>
+                    </li>
                     <li v-for="stat in stats" :key="stat.label">
                         <Link
                             :href="stat.href"
@@ -47,17 +54,23 @@ const ago = (iso) =>
 
             <!-- Record money: one main action, one quieter one. -->
             <section v-if="canRecord" aria-labelledby="record-heading" class="rounded-lg bg-white p-6 shadow-sm">
-                <h2 id="record-heading" class="text-base font-semibold text-gray-900">Record money</h2>
-                <p class="mt-1 text-sm text-gray-600">Money that came in, or money you paid out.</p>
+                <h2 id="record-heading" class="text-base font-semibold text-gray-900">Record a transaction</h2>
+                <p class="mt-1 text-sm text-gray-600">Gold you bought or sold, or money that came in or went out.</p>
                 <div class="mt-4 flex flex-wrap items-center gap-3">
-                    <Link :href="route('receipts.create')">
-                        <PrimaryButton class="min-h-[44px]" type="button">Record a receipt</PrimaryButton>
+                    <Link :href="route('purchases.create')">
+                        <PrimaryButton class="min-h-[44px]" type="button">Record a purchase</PrimaryButton>
                     </Link>
                     <Link
-                        :href="route('payments.create')"
+                        v-for="item in [
+                            { label: 'Record a sale', href: route('sales.create') },
+                            { label: 'Record a receipt', href: route('receipts.create') },
+                            { label: 'Record a payment', href: route('payments.create') },
+                        ]"
+                        :key="item.label"
+                        :href="item.href"
                         class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                        Record a payment
+                        {{ item.label }}
                     </Link>
                 </div>
             </section>

@@ -10,6 +10,8 @@ use App\Domain\Documents\PostingError;
 use App\Domain\Documents\PostingService;
 use App\Domain\Support\AmountInWords;
 use App\Domain\Support\Money;
+use App\Domain\Tenancy\Role;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,7 +62,7 @@ class DocumentController extends Controller
         return Inertia::render('Documents/Index', [
             'documents' => $documents,
             'filters' => $filters,
-            'types' => collect(DocumentType::cases())->filter(fn ($t) => $t->isCash())
+            'types' => collect(DocumentType::cases())->filter(fn ($t) => $t->isRecordable())
                 ->map(fn ($t) => ['value' => $t->value, 'label' => $t->label().'s'])->values(),
             'canRecord' => $request->user()->can('create', [Document::class, 'receipt']),
         ]);
@@ -73,7 +75,7 @@ class DocumentController extends Controller
         $user = $request->user();
 
         return Inertia::render('Documents/Show', [
-            ...$this->details($document),
+            ...$this->details($document, $user),
             'canReverse' => $user->can('reverse', $document),
             'canRecordAnother' => $user->can('create', [Document::class, $document->type->value]),
             'history' => $user->can('viewAny', AuditLog::class)
@@ -119,9 +121,9 @@ class DocumentController extends Controller
     }
 
     /** Everything a screen needs to show one document, with amounts already formatted. */
-    private function details(Document $document): array
+    private function details(Document $document, ?User $viewer = null): array
     {
-        $document->load(['ledger', 'cashLedger', 'branch', 'creator', 'lines.ledger', 'reverses', 'reversal']);
+        $document->load(['ledger', 'cashLedger', 'branch', 'creator', 'lines.ledger', 'reverses', 'reversal', 'goldLine.formulaSet']);
 
         $cents = Money::cents($document->total);
         $balance = $document->ledger
@@ -147,6 +149,8 @@ class DocumentController extends Controller
                 'reversed_by' => $document->reversal ? ['id' => $document->reversal->id, 'number' => $document->reversal->number] : null,
             ],
             'party_balance' => $balance,
+            'gold' => $this->gold($document),
+            'profit' => $this->profit($document, $viewer),
             'lines' => $document->lines->map(fn ($line) => [
                 'id' => $line->id,
                 'ledger' => $line->ledger?->name,
@@ -154,6 +158,53 @@ class DocumentController extends Controller
                 'credit' => Money::fromDb($line->credit) > 0 ? Money::format(Money::fromDb($line->credit)) : '',
             ]),
         ];
+    }
+
+    /** The weighing on a purchase or a sale, as text. */
+    private function gold(Document $document): ?array
+    {
+        $line = $document->goldLine;
+
+        if ($line === null) {
+            return null;
+        }
+
+        $format = fn ($value) => $value === null ? null : Money::format(Money::fromDb($value));
+
+        return [
+            'form' => $line->form,
+            'weight' => $format($line->weight_g),
+            'water_weight' => $format($line->water_weight_g),
+            'pounds' => $format($line->pounds),
+            'density' => $format($line->density),
+            'karat' => $format($line->karat),
+            'price' => Money::cedis(Money::fromDb($line->price)),
+            'base_karat' => $line->formulaSet->karat_base,
+            'formula_version' => $line->formulaSet->version,
+        ];
+    }
+
+    /**
+     * What a sale earned: the amount less what its gold had cost. A margin is sensitive,
+     * so only managers, admins and owners of the office see it.
+     */
+    private function profit(Document $document, ?User $viewer): ?array
+    {
+        if ($viewer === null || $document->type !== DocumentType::Sale || $document->isReversal()) {
+            return null;
+        }
+
+        if (! ($viewer->roleIn($document->branch_id)?->atLeast(Role::Manager) ?? false)) {
+            return null;
+        }
+
+        $cost = $document->lines
+            ->filter(fn ($line) => $line->ledger?->system_key === 'cost_of_sales')
+            ->sum(fn ($line) => Money::fromDb($line->debit));
+
+        $amount = Money::cents($document->total);
+
+        return ['cost' => Money::cedis($cost), 'profit' => Money::cedis($amount - $cost), 'is_loss' => $amount < $cost];
     }
 
     private function date(mixed $value): string

@@ -39,7 +39,7 @@ class DocumentPolicy
     {
         $documentType = DocumentType::tryFrom($type);
 
-        if ($documentType === null || ! $documentType->isCash()) {
+        if ($documentType === null || ! $documentType->isRecordable()) {
             return false;
         }
 

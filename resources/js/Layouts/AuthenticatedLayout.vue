@@ -13,6 +13,8 @@ const canRecord = computed(() => Boolean(tenancy.value?.can_record));
 // Icons are 24 x 24 outlines. Each page that exists gets one entry; more arrive with each phase.
 const icons = {
     home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
+    purchase: 'M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3',
+    sale: 'M12 15V3m0 0L8 7m4-4l4 4M4 17v3h16v-3',
     receipt: 'M12 4v10m0 0l-4-4m4 4l4-4M5 20h14',
     payment: 'M12 20V10m0 0l-4 4m4-4l4 4M5 4h14',
     transactions: 'M5 6h14M5 12h14M5 18h9',
@@ -31,6 +33,8 @@ const sections = computed(() =>
         {
             title: 'New',
             items: [
+                { label: 'Purchase', href: route('purchases.create'), active: route().current('purchases.*'), icon: 'purchase', show: canRecord.value, mobile: true },
+                { label: 'Sale', href: route('sales.create'), active: route().current('sales.*'), icon: 'sale', show: canRecord.value, mobile: true },
                 { label: 'Receipt', href: route('receipts.create'), active: route().current('receipts.*'), icon: 'receipt', show: canRecord.value, mobile: true },
                 { label: 'Payment', href: route('payments.create'), active: route().current('payments.*'), icon: 'payment', show: canRecord.value, mobile: true },
             ],
@@ -38,8 +42,8 @@ const sections = computed(() =>
         {
             title: 'Find',
             items: [
-                { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: true },
-                { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: true },
+                { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: false },
+                { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: false },
             ],
         },
         {
@@ -55,8 +59,18 @@ const sections = computed(() =>
 );
 
 // A phone's bottom bar holds five at most. The settings pages move into the account menu there.
-const phoneItems = computed(() => sections.value.flatMap((section) => section.items).filter((item) => item.mobile).slice(0, 5));
-const phoneSettings = computed(() => sections.value.flatMap((section) => section.items).filter((item) => item.mobile === false));
+// People who cannot record anything get the Find pages in the bar instead, so it is never nearly empty.
+const phoneItems = computed(() =>
+    sections.value
+        .flatMap((section) => section.items)
+        .filter((item) => item.mobile || (!canRecord.value && ['Transactions', 'Ledgers'].includes(item.label)))
+        .slice(0, 5),
+);
+const phoneSettings = computed(() =>
+    sections.value
+        .flatMap((section) => section.items)
+        .filter((item) => !phoneItems.value.some((shown) => shown.label === item.label)),
+);
 </script>
 
 <template>

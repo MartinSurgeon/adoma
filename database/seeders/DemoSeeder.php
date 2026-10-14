@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\PostingService;
 use App\Domain\Documents\VoucherNumbers;
+use App\Domain\Gold\FormulaSet;
+use App\Domain\Gold\GoldCalculator;
 use App\Domain\Ledgers\ChartOfAccounts;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
@@ -37,6 +39,7 @@ class DemoSeeder extends Seeder
         // New businesses get this when they are created. Running it again fills in
         // anything an older business is missing, and does nothing if it is all there.
         ChartOfAccounts::seedFor($tenant);
+        FormulaSet::createDefaultFor($tenant);
         VoucherNumbers::ensureFor($central);
         VoucherNumbers::ensureFor($kumasi);
 
@@ -88,6 +91,40 @@ class DemoSeeder extends Seeder
                     Ledger::where('name', $cashName)->firstOrFail(),
                     $cents, $note, $key, $by,
                 );
+            } finally {
+                $context->clear();
+            }
+        }
+
+        $this->goldTransactions($tenant, $central, $kumasi, $clerk, $manager);
+    }
+
+    /** Gold bought and sold, using weighings from the client's own FORMULARS sheet. */
+    private function goldTransactions(Tenant $tenant, Branch $central, Branch $kumasi, User $clerk, User $manager): void
+    {
+        $context = app(TenantContext::class);
+        $posting = app(PostingService::class);
+        $formula = FormulaSet::currentFor($tenant->id);
+
+        // [branch, who, buy or sell, who with, weight, water weight, price, days ago, key]
+        $entries = [
+            [$kumasi, $clerk, 'buy', 'Bright Ofori', '2094.25', '114.56', '10600', 14, 'demo-gold-1'],
+            [$kumasi, $clerk, 'buy', 'Black', '2081.01', '113.78', '10600', 10, 'demo-gold-2'],
+            [$central, $manager, 'buy', 'Nana Nkawkaw', '1495.18', '82.64', '10600', 8, 'demo-gold-3'],
+            [$kumasi, $clerk, 'sell', 'Passion Gold', '1000.00', '54.70', '12000', 3, 'demo-gold-4'],
+        ];
+
+        foreach ($entries as [$branch, $by, $direction, $partyName, $weight, $water, $price, $daysAgo, $key]) {
+            $context->set($tenant, $branch);
+
+            try {
+                $party = Ledger::where('name', $partyName)->firstOrFail();
+                $figures = GoldCalculator::raw($formula, $weight, $water, $price);
+                $date = now()->subDays($daysAgo)->toDateString();
+
+                $direction === 'buy'
+                    ? $posting->postPurchase($branch, $date, $party, $figures, null, $key, $by)
+                    : $posting->postSale($branch, $date, $party, $figures, null, $key, $by);
             } finally {
                 $context->clear();
             }

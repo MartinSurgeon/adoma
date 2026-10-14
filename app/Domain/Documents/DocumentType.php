@@ -29,6 +29,18 @@ enum DocumentType: string
         return ucfirst($this->value);
     }
 
+    /** Gold bought or sold, weighed and priced with the client's formulas. */
+    public function isGold(): bool
+    {
+        return $this === self::Purchase || $this === self::Sale;
+    }
+
+    /** The types a person can record on a screen today. Transfers and journals come later. */
+    public function isRecordable(): bool
+    {
+        return $this->isCash() || $this->isGold();
+    }
+
     /** Money in or out against a ledger and a cash or bank account, with no gold involved. */
     public function isCash(): bool
     {

@@ -4,13 +4,37 @@ import { Head } from '@inertiajs/vue3';
 
 const props = defineProps({
     document: Object,
+    gold: { type: Object, default: null },
     party_balance: String,
     layout: String, // a4 or thermal
     business: String,
 });
 
 const thermal = computed(() => props.layout === 'thermal');
-const title = computed(() => (props.document.type === 'payment' ? 'Payment voucher' : 'Receipt'));
+const title = computed(() => ({ payment: 'Payment voucher', purchase: 'Purchase slip', sale: 'Sales receipt' })[props.document.type] ?? 'Receipt');
+const partyLabel = computed(() => ({ receipt: 'Received from', payment: 'Paid to', purchase: 'Bought from', sale: 'Sold to' })[props.document.type] ?? 'With');
+const rows = computed(() => {
+    const list = [
+        ['Number', props.document.number],
+        ['Date', day(props.document.date)],
+        ['Office', props.document.office],
+        [partyLabel.value, props.document.party?.name],
+    ];
+
+    if (props.document.cash) {
+        list.push([props.document.type === 'receipt' ? 'Paid into' : 'Paid from', props.document.cash.name]);
+    }
+
+    if (props.gold) {
+        list.push(['Form', props.gold.form === 'raw' ? 'Raw' : 'Refined'], ['Weight', `${props.gold.weight} g`]);
+        if (props.gold.water_weight) list.push(['Water weight', `${props.gold.water_weight} g`]);
+        list.push(['Pounds', props.gold.pounds]);
+        if (props.gold.density) list.push(['Density', props.gold.density]);
+        list.push(['Karat', props.gold.karat], [`Price per pound at ${props.gold.base_karat} karat`, props.gold.price]);
+    }
+
+    return list;
+});
 const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 </script>
 
@@ -42,13 +66,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             </header>
 
             <dl class="mt-4 space-y-1" :class="thermal ? '' : 'grid grid-cols-[10rem_1fr] gap-y-2 space-y-0'">
-                <template v-for="row in [
-                    ['Number', document.number],
-                    ['Date', day(document.date)],
-                    ['Office', document.office],
-                    [document.type === 'receipt' ? 'Received from' : 'Paid to', document.party?.name],
-                    [document.type === 'receipt' ? 'Paid into' : 'Paid from', document.cash?.name],
-                ]" :key="row[0]">
+                <template v-for="row in rows" :key="row[0]">
                     <div :class="thermal ? 'flex justify-between gap-2' : 'contents'">
                         <dt class="text-gray-700">{{ row[0] }}</dt>
                         <dd class="font-medium" :class="thermal ? 'text-right' : ''">{{ row[1] }}</dd>

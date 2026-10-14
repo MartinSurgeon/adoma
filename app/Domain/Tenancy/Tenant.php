@@ -3,6 +3,7 @@
 namespace App\Domain\Tenancy;
 
 use App\Domain\Audit\Auditable;
+use App\Domain\Gold\FormulaSet;
 use App\Domain\Ledgers\ChartOfAccounts;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,7 +16,10 @@ class Tenant extends Model
     protected static function booted(): void
     {
         // Every business starts with the standard chart of accounts.
-        static::created(fn (Tenant $tenant) => ChartOfAccounts::seedFor($tenant));
+        static::created(function (Tenant $tenant) {
+            ChartOfAccounts::seedFor($tenant);
+            FormulaSet::createDefaultFor($tenant);
+        });
     }
 
     public function isActive(): bool

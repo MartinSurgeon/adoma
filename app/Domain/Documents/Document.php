@@ -3,6 +3,7 @@
 namespace App\Domain\Documents;
 
 use App\Domain\Audit\Auditable;
+use App\Domain\Gold\GoldLine;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Tenancy\BelongsToBranch;
 use App\Domain\Tenancy\BelongsToTenant;
@@ -94,6 +95,12 @@ class Document extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(JournalLine::class)->orderBy('id');
+    }
+
+    /** The weighing and the figures, for a purchase or a sale. */
+    public function goldLine(): HasOne
+    {
+        return $this->hasOne(GoldLine::class);
     }
 
     /** The document this one undoes, if it is a reversal. */

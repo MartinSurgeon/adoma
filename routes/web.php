@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\ForcedPasswordController;
 use App\Http\Controllers\CashDocumentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\GoldCalculationController;
+use App\Http\Controllers\GoldDocumentController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\LedgerSearchController;
 use App\Http\Controllers\LedgerStatementController;
@@ -27,6 +29,13 @@ Route::middleware('auth')->group(function () {
 
     // Who did what. For owners and admins, read only.
     Route::get('/activity', [ActivityController::class, 'index'])->name('activity.index');
+
+    // Purchases and sales of gold, and the live calculation behind their forms.
+    foreach (['purchase' => 'purchases', 'sale' => 'sales'] as $type => $path) {
+        Route::get("/$path/create", [GoldDocumentController::class, 'create'])->defaults('type', $type)->name("$path.create");
+        Route::post("/$path", [GoldDocumentController::class, 'store'])->defaults('type', $type)->name("$path.store");
+    }
+    Route::post('/gold/calculate', GoldCalculationController::class)->name('gold.calculate');
 
     // Receipts and payments. The route says which, and DocumentPolicy decides who may record one.
     foreach (['receipt' => 'receipts', 'payment' => 'payments'] as $type => $path) {
