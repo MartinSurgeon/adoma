@@ -8,8 +8,10 @@ use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\LedgerBalances;
 use App\Domain\Documents\PostingError;
 use App\Domain\Documents\PostingService;
+use App\Domain\Stock\StockMovement;
 use App\Domain\Support\AmountInWords;
 use App\Domain\Support\Money;
+use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\Role;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -62,8 +64,8 @@ class DocumentController extends Controller
         return Inertia::render('Documents/Index', [
             'documents' => $documents,
             'filters' => $filters,
-            'types' => collect(DocumentType::cases())->filter(fn ($t) => $t->isRecordable())
-                ->map(fn ($t) => ['value' => $t->value, 'label' => $t->label().'s'])->values(),
+            'types' => collect(DocumentType::cases())->filter(fn ($t) => $t->isListed())
+                ->map(fn ($t) => ['value' => $t->value, 'label' => $t->pluralLabel()])->values(),
             'canRecord' => $request->user()->can('create', [Document::class, 'receipt']),
         ]);
     }
@@ -150,6 +152,7 @@ class DocumentController extends Controller
             ],
             'party_balance' => $balance,
             'gold' => $this->gold($document),
+            'transfer' => $this->transfer($document, $viewer),
             'profit' => $this->profit($document, $viewer),
             'lines' => $document->lines->map(fn ($line) => [
                 'id' => $line->id,
@@ -157,6 +160,32 @@ class DocumentController extends Controller
                 'debit' => Money::fromDb($line->debit) > 0 ? Money::format(Money::fromDb($line->debit)) : '',
                 'credit' => Money::fromDb($line->credit) > 0 ? Money::format(Money::fromDb($line->credit)) : '',
             ]),
+        ];
+    }
+
+    /**
+     * What moved on a transfer, and the other half of it in the other office's books. The other half is
+     * linked only when this person may open it, so reading one office's transfer never opens another's books.
+     */
+    private function transfer(Document $document, ?User $viewer): ?array
+    {
+        if (! $document->type->isTransfer()) {
+            return null;
+        }
+
+        $weightH = StockMovement::withoutGlobalScopes()->where('document_id', $document->id)->get()
+            ->sum(fn ($m) => abs(Money::fromDb($m->weight_g)));
+
+        $other = $document->otherHalf();
+        $otherBranch = $other === null ? null : Branch::withoutGlobalScopes()->find($other->branch_id);
+        $mayOpen = $other !== null && $viewer !== null && $viewer->can('view', $other);
+
+        return [
+            'direction' => $document->type === DocumentType::Transfer ? 'out' : 'in',
+            'weight' => Money::format($weightH),
+            'other_office' => $otherBranch?->name,
+            'other_id' => $mayOpen ? $other->id : null,
+            'other_number' => $other?->number,
         ];
     }
 

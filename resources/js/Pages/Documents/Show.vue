@@ -16,6 +16,7 @@ const props = defineProps({
     party_balance: String,
     gold: { type: Object, default: null },
     profit: { type: Object, default: null },
+    transfer: { type: Object, default: null },
     lines: Array,
     canReverse: Boolean,
     canRecordAnother: Boolean,
@@ -26,7 +27,7 @@ const page = usePage();
 const success = computed(() => page.props.flash?.success);
 const reversed = computed(() => props.document.status === 'reversed');
 const noun = computed(() => props.document.type_label.toLowerCase());
-const partyLabel = computed(() => ({ receipt: 'Received from', payment: 'Paid to', purchase: 'Bought from', sale: 'Sold to' })[props.document.type] ?? 'With');
+const partyLabel = computed(() => ({ receipt: 'Received from', payment: 'Paid to', purchase: 'Bought from', sale: 'Sold to', transfer: 'Sent to', transfer_in: 'Received from' })[props.document.type] ?? 'With');
 
 const confirming = ref(false);
 const reverseForm = useForm({ reason: '' });
@@ -54,9 +55,18 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             <div class="flex flex-wrap items-center gap-3">
                 <h1 class="text-2xl font-semibold leading-tight text-gray-900">{{ document.type_label }} {{ document.number }}</h1>
                 <span
-                    class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
-                    :class="reversed ? 'bg-gray-200 text-gray-900' : document.reverses ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-900'"
+                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium"
+                    :class="reversed ? 'bg-gray-200 text-gray-800' : document.reverses ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-900'"
                 >
+                    <svg v-if="reversed" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                    </svg>
+                    <svg v-else-if="document.reverses" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    <svg v-else class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                    </svg>
                     {{ reversed ? 'Reversed' : document.reverses ? 'Reversal' : 'Saved' }}
                 </span>
             </div>
@@ -81,8 +91,18 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
             <!-- One main action, one quieter one, the rest under More. -->
             <div class="flex flex-wrap items-center gap-3">
-                <ButtonLink :href="route('documents.print', { document: document.id, layout: 'a4' })" external>Print {{ noun }}</ButtonLink>
-                <ButtonLink v-if="canRecordAnother" :href="route(`${document.type}s.create`, { like: document.id })" variant="secondary">Record another {{ noun }}</ButtonLink>
+                <ButtonLink :href="route('documents.print', { document: document.id, layout: 'a4' })" external>
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+                    </svg>
+                    Print {{ noun }}
+                </ButtonLink>
+                <ButtonLink v-if="canRecordAnother" :href="route(`${document.type}s.create`, { like: document.id })" variant="secondary">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Record another {{ noun }}
+                </ButtonLink>
                 <MoreMenu>
                     <MenuItem v-if="canRecordAnother" :href="route(`${document.type}s.create`)">Start a blank {{ noun }}</MenuItem>
                     <MenuItem :href="route('documents.print', { document: document.id, layout: 'thermal' })" external>Print small receipt</MenuItem>
@@ -93,8 +113,8 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
             <!-- The amount first: it is what people look for. -->
             <section class="card p-6">
-                <p class="text-base text-gray-700">Amount</p>
-                <p class="mt-1 text-4xl font-semibold tabular-nums text-gray-900">{{ document.total }}</p>
+                <p class="text-sm font-medium uppercase tracking-wider text-gray-500">Amount</p>
+                <p class="mt-1 text-4xl font-bold tabular-nums text-gray-900">{{ document.total }}</p>
                 <p class="mt-1 text-base text-gray-700">{{ document.total_in_words }}</p>
 
                 <dl class="mt-6 grid gap-x-6 gap-y-4 text-base sm:grid-cols-2">
@@ -126,6 +146,29 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <dd class="mt-1 text-gray-900">{{ document.recorded_by ?? 'Unknown' }}</dd>
                     </div>
                 </dl>
+            </section>
+
+            <!-- A transfer: what moved, and the other half in the other office's books. -->
+            <section v-if="transfer" aria-labelledby="transfer-heading" class="card p-6">
+                <h2 id="transfer-heading" class="text-lg font-semibold text-gray-900">The gold</h2>
+                <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 text-base">
+                    <div>
+                        <dt class="text-gray-700">Weight</dt>
+                        <dd class="mt-1 font-medium tabular-nums text-gray-900">{{ transfer.weight }} g</dd>
+                    </div>
+                    <div v-if="transfer.other_number">
+                        <dt class="text-gray-700">{{ transfer.direction === 'out' ? 'Arrived as' : 'Sent as' }}</dt>
+                        <dd class="mt-1 font-medium text-gray-900">
+                            <Link v-if="transfer.other_id" :href="route('documents.show', transfer.other_id)" class="text-teal-800 hover:underline">{{ transfer.other_number }}</Link>
+                            <span v-else>{{ transfer.other_number }}</span>
+                            <span v-if="transfer.other_office" class="text-gray-700"> in {{ transfer.other_office }}</span>
+                        </dd>
+                    </div>
+                </dl>
+                <p class="mt-4 text-base text-gray-700">
+                    The gold moved at what it cost, so neither office shows a profit or a loss on it.
+                    <template v-if="transfer.direction === 'in'">To put this right, the sending office reverses its transfer, which undoes both halves.</template>
+                </p>
             </section>
 
             <!-- The weighing, for a purchase or a sale. The working out is folded away. -->

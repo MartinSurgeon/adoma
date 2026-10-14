@@ -425,7 +425,7 @@ it('tells the manager why a purchase cannot be reversed once some gold is sold',
     $this->actingAs($this->w->kumasiClerk)->post(route('sales.store'), saleForm($this));
 
     $this->actingAs($this->w->kumasiManager)->post(route('documents.reverse', $purchase), ['reason' => 'Mistake'])
-        ->assertSessionHasErrors(['reason' => 'Some of this gold has already been sold, so this purchase cannot be reversed. Reverse those sales first.']);
+        ->assertSessionHasErrors(['reason' => 'Some of this gold has already been sold or sent to another office, so this purchase cannot be reversed. Reverse those first.']);
 
     expect($purchase->fresh()->status)->toBe(Document::POSTED);
 });

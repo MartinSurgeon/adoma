@@ -36,7 +36,7 @@ it('uses the right letters for each type', function () {
 
     expect($letters)->toBe([
         'purchase' => 'PCH', 'sale' => 'SAL', 'receipt' => 'REC',
-        'payment' => 'PV', 'transfer' => 'TRF', 'journal' => 'JNL',
+        'payment' => 'PV', 'transfer' => 'TRF', 'transfer_in' => 'TRI', 'journal' => 'JNL',
     ]);
 });
 

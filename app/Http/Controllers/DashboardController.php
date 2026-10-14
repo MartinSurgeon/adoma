@@ -47,6 +47,7 @@ class DashboardController extends Controller
                 ->map(fn (Document $d) => [
                     'id' => $d->id,
                     'number' => $d->number,
+                    'type' => $d->type->value,
                     'type_label' => $d->type->label(),
                     'date' => $d->date->toDateString(),
                     'party' => $d->ledger?->name,
@@ -60,7 +61,21 @@ class DashboardController extends Controller
         // Gold in stock, for the offices in context: the number an owner looks for first.
         $goldInStock = StockLot::query()->where('remaining_g', '>', 0)->sum('remaining_g');
 
+        // For an owner or admin looking at every office: how much gold each one holds.
+        $stockByOffice = null;
+
+        if ($context->viewingAllBranches() && $user->isTenantAdmin()) {
+            $held = StockLot::query()->where('remaining_g', '>', 0)
+                ->selectRaw('branch_id, SUM(remaining_g) as grams')->groupBy('branch_id')->pluck('grams', 'branch_id');
+
+            $stockByOffice = $user->accessibleBranches()
+                ->map(fn ($branch) => ['name' => $branch->name, 'grams' => Money::format(Money::fromDb($held[$branch->id] ?? 0))])
+                ->values();
+        }
+
         return Inertia::render('Dashboard', [
+            'stockByOffice' => $stockByOffice,
+            'canTransfer' => $user->can('create', [Document::class, 'transfer']),
             'where' => $context->viewingAllBranches() ? 'All offices' : $context->branch()?->name,
             'goldInStock' => Money::format(Money::fromDb($goldInStock)),
             'stats' => collect(self::STATS)->map(fn (array $stat) => [

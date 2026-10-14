@@ -4,6 +4,7 @@ namespace App\Domain\Documents;
 
 use App\Domain\Gold\GoldFigures;
 use App\Domain\Gold\GoldLine;
+use App\Domain\Ledgers\ChartOfAccounts;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Stock\LotAllocator;
@@ -11,6 +12,8 @@ use App\Domain\Stock\StockLot;
 use App\Domain\Stock\StockMovement;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\Branch;
+use App\Domain\Tenancy\Tenant;
+use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Closure;
@@ -30,6 +33,10 @@ use Illuminate\Support\Facades\DB;
  *   Purchase  Dr Gold Stock            Cr the supplier          and a new lot of gold in stock
  *   Sale      Dr the customer          Cr Sales
  *             Dr Cost of Sales         Cr Gold Stock            and gold leaves the oldest lots
+ *   Transfer  two documents, one in each office's books, so each office's books balance by themselves:
+ *     out, in the sending office    Dr the receiving office's account   Cr Gold Stock   (gold leaves the oldest lots)
+ *     in, in the receiving office   Dr Gold Stock   Cr the sending office's account     (the gold becomes new lots)
+ *     Gold moves at what it cost, so neither office shows a profit or a loss on it.
  */
 final class PostingService
 {
@@ -150,8 +157,85 @@ final class PostingService
     }
 
     /**
+     * Gold sent from one office to another, at what it cost. It leaves the sending office's oldest
+     * lots, keeping the date it was first bought, and arrives as new lots in the receiving office with
+     * the same weight, karat and cost. Returns the sending office's document, and the receiving
+     * office's document is its other half.
+     *
+     * The two offices then owe each other the cost of the gold, through their office accounts, until
+     * that is settled with a receipt or a payment.
+     */
+    public function postTransfer(Branch $from, Branch $to, string $date, int $weightH, ?string $note, ?string $idempotencyKey, User $by): Document
+    {
+        return $this->once($from, $idempotencyKey, $by, function () use ($from, $to, $date, $weightH, $note, $idempotencyKey, $by) {
+            $this->assertTransfer($from, $to, $date, $weightH);
+
+            // Both offices' gold, lowest office first, so two offices sending to each other wait their turn.
+            $this->lots->lockOffices([$from, $to]);
+
+            $taken = $this->lots->allocate($from, $weightH);   // locks the lots until we finish
+            $costCents = array_sum(array_column($taken, 'costCents'));
+
+            if ($costCents <= 0) {
+                throw new PostingError('This gold has no cost on record, so it cannot be moved between offices.');
+            }
+
+            $toAccount = ChartOfAccounts::ensureBranchLedger($to);
+            $fromAccount = ChartOfAccounts::ensureBranchLedger($from);
+            $stock = $this->systemLedger($from, 'gold_stock');
+
+            $out = $this->write(
+                DocumentType::Transfer, $from, $date, $toAccount, null, $costCents, $note, $idempotencyKey, $by,
+                [[$toAccount, $costCents, 0], [$stock, 0, $costCents]],
+            );
+
+            // The sending office's side: the gold leaves its oldest lots.
+            foreach ($taken as ['lot' => $lot, 'weightH' => $takenH, 'costCents' => $lotCost]) {
+                $this->writeMovement($lot, $out, $date, -$takenH, -$lotCost);
+
+                $lot->forceFill([
+                    'remaining_g' => Money::decimal(Money::fromDb($lot->remaining_g) - $takenH),
+                    'remaining_cost' => Money::decimal(Money::fromDb($lot->remaining_cost) - $lotCost),
+                ])->save();
+            }
+
+            // The receiving office's side, written as that office: its document, its lines, its new lots.
+            $this->asOffice($to, function () use ($to, $date, $fromAccount, $stock, $costCents, $note, $by, $out, $taken) {
+                $in = $this->write(
+                    DocumentType::TransferIn, $to, $date, $fromAccount, null, $costCents, $note, null, $by,
+                    [[$stock, $costCents, 0], [$fromAccount, 0, $costCents]],
+                    $out->id,
+                );
+
+                foreach ($taken as ['lot' => $lot, 'weightH' => $takenH, 'costCents' => $lotCost]) {
+                    // The same gold, now held by the receiving office. It keeps its original date so it still sells in order.
+                    $arrived = StockLot::create([
+                        'tenant_id' => $to->tenant_id,
+                        'branch_id' => $to->id,
+                        'gold_line_id' => null,
+                        'source_lot_id' => $lot->id,
+                        'document_id' => $in->id,
+                        'date' => $lot->date->toDateString(),
+                        'form' => $lot->form,
+                        'karat' => $lot->getRawOriginal('karat'),
+                        'weight_g' => Money::decimal($takenH),
+                        'remaining_g' => Money::decimal($takenH),
+                        'cost' => Money::decimal($lotCost),
+                        'remaining_cost' => Money::decimal($lotCost),
+                    ]);
+
+                    $this->writeMovement($arrived, $in, $date, $takenH, $lotCost);
+                }
+            });
+
+            return $out;
+        });
+    }
+
+    /**
      * Undo a document by posting the opposite entry. The original stays, marked reversed, and the
      * two together show what happened and that it was put right. Gold goes back where it came from.
+     * A transfer is two documents, so both are reversed together, or neither is.
      */
     public function reverse(Document $document, string $reason, User $by): Document
     {
@@ -159,53 +243,98 @@ final class PostingService
             // Lock the original, so two people reversing it at once cannot both succeed.
             $original = Document::withoutGlobalScopes()->whereKey($document->id)->lockForUpdate()->firstOrFail();
 
+            if ($original->type === DocumentType::TransferIn) {
+                throw new PostingError('A transfer is put right by the office that sent it. Reverse the transfer out there.');
+            }
+
             if ($original->status !== Document::POSTED || $original->isReversal()) {
                 throw new PostingError($original->isReversal()
                     ? 'A reversal cannot be reversed. Post a new document instead.'
                     : "{$original->number} has already been reversed.");
             }
 
-            $branch = Branch::withoutGlobalScopes()->findOrFail($original->branch_id);
             $date = now()->toDateString();
+            $other = null;
 
-            $reversal = Document::create([
-                'tenant_id' => $original->tenant_id,
-                'branch_id' => $original->branch_id,
-                'type' => $original->type,
-                'number' => VoucherNumbers::next($branch, $original->type),
-                'date' => $date,
-                'ledger_id' => $original->ledger_id,
-                'cash_ledger_id' => $original->cash_ledger_id,
-                'total' => $original->getRawOriginal('total'),
-                'note' => "Reversal of {$original->number}: {$reason}",
-                'status' => Document::POSTED,
-                'reverses_id' => $original->id,
-                'created_by' => $by->id,
-            ]);
+            if ($original->type === DocumentType::Transfer) {
+                $other = Document::withoutGlobalScopes()->where('paired_id', $original->id)->lockForUpdate()->first();
 
-            $lines = JournalLine::withoutGlobalScopes()->where('document_id', $original->id)->orderBy('id')->get();
-
-            // The same lines with debit and credit swapped.
-            foreach ($lines as $line) {
-                JournalLine::create([
-                    'tenant_id' => $original->tenant_id,
-                    'branch_id' => $original->branch_id,
-                    'document_id' => $reversal->id,
-                    'ledger_id' => $line->ledger_id,
-                    'date' => $date,
-                    'debit' => $line->getRawOriginal('credit'),
-                    'credit' => $line->getRawOriginal('debit'),
-                ]);
+                if ($other === null || $other->status !== Document::POSTED) {
+                    throw new PostingError("{$original->number} cannot be reversed, because the receiving office's half is not in order.");
+                }
             }
 
-            if ($original->type->isGold()) {
-                $this->reverseStock($original, $reversal, $date);
+            $otherBranch = $other === null ? null : Branch::withoutGlobalScopes()->findOrFail($other->branch_id);
+
+            // Putting gold back changes lots, so take the same stock lock a sale or a transfer takes, in the same order.
+            if ($original->type->movesStock()) {
+                $this->lots->lockOffices(array_filter([Branch::withoutGlobalScopes()->findOrFail($original->branch_id), $otherBranch]));
             }
 
-            $original->forceFill(['status' => Document::REVERSED])->save();
+            $reversal = $this->reverseOne($original, $reason, $by, $date, null);
+
+            if ($other !== null) {
+                $this->asOffice($otherBranch, fn () => $this->reverseOne($other, $reason, $by, $date, $reversal->id));
+            }
 
             return $reversal;
         }, 3);
+    }
+
+    /**
+     * Write as another office of the same business, then go back to the one in view. A transfer is the one
+     * posting that must write into two offices, and this keeps that deliberate: the guard that stops an
+     * office writing into another's books stays on, and is told which office the work is for.
+     */
+    private function asOffice(Branch $branch, Closure $work): mixed
+    {
+        $context = app(TenantContext::class);
+
+        return $context->run(Tenant::findOrFail($branch->tenant_id), $branch, $work);
+    }
+
+    /** The opposite of one document: the same lines with debit and credit swapped, and any gold put back. */
+    private function reverseOne(Document $original, string $reason, User $by, string $date, ?int $pairedId): Document
+    {
+        $branch = Branch::withoutGlobalScopes()->findOrFail($original->branch_id);
+
+        $reversal = Document::create([
+            'tenant_id' => $original->tenant_id,
+            'branch_id' => $original->branch_id,
+            'type' => $original->type,
+            'number' => VoucherNumbers::next($branch, $original->type),
+            'date' => $date,
+            'ledger_id' => $original->ledger_id,
+            'cash_ledger_id' => $original->cash_ledger_id,
+            'total' => $original->getRawOriginal('total'),
+            'note' => "Reversal of {$original->number}: {$reason}",
+            'status' => Document::POSTED,
+            'reverses_id' => $original->id,
+            'paired_id' => $pairedId,
+            'created_by' => $by->id,
+        ]);
+
+        $lines = JournalLine::withoutGlobalScopes()->where('document_id', $original->id)->orderBy('id')->get();
+
+        foreach ($lines as $line) {
+            JournalLine::create([
+                'tenant_id' => $original->tenant_id,
+                'branch_id' => $line->branch_id,
+                'document_id' => $reversal->id,
+                'ledger_id' => $line->ledger_id,
+                'date' => $date,
+                'debit' => $line->getRawOriginal('credit'),
+                'credit' => $line->getRawOriginal('debit'),
+            ]);
+        }
+
+        if ($original->type->movesStock()) {
+            $this->reverseStock($original, $reversal, $date);
+        }
+
+        $original->forceFill(['status' => Document::REVERSED])->save();
+
+        return $reversal;
     }
 
     // ------------------------------------------------------------------ writing
@@ -222,6 +351,7 @@ final class PostingService
         ?string $idempotencyKey,
         User $by,
         array $lines,
+        ?int $pairedId = null,
     ): Document {
         $this->assertBalanced($lines);
 
@@ -236,6 +366,7 @@ final class PostingService
             'total' => Money::decimal($cents),
             'note' => $note !== null && trim($note) !== '' ? trim($note) : null,
             'status' => Document::POSTED,
+            'paired_id' => $pairedId,
             'idempotency_key' => $idempotencyKey,
             'created_by' => $by->id,
         ]);
@@ -277,7 +408,8 @@ final class PostingService
     {
         StockMovement::create([
             'tenant_id' => $document->tenant_id,
-            'branch_id' => $document->branch_id,
+            // The office that holds the lot, which for a transfer is not always the document's own office.
+            'branch_id' => $lot->branch_id,
             'lot_id' => $lot->id,
             'document_id' => $document->id,
             'weight_g' => Money::decimal($weightH),
@@ -299,9 +431,12 @@ final class PostingService
             $remainingH = Money::fromDb($lot->remaining_g) - $weightH;
             $remainingCost = Money::fromDb($lot->remaining_cost) - $costCents;
 
-            // Reversing a purchase takes its gold back out of the lot. If some was sold, the lot is short.
+            // Reversing a purchase or a transfer in takes its gold back out of the lot. If some has gone since, the lot is short.
             if ($remainingH < 0 || $remainingCost < 0) {
-                throw new PostingError('Some of this gold has already been sold, so this purchase cannot be reversed. Reverse those sales first.');
+                throw new PostingError(sprintf(
+                    'Some of this gold has already been sold or sent to another office, so this %s cannot be reversed. Reverse those first.',
+                    $original->type->isTransfer() ? 'transfer' : 'purchase',
+                ));
             }
 
             if ($remainingH > Money::fromDb($lot->weight_g)) {
@@ -403,6 +538,23 @@ final class PostingService
         }
 
         $this->assertUsable($party, $branch);
+    }
+
+    private function assertTransfer(Branch $from, Branch $to, string $date, int $weightH): void
+    {
+        if ($from->is($to)) {
+            throw new PostingError('Choose a different office to send the gold to.');
+        }
+
+        if ($from->tenant_id !== $to->tenant_id) {
+            throw new PostingError('Gold can only be sent to another office of the same business.');
+        }
+
+        if ($weightH <= 0) {
+            throw new PostingError('The weight must be more than zero.');
+        }
+
+        $this->assertDate($date);
     }
 
     private function assertDate(string $date): void

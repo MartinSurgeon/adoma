@@ -9,6 +9,7 @@ const page = usePage();
 const tenancy = computed(() => page.props.tenancy);
 const isAdmin = computed(() => Boolean(tenancy.value?.can_view_all));
 const canRecord = computed(() => Boolean(tenancy.value?.can_record));
+const canTransfer = computed(() => Boolean(tenancy.value?.can_transfer));
 
 // Icons are 24 x 24 outlines. Each page that exists gets one entry; more arrive with each phase.
 const icons = {
@@ -18,6 +19,8 @@ const icons = {
     receipt: 'M12 4v10m0 0l-4-4m4 4l4-4M5 20h14',
     payment: 'M12 20V10m0 0l-4 4m4-4l4 4M5 4h14',
     transactions: 'M5 6h14M5 12h14M5 18h9',
+    transfer: 'M4 8h13m0 0l-3-3m3 3l-3 3M20 16H7m0 0l3-3m-3 3l3 3',
+    stock: 'M3 9l9-5 9 5v8l-9 5-9-5V9zM3 9l9 5 9-5M12 14v8',
     ledgers: 'M5 4h12a2 2 0 012 2v14H7a2 2 0 01-2-2V4zM9 8h6M9 12h6',
     users: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3 3 0 100-6 3 3 0 000 6zM20 20v-1a3 3 0 00-2-2.8M15 5.2a3 3 0 010 5.6',
     activity: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
@@ -37,6 +40,8 @@ const sections = computed(() =>
                 { label: 'Sale', href: route('sales.create'), active: route().current('sales.*'), icon: 'sale', show: canRecord.value, mobile: true },
                 { label: 'Receipt', href: route('receipts.create'), active: route().current('receipts.*'), icon: 'receipt', show: canRecord.value, mobile: true },
                 { label: 'Payment', href: route('payments.create'), active: route().current('payments.*'), icon: 'payment', show: canRecord.value, mobile: true },
+                // Managers only. On a phone it moves into the account menu, so the bottom bar stays at five.
+                { label: 'Transfer', href: route('transfers.create'), active: route().current('transfers.*'), icon: 'transfer', show: canTransfer.value, mobile: false },
             ],
         },
         {
@@ -44,6 +49,7 @@ const sections = computed(() =>
             items: [
                 { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: false },
+                { label: 'Stock', href: route('stock.index'), active: route().current('stock.*'), icon: 'stock', show: Boolean(tenancy.value), mobile: false },
             ],
         },
         {

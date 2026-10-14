@@ -68,6 +68,10 @@ class HandleInertiaRequests extends Middleware
             'can_record' => ! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && ($user->roleIn($context->branchId())?->atLeast(Role::Clerk) ?? false),
+            // Sending gold to another office needs one office and at least a manager's role in it.
+            'can_transfer' => ! $context->viewingAllBranches()
+                && $context->branchId() !== null
+                && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false),
             'branches' => $user->accessibleBranches()->map->only(['id', 'code', 'name'])->values(),
             // The kinds of ledger this person may add here, so a form can offer "add new" only when it will work.
             'addable_ledger_kinds' => collect(LedgerKind::creatable())

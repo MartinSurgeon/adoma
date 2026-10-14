@@ -8,7 +8,10 @@ enum DocumentType: string
     case Sale = 'sale';
     case Receipt = 'receipt';
     case Payment = 'payment';
+    /** Gold sent to another office: the sending office's half of a transfer. */
     case Transfer = 'transfer';
+    /** Gold arriving from another office: the receiving office's half of the same transfer. */
+    case TransferIn = 'transfer_in';
     case Journal = 'journal';
 
     /** The letters at the front of a voucher number. */
@@ -20,13 +23,28 @@ enum DocumentType: string
             self::Receipt => 'REC',
             self::Payment => 'PV',
             self::Transfer => 'TRF',
+            self::TransferIn => 'TRI',
             self::Journal => 'JNL',
         };
     }
 
     public function label(): string
     {
-        return ucfirst($this->value);
+        return match ($this) {
+            self::Transfer => 'Transfer out',
+            self::TransferIn => 'Transfer in',
+            default => ucfirst($this->value),
+        };
+    }
+
+    /** For the filter on the transactions list: "Purchases", "Transfers out". */
+    public function pluralLabel(): string
+    {
+        return match ($this) {
+            self::Transfer => 'Transfers out',
+            self::TransferIn => 'Transfers in',
+            default => $this->label().'s',
+        };
     }
 
     /** Gold bought or sold, weighed and priced with the client's formulas. */
@@ -35,10 +53,28 @@ enum DocumentType: string
         return $this === self::Purchase || $this === self::Sale;
     }
 
-    /** The types a person can record on a screen today. Transfers and journals come later. */
+    /** Gold moving between two offices, at what it cost. */
+    public function isTransfer(): bool
+    {
+        return $this === self::Transfer || $this === self::TransferIn;
+    }
+
+    /** Documents that move gold in or out of stock, and so can be put right only by moving it back. */
+    public function movesStock(): bool
+    {
+        return $this->isGold() || $this->isTransfer();
+    }
+
+    /** The types a person can record on a screen. A transfer in is made by the sending office, never typed in. */
     public function isRecordable(): bool
     {
-        return $this->isCash() || $this->isGold();
+        return $this->isCash() || $this->isGold() || $this === self::Transfer;
+    }
+
+    /** Every type that appears in the transactions list. */
+    public function isListed(): bool
+    {
+        return $this->isRecordable() || $this === self::TransferIn;
     }
 
     /** Money in or out against a ledger and a cash or bank account, with no gold involved. */

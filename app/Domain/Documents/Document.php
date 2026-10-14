@@ -32,7 +32,7 @@ class Document extends Model
 
     protected $fillable = [
         'tenant_id', 'branch_id', 'type', 'number', 'date', 'ledger_id', 'cash_ledger_id',
-        'total', 'note', 'status', 'reverses_id', 'idempotency_key', 'created_by',
+        'total', 'note', 'status', 'reverses_id', 'paired_id', 'idempotency_key', 'created_by',
     ];
 
     protected function casts(): array
@@ -101,6 +101,22 @@ class Document extends Model
     public function goldLine(): HasOne
     {
         return $this->hasOne(GoldLine::class);
+    }
+
+    /**
+     * The other half of a transfer, in the other office's books: for a transfer out, the transfer in, and the
+     * other way round. Read without the office scope on purpose, because the other half belongs to another office.
+     * Callers decide what they may show of it.
+     */
+    public function otherHalf(): ?self
+    {
+        if (! $this->type->isTransfer()) {
+            return null;
+        }
+
+        return $this->paired_id !== null
+            ? self::withoutGlobalScopes()->find($this->paired_id)
+            : self::withoutGlobalScopes()->where('paired_id', $this->id)->first();
     }
 
     /** The document this one undoes, if it is a reversal. */

@@ -49,12 +49,20 @@ class DocumentPolicy
             return false;
         }
 
-        return $user->roleIn($context->branchId())?->atLeast(Role::Clerk) ?? false;
+        // Moving gold to another office is a manager's decision. Everything else a clerk may record.
+        $minimum = $documentType === DocumentType::Transfer ? Role::Manager : Role::Clerk;
+
+        return $user->roleIn($context->branchId())?->atLeast($minimum) ?? false;
     }
 
     public function reverse(User $user, Document $document): bool
     {
         if ($document->status !== Document::POSTED || $document->isReversal()) {
+            return false;
+        }
+
+        // A transfer is put right by the office that sent it, which undoes both halves together.
+        if ($document->type === DocumentType::TransferIn) {
             return false;
         }
 
