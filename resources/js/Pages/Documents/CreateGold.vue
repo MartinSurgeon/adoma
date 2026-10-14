@@ -177,20 +177,33 @@ const submit = () => form.post(route(`${props.type}s.store`));
             </div>
 
             <!-- Worked out from the boxes above. Read only, shaded, and right under them. -->
-            <dl class="mt-4 grid grid-cols-3 gap-4 rounded-md bg-gray-50 p-4 ring-1 ring-gray-200">
-                <div>
-                    <dt class="text-sm text-gray-700">Pounds</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">{{ dash(figures?.pounds) }}</dd>
+            <div class="mt-4 rounded-md bg-gray-50 p-4 ring-1 ring-gray-200">
+                <div class="flex items-center justify-between pb-2 border-b border-gray-200/80">
+                    <span class="text-sm font-semibold uppercase tracking-wider text-gray-700">Calculated figures</span>
+                    <span v-if="working" class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700">
+                        <svg class="h-3.5 w-3.5 animate-spin text-teal-600" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        Working it out…
+                    </span>
+                    <span v-else-if="figures" class="text-sm font-medium text-green-800">✓ Updated</span>
                 </div>
-                <div>
-                    <dt class="text-sm text-gray-700">Density</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">{{ isRaw ? dash(figures?.density) : 'Not used' }}</dd>
-                </div>
-                <div>
-                    <dt class="text-sm text-gray-700">Karat</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">{{ dash(figures?.karat) }}</dd>
-                </div>
-            </dl>
+                <dl class="mt-3 grid grid-cols-3 gap-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-600">Pounds</dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.pounds) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-600">Density</dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ isRaw ? dash(figures?.density) : 'Not used' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-600">Karat</dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.karat) }}</dd>
+                    </div>
+                </dl>
+            </div>
         </FormSection>
 
         <!-- The price, and the amount it comes to: last on the form and the largest figure on it. -->
@@ -201,9 +214,12 @@ const submit = () => form.post(route(`${props.type}s.store`));
                     <TextInput id="price" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0.00" v-model="form.price" required />
                     <InputError class="mt-2" :message="form.errors.price || problem('price')" />
                 </div>
-                <div class="rounded-md bg-teal-50 p-4 ring-1 ring-teal-100">
-                    <p class="text-base text-gray-800">{{ words.owes }}</p>
-                    <p class="mt-1 text-3xl font-semibold tabular-nums text-gray-900">{{ figures?.amount_text ?? (working ? 'Working it out…' : '—') }}</p>
+                <div class="rounded-lg bg-teal-50/80 p-5 ring-1 ring-teal-200/80 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium uppercase tracking-wide text-teal-900">{{ words.owes }}</p>
+                        <span v-if="working" class="h-2 w-2 rounded-full bg-teal-500 animate-pulse" aria-hidden="true"></span>
+                    </div>
+                    <p class="mt-1 text-3xl font-bold tabular-nums text-teal-950">{{ figures?.amount_text ?? (working ? 'Working it out…' : '—') }}</p>
                 </div>
             </div>
         </FormSection>

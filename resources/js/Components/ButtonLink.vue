@@ -13,10 +13,10 @@ const props = defineProps({
 });
 
 const classes = computed(() => [
-    'inline-flex min-h-12 items-center justify-center rounded-md px-6 text-base transition duration-150 ease-in-out',
+    'inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-6 text-base shadow-sm transition duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2',
     props.variant === 'primary'
         ? 'border border-transparent bg-teal-700 font-semibold text-white hover:bg-teal-800 active:bg-teal-900'
-        : 'border border-gray-300 bg-white font-medium text-gray-800 hover:bg-gray-50',
+        : 'border border-gray-300 bg-white font-medium text-gray-800 hover:bg-gray-50 active:bg-gray-100',
 ]);
 </script>
 

@@ -137,33 +137,38 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
 
         <!-- The amount last, and the largest thing on the form. -->
         <FormSection title="3. Amount">
-            <InputLabel for="amount" value="Amount (GH₵)" />
-            <TextInput
-                id="amount"
-                class="mt-1 block w-full text-right text-3xl font-semibold tabular-nums"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="0.00"
-                v-model="form.amount"
-                required
-            />
+            <InputLabel for="amount" value="Amount" />
+            <div class="relative mt-1">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <span class="text-xl font-semibold text-gray-500">GH₵</span>
+                </div>
+                <TextInput
+                    id="amount"
+                    class="block w-full pl-20 pr-4 text-right text-3xl font-semibold tabular-nums"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="0.00"
+                    v-model="form.amount"
+                    required
+                />
+            </div>
             <InputError class="mt-2" :message="form.errors.amount" />
         </FormSection>
 
         <template #summary>
-            <div class="rounded-lg bg-teal-50 p-6 ring-1 ring-teal-100">
+            <div class="rounded-lg bg-teal-50/80 p-6 ring-1 ring-teal-200/80 shadow-sm">
                 <h2 class="text-lg font-semibold text-gray-900">Summary</h2>
                 <dl class="mt-4 space-y-4 text-base">
                     <div>
-                        <dt class="text-gray-700">Amount</dt>
-                        <dd class="mt-1 text-2xl font-semibold tabular-nums text-gray-900">{{ amountText ?? 'Not entered yet' }}</dd>
+                        <dt class="text-sm font-medium text-gray-600">Amount</dt>
+                        <dd class="mt-1 text-3xl font-bold tabular-nums text-teal-950">{{ amountText ?? 'Not entered yet' }}</dd>
                     </div>
-                    <div v-if="cashName">
-                        <dt class="text-gray-700">What happens</dt>
-                        <dd class="mt-1 text-gray-900">{{ cashName }} {{ effect }}.</dd>
+                    <div v-if="cashName" class="border-t border-teal-100 pt-3">
+                        <dt class="text-sm font-medium text-gray-600">Account impact</dt>
+                        <dd class="mt-1 font-medium text-gray-900">{{ cashName }} {{ effect }}.</dd>
                     </div>
                 </dl>
-                <p class="mt-4 text-sm text-gray-700">The server checks everything again when you save.</p>
+                <p class="mt-4 text-sm text-gray-700">The server checks and verifies all figures again when you save.</p>
             </div>
         </template>
     </TransactionLayout>

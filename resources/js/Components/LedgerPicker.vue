@@ -140,12 +140,23 @@ function closeSoon() {
     <div>
         <InputLabel :for="inputId" :value="label" />
 
-        <div v-if="selected" class="mt-1 flex items-center justify-between gap-3 rounded-md border border-teal-600 bg-teal-50 p-3">
-            <div class="min-w-0">
-                <p class="truncate text-base font-medium text-gray-900">{{ selected.name }}</p>
-                <p class="text-base text-gray-700">{{ selected.kind_label }} · {{ selected.balance }}</p>
+        <div v-if="selected" class="mt-1 flex items-center justify-between gap-3 rounded-md border border-teal-600 bg-teal-50/70 p-3.5 shadow-sm">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-teal-800" aria-hidden="true">
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="truncate text-base font-semibold text-gray-900">{{ selected.name }}</p>
+                    <p class="text-sm text-gray-700">{{ selected.kind_label }} · {{ selected.balance }}</p>
+                </div>
             </div>
-            <button type="button" @click="change" class="min-h-12 shrink-0 rounded-md border border-gray-300 bg-white px-3 text-base text-gray-700 hover:bg-gray-50">
+            <button
+                type="button"
+                @click="change"
+                class="min-h-12 shrink-0 rounded-md border border-gray-300 bg-white px-4 text-base font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+            >
                 Change
             </button>
         </div>
@@ -164,16 +175,32 @@ function closeSoon() {
                 @focus="show"
                 @blur="closeSoon"
                 @keydown="onKey"
-                class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
+                class="mt-1 block min-h-12 w-full rounded-md border-gray-300 pe-10 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
             />
+
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                <svg v-if="loading" class="h-5 w-5 animate-spin text-teal-600" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <svg v-else class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                </svg>
+            </div>
 
             <ul
                 v-show="open"
                 :id="`${inputId}-list`"
                 role="listbox"
-                class="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+                class="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
             >
-                <li v-if="loading" class="px-3 py-2 text-base text-gray-700">Searching…</li>
+                <li v-if="loading && !results.length" class="flex items-center gap-2 px-3 py-2 text-base text-gray-700">
+                    <svg class="h-4 w-4 animate-spin text-teal-600" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    Searching…
+                </li>
                 <li v-else-if="failed" class="px-3 py-2 text-sm text-red-700">Could not search. Check your connection and try again.</li>
                 <li v-else-if="!results.length" class="px-3 py-2 text-base text-gray-700">
                     {{ query ? 'No ledger matches that name.' : 'No ledgers yet.' }}
@@ -184,11 +211,11 @@ function closeSoon() {
                     role="option"
                     :aria-selected="index === active"
                     @mousedown.prevent="choose(item)"
-                    class="cursor-pointer px-3 py-2"
-                    :class="index === active ? 'bg-teal-50' : 'hover:bg-gray-50'"
+                    class="cursor-pointer px-3 py-2.5 transition"
+                    :class="index === active ? 'bg-teal-50 text-teal-900' : 'hover:bg-gray-50'"
                 >
                     <p class="text-base font-medium text-gray-900">{{ item.name }}</p>
-                    <p class="text-base text-gray-700">{{ item.kind_label }} · {{ item.balance }}</p>
+                    <p class="text-sm text-gray-700">{{ item.kind_label }} · {{ item.balance }}</p>
                 </li>
                 <li v-if="addable.length && !loading" role="option" aria-selected="false" class="border-t border-gray-200">
                     <button
@@ -196,7 +223,7 @@ function closeSoon() {
                         class="flex min-h-12 w-full items-center gap-2 px-3 text-left text-base font-medium text-teal-800 hover:bg-teal-50"
                         @mousedown.prevent="startAdding"
                     >
-                        <span aria-hidden="true">+</span>
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-teal-100 text-teal-800 font-bold text-sm" aria-hidden="true">+</span>
                         {{ query.trim() ? `Add “${query.trim()}” as new` : 'Add a new ledger' }}
                     </button>
                 </li>
