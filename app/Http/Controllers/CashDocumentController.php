@@ -6,6 +6,7 @@ use App\Domain\Documents\Document;
 use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\PostingError;
 use App\Domain\Documents\PostingService;
+use App\Domain\Documents\RepeatOf;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\TenantContext;
@@ -43,6 +44,7 @@ class CashDocumentController extends Controller
             'office' => $context->branch()->name,
             'today' => now()->toDateString(),
             'idempotencyKey' => (string) Str::uuid(),
+            'prefill' => RepeatOf::from($request, DocumentType::from($type)),
             'cashLedgers' => Ledger::query()
                 ->whereIn('kind', [LedgerKind::Cash->value, LedgerKind::Bank->value])
                 ->where('is_active', true)

@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Ledgers\Ledger;
+use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\Role;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Http\Request;
@@ -67,6 +69,11 @@ class HandleInertiaRequests extends Middleware
                 && $context->branchId() !== null
                 && ($user->roleIn($context->branchId())?->atLeast(Role::Clerk) ?? false),
             'branches' => $user->accessibleBranches()->map->only(['id', 'code', 'name'])->values(),
+            // The kinds of ledger this person may add here, so a form can offer "add new" only when it will work.
+            'addable_ledger_kinds' => collect(LedgerKind::creatable())
+                ->filter(fn (LedgerKind $kind) => $user->can('create', [Ledger::class, $kind->value]))
+                ->map(fn (LedgerKind $kind) => ['value' => $kind->value, 'label' => $kind->label()])
+                ->values(),
         ];
     }
 }

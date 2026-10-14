@@ -1,6 +1,6 @@
 <script setup>
 import axios from 'axios';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Banner from '@/Components/Banner.vue';
 import FormSection from '@/Components/FormSection.vue';
@@ -19,18 +19,27 @@ const props = defineProps({
     idempotencyKey: String,
     baseKarat: Number,
     inStock: { type: String, default: null }, // sales only: grams in stock
+    prefill: { type: Object, default: null }, // "record another like this"
 });
 
 const form = useForm({
     date: props.today ?? '',
-    ledger_id: '',
-    form: 'raw',
+    ledger_id: props.prefill?.ledger?.id ?? '',
+    form: props.prefill?.form ?? 'raw',
     weight: '',
     water_weight: '',
     karat: '',
-    price: '',
-    note: '',
+    price: props.prefill?.price ?? '',
+    note: props.prefill?.note ?? '',
     idempotency_key: props.idempotencyKey ?? '',
+});
+
+// Starting values are not "typed in", so they do not count as unsaved work.
+form.defaults();
+
+onMounted(() => {
+    // The person comes first, so the cursor starts there (unless it is already chosen).
+    if (!form.ledger_id) document.getElementById('party')?.focus();
 });
 
 const isRaw = computed(() => form.form === 'raw');
@@ -93,6 +102,8 @@ const submit = () => form.post(route(`${props.type}s.store`));
         :blocked="blocked"
         :needs-office="needsOffice"
         :noun="type"
+        :dirty="form.isDirty"
+        :errors="form.errors"
         @submit="submit"
     >
         <template #subtitle>
@@ -109,6 +120,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
                         :label="words.party"
                         kinds="customer,supplier"
                         :error="form.errors.ledger_id"
+                        :initial="prefill?.ledger"
                         help="Customers and suppliers in your list."
                     />
                 </div>

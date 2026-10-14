@@ -100,6 +100,11 @@ class SaveGoldDocumentRequest extends FormRequest
         return [
             'date.before_or_equal' => 'The date cannot be in the future.',
             'date.date_format' => 'Enter the date as day, month and year.',
+            'date.required' => 'Enter the date.',
+            'ledger_id.required' => 'Choose a customer or supplier from your list.',
+            'ledger_id.integer' => 'Choose a customer or supplier from your list.',
+            'weight.required' => 'Enter the weight.',
+            'price.required' => 'Enter the price.',
             'water_weight.required' => 'Enter the water weight.',
             'karat.required' => 'Enter the karat.',
         ];

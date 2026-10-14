@@ -1,7 +1,11 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue';
+import axios from 'axios';
+import { computed, nextTick, ref, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
 
 const props = defineProps({
     modelValue: { type: [Number, String], default: '' },
@@ -10,6 +14,7 @@ const props = defineProps({
     inputId: { type: String, default: 'ledger-picker' },
     error: { type: String, default: '' },
     help: { type: String, default: '' },
+    initial: { type: Object, default: null }, // a ledger to start with: { id, name, kind_label, balance }
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -17,7 +22,43 @@ const query = ref('');
 const results = ref([]);
 const open = ref(false);
 const active = ref(-1);
-const selected = ref(null);
+const selected = ref(props.initial ?? null);
+
+// Adding a ledger without leaving the form. Offered only for the kinds this list shows and this person may add.
+const page = usePage();
+const addable = computed(() => {
+    const shown = props.kinds ? props.kinds.split(',').map((k) => k.trim()) : null;
+    return (page.props.tenancy?.addable_ledger_kinds ?? []).filter((k) => !shown || shown.includes(k.value));
+});
+const adding = ref(false);
+const adder = ref({ kind: '', name: '', phone: '' });
+const addErrors = ref({});
+const addWorking = ref(false);
+
+function startAdding() {
+    adder.value = { kind: addable.value[0]?.value ?? '', name: query.value.trim(), phone: '' };
+    addErrors.value = {};
+    open.value = false;
+    adding.value = true;
+}
+
+async function saveNew() {
+    addWorking.value = true;
+    addErrors.value = {};
+
+    try {
+        const { data } = await axios.post(route('ledgers.store'), adder.value, { headers: { Accept: 'application/json' } });
+        adding.value = false;
+        choose(data);
+    } catch (error) {
+        const body = error.response?.data;
+        addErrors.value = error.response?.status === 422
+            ? Object.fromEntries(Object.entries(body.errors ?? {}).map(([field, messages]) => [field, messages[0]]))
+            : { name: 'Could not add it. Check your connection and try again.' };
+    } finally {
+        addWorking.value = false;
+    }
+}
 const loading = ref(false);
 const failed = ref(false);
 
@@ -149,10 +190,51 @@ function closeSoon() {
                     <p class="text-base font-medium text-gray-900">{{ item.name }}</p>
                     <p class="text-base text-gray-700">{{ item.kind_label }} · {{ item.balance }}</p>
                 </li>
+                <li v-if="addable.length && !loading" role="option" aria-selected="false" class="border-t border-gray-200">
+                    <button
+                        type="button"
+                        class="flex min-h-12 w-full items-center gap-2 px-3 text-left text-base font-medium text-teal-800 hover:bg-teal-50"
+                        @mousedown.prevent="startAdding"
+                    >
+                        <span aria-hidden="true">+</span>
+                        {{ query.trim() ? `Add “${query.trim()}” as new` : 'Add a new ledger' }}
+                    </button>
+                </li>
             </ul>
         </div>
 
         <p v-if="help && !selected" class="mt-1 text-base text-gray-700">{{ help }}</p>
         <InputError class="mt-2" :message="error" />
+
+        <ConfirmDialog
+            :show="adding"
+            title="Add a new ledger"
+            confirm-label="Add and use it"
+            :processing="addWorking"
+            @close="adding = false"
+            @confirm="saveNew"
+        >
+            <div v-if="addable.length > 1">
+                <InputLabel :for="`${inputId}-kind`" value="Type" />
+                <select
+                    :id="`${inputId}-kind`"
+                    v-model="adder.kind"
+                    class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
+                >
+                    <option v-for="kind in addable" :key="kind.value" :value="kind.value">{{ kind.label }}</option>
+                </select>
+                <InputError class="mt-2" :message="addErrors.kind" />
+            </div>
+            <div>
+                <InputLabel :for="`${inputId}-name`" value="Name" />
+                <TextInput :id="`${inputId}-name`" v-model="adder.name" class="mt-1 block w-full" autocomplete="off" required />
+                <InputError class="mt-2" :message="addErrors.name" />
+            </div>
+            <div>
+                <InputLabel :for="`${inputId}-phone`" value="Phone (optional)" />
+                <TextInput :id="`${inputId}-phone`" v-model="adder.phone" type="tel" class="mt-1 block w-full" autocomplete="off" />
+                <InputError class="mt-2" :message="addErrors.phone" />
+            </div>
+        </ConfirmDialog>
     </div>
 </template>

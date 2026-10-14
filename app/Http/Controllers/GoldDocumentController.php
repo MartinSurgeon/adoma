@@ -6,6 +6,7 @@ use App\Domain\Documents\Document;
 use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\PostingError;
 use App\Domain\Documents\PostingService;
+use App\Domain\Documents\RepeatOf;
 use App\Domain\Gold\FormulaSet;
 use App\Domain\Stock\LotAllocator;
 use App\Domain\Support\Money;
@@ -47,6 +48,7 @@ class GoldDocumentController extends Controller
             'today' => now()->toDateString(),
             'idempotencyKey' => (string) Str::uuid(),
             'baseKarat' => $formula->karat_base,
+            'prefill' => RepeatOf::from($request, DocumentType::from($type)),
             'inStock' => $type === 'sale' ? Money::format(LotAllocator::availableH($context->branch())) : null,
         ]);
     }

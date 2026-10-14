@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import Banner from '@/Components/Banner.vue';
@@ -18,18 +18,52 @@ const props = defineProps({
     today: String,
     idempotencyKey: String,
     cashLedgers: { type: Array, default: () => [] },
+    prefill: { type: Object, default: null }, // "record another like this"
 });
+
+// The cash account used last time is the likely one this time. It is remembered in this browser only.
+const rememberKey = `adoma.cash.${props.type}`;
+function rememberedCash() {
+    try {
+        const id = Number(localStorage.getItem(rememberKey));
+        return props.cashLedgers.some((l) => l.id === id) ? id : null;
+    } catch {
+        return null;
+    }
+}
+
+const fromPrefill = props.prefill?.cash_ledger_id;
+const startingCash = props.cashLedgers.some((l) => l.id === fromPrefill)
+    ? fromPrefill
+    : (rememberedCash() ?? props.cashLedgers[0]?.id ?? '');
 
 const form = useForm({
     date: props.today ?? '',
-    ledger_id: '',
-    cash_ledger_id: props.cashLedgers[0]?.id ?? '',
+    ledger_id: props.prefill?.ledger?.id ?? '',
+    cash_ledger_id: startingCash,
     amount: '',
-    note: '',
+    note: props.prefill?.note ?? '',
     idempotency_key: props.idempotencyKey ?? '',
 });
 
-const submit = () => form.post(route(`${props.type}s.store`));
+// Starting values are not "typed in", so they do not count as unsaved work.
+form.defaults();
+
+onMounted(() => {
+    // The person comes first, so the cursor starts there (unless it is already chosen).
+    if (!form.ledger_id) document.getElementById('party')?.focus();
+});
+
+const submit = () =>
+    form.post(route(`${props.type}s.store`), {
+        onSuccess: () => {
+            try {
+                localStorage.setItem(rememberKey, String(form.cash_ledger_id));
+            } catch {
+                // Private window or blocked storage: nothing is lost, it just will not be remembered.
+            }
+        },
+    });
 
 // The amount as it will read on the receipt, worked out while typing. The server checks it again on saving.
 const typed = computed(() => {
@@ -48,6 +82,8 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
         :processing="form.processing"
         :needs-office="needsOffice"
         :noun="type"
+        :dirty="form.isDirty"
+        :errors="form.errors"
         @submit="submit"
     >
         <template #subtitle>{{ office }}</template>
@@ -70,6 +106,7 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
                         :label="words.party"
                         kinds="customer,supplier,bank,cash,expense,branch"
                         :error="form.errors.ledger_id"
+                        :initial="prefill?.ledger"
                         help="Customers, suppliers, banks and other accounts in your list."
                     />
                 </div>

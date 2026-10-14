@@ -66,7 +66,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             <!-- The end of a posting: a clear success message, then the receipt and the next step right below. -->
             <Banner v-if="success" variant="success">
                 <p class="text-lg font-semibold">{{ success }}</p>
-                <p v-if="!reversed && !document.reverses" class="mt-1">Print the receipt, or record the next one.</p>
+                <p v-if="!reversed && !document.reverses" class="mt-1">Print the receipt, or record another. It starts with the same person and details, and you fill in the amounts.</p>
             </Banner>
 
             <Banner v-if="reversed" variant="info">
@@ -82,8 +82,9 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             <!-- One main action, one quieter one, the rest under More. -->
             <div class="flex flex-wrap items-center gap-3">
                 <ButtonLink :href="route('documents.print', { document: document.id, layout: 'a4' })" external>Print {{ noun }}</ButtonLink>
-                <ButtonLink v-if="canRecordAnother" :href="route(`${document.type}s.create`)" variant="secondary">Record another {{ noun }}</ButtonLink>
+                <ButtonLink v-if="canRecordAnother" :href="route(`${document.type}s.create`, { like: document.id })" variant="secondary">Record another {{ noun }}</ButtonLink>
                 <MoreMenu>
+                    <MenuItem v-if="canRecordAnother" :href="route(`${document.type}s.create`)">Start a blank {{ noun }}</MenuItem>
                     <MenuItem :href="route('documents.print', { document: document.id, layout: 'thermal' })" external>Print small receipt</MenuItem>
                     <MenuItem :href="route('documents.index')">All transactions</MenuItem>
                     <MenuItem v-if="canReverse" danger @click="confirming = true">Reverse this {{ noun }}</MenuItem>

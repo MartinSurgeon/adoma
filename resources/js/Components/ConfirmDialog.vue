@@ -14,6 +14,7 @@ defineProps({
     confirmLabel: { type: String, required: true },
     danger: { type: Boolean, default: false },
     processing: { type: Boolean, default: false },
+    cancelLabel: { type: String, default: 'Cancel' },
 });
 
 defineEmits(['confirm', 'close']);
@@ -29,7 +30,7 @@ defineEmits(['confirm', 'close']);
             </div>
 
             <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <SecondaryButton class="w-full sm:w-auto" @click="$emit('close')">Cancel</SecondaryButton>
+                <SecondaryButton class="w-full sm:w-auto" @click="$emit('close')">{{ cancelLabel }}</SecondaryButton>
                 <component :is="danger ? DangerButton : PrimaryButton" type="submit" class="w-full sm:w-auto" :disabled="processing">
                     {{ processing ? 'Working…' : confirmLabel }}
                 </component>

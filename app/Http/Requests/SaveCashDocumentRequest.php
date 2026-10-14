@@ -82,6 +82,12 @@ class SaveCashDocumentRequest extends FormRequest
         return [
             'date.before_or_equal' => 'The date cannot be in the future.',
             'date.date_format' => 'Enter the date as day, month and year.',
+            'date.required' => 'Enter the date.',
+            'ledger_id.required' => 'Choose someone from your list of ledgers.',
+            'ledger_id.integer' => 'Choose someone from your list of ledgers.',
+            'cash_ledger_id.required' => 'Choose a cash or bank account.',
+            'cash_ledger_id.integer' => 'Choose a cash or bank account.',
+            'amount.required' => 'Enter the amount.',
         ];
     }
 }

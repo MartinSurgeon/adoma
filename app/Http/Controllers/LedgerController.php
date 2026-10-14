@@ -8,6 +8,7 @@ use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\TenantContext;
 use App\Http\Requests\SaveLedgerRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -76,7 +77,7 @@ class LedgerController extends Controller
         return Inertia::render('Ledgers/Create', $this->formOptions($request, $kinds));
     }
 
-    public function store(SaveLedgerRequest $request): RedirectResponse
+    public function store(SaveLedgerRequest $request): RedirectResponse|JsonResponse
     {
         $kind = LedgerKind::from($request->validated('kind'));
         $shared = $request->boolean('is_shared');
@@ -93,6 +94,16 @@ class LedgerController extends Controller
             'name' => $request->validated('name'),
             'phone' => $request->validated('phone'),
         ]);
+
+        // Adding a ledger from inside a transaction form: hand back the new ledger so the form can use it at once.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id' => $ledger->id,
+                'name' => $ledger->name,
+                'kind_label' => $ledger->kind->label(),
+                'balance' => LedgerBalances::describe($ledger->kind, 0),
+            ], 201);
+        }
 
         return redirect()->route('ledgers.index')->with('success', "{$ledger->name} was added.");
     }
