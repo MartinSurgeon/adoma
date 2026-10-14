@@ -32,17 +32,17 @@ function show(value) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h1 class="text-xl font-semibold leading-tight text-gray-800">Activity</h1>
-            <p class="mt-1 text-sm text-gray-600">Who did what, newest first. Entries cannot be changed or removed.</p>
+            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Activity</h1>
+            <p class="mt-1 text-base text-gray-700">Who did what, newest first. Entries cannot be changed or removed.</p>
         </template>
 
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
             <div class="rounded-lg bg-white p-4 shadow-sm">
-                <label for="type" class="block text-sm font-medium text-gray-700">Show</label>
+                <label for="type" class="block text-base font-medium text-gray-700">Show</label>
                 <select
                     id="type"
                     v-model="selected"
-                    class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-64"
+                    class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-64"
                 >
                     <option value="">Everything</option>
                     <option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option>
@@ -51,13 +51,13 @@ function show(value) {
 
             <ul class="divide-y divide-gray-100 overflow-hidden rounded-lg bg-white shadow-sm">
                 <li v-for="log in logs.data" :key="log.id" class="p-4">
-                    <p class="text-sm text-gray-900">
+                    <p class="text-base text-gray-900">
                         <span class="font-semibold">{{ log.actor }}</span> {{ log.description }}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500">{{ when(log.when) }}</p>
+                    <p class="mt-1 text-base text-gray-700">{{ when(log.when) }}</p>
 
                     <details v-if="log.changes.length" class="mt-2 text-sm">
-                        <summary class="cursor-pointer text-teal-700 hover:underline">Details</summary>
+                        <summary class="flex min-h-12 cursor-pointer items-center text-teal-800 hover:underline">Details</summary>
                         <ul class="mt-2 space-y-1 text-gray-700">
                             <li v-for="change in log.changes" :key="change.field">
                                 <span class="font-medium capitalize">{{ change.field }}:</span>
@@ -67,7 +67,7 @@ function show(value) {
                     </details>
                 </li>
 
-                <li v-if="!logs.data.length" class="p-8 text-center text-sm text-gray-500">Nothing to show yet.</li>
+                <li v-if="!logs.data.length" class="p-8 text-center text-base text-gray-700">Nothing to show yet.</li>
             </ul>
 
             <Pagination :paginator="logs" />

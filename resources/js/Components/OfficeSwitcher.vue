@@ -24,7 +24,7 @@ function switchOffice(event) {
             id="office-switcher"
             :value="current"
             @change="switchOffice"
-            class="min-h-[44px] rounded-md border-gray-300 py-2 pe-9 ps-3 text-sm text-gray-700 shadow-sm focus:border-teal-600 focus:ring-teal-600"
+            class="min-h-12 rounded-md border-gray-300 py-2 pe-9 ps-3 text-base text-gray-700 shadow-sm focus:border-teal-600 focus:ring-teal-600"
         >
             <option v-if="tenancy.can_view_all" value="all">All offices</option>
             <option v-for="office in tenancy.branches" :key="office.id" :value="office.id">

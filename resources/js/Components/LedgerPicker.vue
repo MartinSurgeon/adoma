@@ -101,10 +101,10 @@ function closeSoon() {
 
         <div v-if="selected" class="mt-1 flex items-center justify-between gap-3 rounded-md border border-teal-600 bg-teal-50 p-3">
             <div class="min-w-0">
-                <p class="truncate text-sm font-medium text-gray-900">{{ selected.name }}</p>
-                <p class="text-xs text-gray-700">{{ selected.kind_label }} · {{ selected.balance }}</p>
+                <p class="truncate text-base font-medium text-gray-900">{{ selected.name }}</p>
+                <p class="text-base text-gray-700">{{ selected.kind_label }} · {{ selected.balance }}</p>
             </div>
-            <button type="button" @click="change" class="min-h-[44px] shrink-0 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50">
+            <button type="button" @click="change" class="min-h-12 shrink-0 rounded-md border border-gray-300 bg-white px-3 text-base text-gray-700 hover:bg-gray-50">
                 Change
             </button>
         </div>
@@ -123,7 +123,7 @@ function closeSoon() {
                 @focus="show"
                 @blur="closeSoon"
                 @keydown="onKey"
-                class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600"
+                class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
             />
 
             <ul
@@ -132,9 +132,9 @@ function closeSoon() {
                 role="listbox"
                 class="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
             >
-                <li v-if="loading" class="px-3 py-2 text-sm text-gray-500">Searching…</li>
+                <li v-if="loading" class="px-3 py-2 text-base text-gray-700">Searching…</li>
                 <li v-else-if="failed" class="px-3 py-2 text-sm text-red-700">Could not search. Check your connection and try again.</li>
-                <li v-else-if="!results.length" class="px-3 py-2 text-sm text-gray-600">
+                <li v-else-if="!results.length" class="px-3 py-2 text-base text-gray-700">
                     {{ query ? 'No ledger matches that name.' : 'No ledgers yet.' }}
                 </li>
                 <li
@@ -146,13 +146,13 @@ function closeSoon() {
                     class="cursor-pointer px-3 py-2"
                     :class="index === active ? 'bg-teal-50' : 'hover:bg-gray-50'"
                 >
-                    <p class="text-sm font-medium text-gray-900">{{ item.name }}</p>
-                    <p class="text-xs text-gray-600">{{ item.kind_label }} · {{ item.balance }}</p>
+                    <p class="text-base font-medium text-gray-900">{{ item.name }}</p>
+                    <p class="text-base text-gray-700">{{ item.kind_label }} · {{ item.balance }}</p>
                 </li>
             </ul>
         </div>
 
-        <p v-if="help && !selected" class="mt-1 text-xs text-gray-500">{{ help }}</p>
+        <p v-if="help && !selected" class="mt-1 text-base text-gray-700">{{ help }}</p>
         <InputError class="mt-2" :message="error" />
     </div>
 </template>

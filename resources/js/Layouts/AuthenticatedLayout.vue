@@ -85,14 +85,14 @@ const phoneSettings = computed(() =>
         <!-- Sidebar, large screens -->
         <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-teal-900 lg:flex" aria-label="Main">
             <div class="flex h-16 items-center px-6">
-                <Link :href="route('dashboard')" class="text-xl font-semibold tracking-tight text-white">
+                <Link :href="route('dashboard')" class="inline-flex min-h-12 items-center text-xl font-semibold tracking-tight text-white">
                     Adoma<span class="text-amber-400">.</span>
                 </Link>
             </div>
 
             <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-4">
                 <div v-for="(section, index) in sections" :key="index">
-                    <p v-if="section.title" class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-teal-200">
+                    <p v-if="section.title" class="px-3 pb-2 text-sm font-semibold uppercase tracking-wider text-teal-100">
                         {{ section.title }}
                     </p>
                     <ul class="space-y-1">
@@ -100,7 +100,7 @@ const phoneSettings = computed(() =>
                             <Link
                                 :href="item.href"
                                 :aria-current="item.active ? 'page' : undefined"
-                                class="group flex min-h-[44px] items-center gap-3 rounded-md px-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                                class="group flex min-h-12 items-center gap-3 rounded-md px-3 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                                 :class="item.active ? 'bg-teal-800 text-white' : 'text-teal-50 hover:bg-teal-800/60 hover:text-white'"
                             >
                                 <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -118,10 +118,10 @@ const phoneSettings = computed(() =>
         <div class="lg:pl-64">
             <!-- Top bar -->
             <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
-                <Link :href="route('dashboard')" class="text-lg font-semibold text-teal-900 lg:hidden">
-                    Adoma<span class="text-amber-500">.</span>
+                <Link :href="route('dashboard')" class="inline-flex min-h-12 items-center text-lg font-semibold text-teal-900 lg:hidden">
+                    Adoma<span class="text-amber-700" aria-hidden="true">.</span>
                 </Link>
-                <span class="hidden text-sm text-gray-600 lg:block">{{ tenancy?.tenant }}</span>
+                <span class="hidden text-base text-gray-700 lg:block">{{ tenancy?.tenant }}</span>
 
                 <div class="flex items-center gap-2 sm:gap-3">
                     <OfficeSwitcher />
@@ -130,13 +130,13 @@ const phoneSettings = computed(() =>
                         <template #trigger>
                             <button
                                 type="button"
-                                class="inline-flex min-h-[44px] items-center gap-2 rounded-md px-3 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
+                                class="inline-flex min-h-12 items-center gap-2 rounded-md px-3 text-base font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
                             >
                                 <span class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-900" aria-hidden="true">
                                     {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
                                 </span>
                                 <span class="hidden max-w-[10rem] truncate sm:inline">{{ $page.props.auth.user.name }}</span>
-                                <svg class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <svg class="h-4 w-4 text-gray-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                                 <span class="sr-only">Account menu</span>
@@ -144,7 +144,7 @@ const phoneSettings = computed(() =>
                         </template>
 
                         <template #content>
-                            <div class="border-b border-gray-100 px-4 py-2 text-xs text-gray-500">{{ $page.props.auth.user.email }}</div>
+                            <div class="border-b border-gray-100 px-4 py-2 text-base text-gray-700">{{ $page.props.auth.user.email }}</div>
                             <div v-if="phoneSettings.length" class="lg:hidden">
                                 <DropdownLink v-for="item in phoneSettings" :key="item.label" :href="item.href">{{ item.label }}</DropdownLink>
                             </div>
@@ -174,8 +174,8 @@ const phoneSettings = computed(() =>
                     <Link
                         :href="item.href"
                         :aria-current="item.active ? 'page' : undefined"
-                        class="flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
-                        :class="item.active ? 'text-teal-800' : 'text-gray-600'"
+                        class="flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
+                        :class="item.active ? 'text-teal-800' : 'text-gray-700'"
                     >
                         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" :stroke-width="item.active ? 2.2 : 1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path :d="icons[item.icon]" />

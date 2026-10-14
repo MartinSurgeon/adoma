@@ -2,8 +2,13 @@
 import { computed, reactive, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ButtonLink from '@/Components/ButtonLink.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import MenuItem from '@/Components/MenuItem.vue';
+import MoreMenu from '@/Components/MoreMenu.vue';
 import Pagination from '@/Components/Pagination.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import TextInput from '@/Components/TextInput.vue';
 
 const props = defineProps({ documents: Object, filters: Object, types: Array, canRecord: Boolean });
 
@@ -23,6 +28,8 @@ watch(() => [filter.type, filter.status, filter.from, filter.to], apply);
 
 const clear = () => Object.assign(filter, { q: '', type: '', status: '', from: '', to: '' });
 const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
 </script>
 
 <template>
@@ -32,39 +39,44 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-xl font-semibold leading-tight text-gray-900">Transactions</h1>
-                    <p class="mt-1 text-sm text-gray-600">Receipts and payments, newest first.</p>
+                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">Transactions</h1>
+                    <p class="mt-1 text-base text-gray-700">Everything recorded, newest first.</p>
                 </div>
-                <Link v-if="canRecord" :href="route('receipts.create')">
-                    <PrimaryButton type="button" class="min-h-[44px]">Record a receipt</PrimaryButton>
-                </Link>
+                <div v-if="canRecord" class="flex flex-wrap items-center gap-3">
+                    <ButtonLink :href="route('purchases.create')">Record a purchase</ButtonLink>
+                    <ButtonLink :href="route('sales.create')" variant="secondary">Record a sale</ButtonLink>
+                    <MoreMenu label="More ways to record">
+                        <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
+                        <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
+                    </MoreMenu>
+                </div>
             </div>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
-            <div class="grid gap-3 rounded-lg bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
+            <div class="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div class="sm:col-span-2 lg:col-span-1">
-                    <label for="q" class="block text-sm font-medium text-gray-700">Search</label>
-                    <input id="q" type="search" v-model="filter.q" placeholder="Number or name" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600" />
+                    <InputLabel for="q" value="Search" />
+                    <TextInput id="q" type="search" v-model="filter.q" placeholder="Number or name" class="mt-1 block w-full" />
                 </div>
                 <div>
-                    <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-                    <select id="type" v-model="filter.type" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600">
+                    <InputLabel for="type" value="Type" />
+                    <select id="type" v-model="filter.type" :class="select">
                         <option value="">All types</option>
                         <option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option>
                     </select>
                 </div>
                 <div>
-                    <label for="from" class="block text-sm font-medium text-gray-700">From</label>
-                    <input id="from" type="date" v-model="filter.from" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600" />
+                    <InputLabel for="from" value="From" />
+                    <TextInput id="from" type="date" v-model="filter.from" class="mt-1 block w-full" />
                 </div>
                 <div>
-                    <label for="to" class="block text-sm font-medium text-gray-700">To</label>
-                    <input id="to" type="date" v-model="filter.to" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600" />
+                    <InputLabel for="to" value="To" />
+                    <TextInput id="to" type="date" v-model="filter.to" class="mt-1 block w-full" />
                 </div>
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-                    <select id="status" v-model="filter.status" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600">
+                    <InputLabel for="status" value="Status" />
+                    <select id="status" v-model="filter.status" :class="select">
                         <option value="">Any</option>
                         <option value="posted">Saved</option>
                         <option value="reversed">Reversed</option>
@@ -72,44 +84,42 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-lg bg-white shadow-sm">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <div class="card overflow-x-auto">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">Number</th>
-                            <th scope="col" class="px-4 py-3">Date</th>
-                            <th scope="col" class="px-4 py-3">Who</th>
-                            <th scope="col" class="px-4 py-3">Office</th>
-                            <th scope="col" class="px-4 py-3 text-right">Amount (GH₵)</th>
-                            <th scope="col" class="px-4 py-3">Status</th>
+                            <th scope="col">Number</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Who</th>
+                            <th scope="col">Office</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="num">Amount (GH₵)</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <tr v-for="d in documents.data" :key="d.id" class="hover:bg-gray-50">
-                            <td class="px-4 py-3">
-                                <Link :href="route('documents.show', d.id)" class="inline-flex min-h-[44px] items-center font-medium text-teal-800 hover:underline">{{ d.number }}</Link>
-                                <span class="block text-xs text-gray-500">{{ d.type_label }}</span>
+                    <tbody>
+                        <tr v-for="d in documents.data" :key="d.id">
+                            <td>
+                                <Link :href="route('documents.show', d.id)" class="inline-flex min-h-12 items-center font-medium text-teal-800 hover:underline">{{ d.number }}</Link>
+                                <span class="block text-sm text-gray-700">{{ d.type_label }}</span>
                             </td>
-                            <td class="px-4 py-3 text-gray-700">{{ day(d.date) }}</td>
-                            <td class="px-4 py-3 text-gray-900">{{ d.party }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ d.office }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums text-gray-900">{{ d.total }}</td>
-                            <td class="px-4 py-3">
+                            <td>{{ day(d.date) }}</td>
+                            <td>{{ d.party }}</td>
+                            <td>{{ d.office }}</td>
+                            <td>
                                 <span
-                                    class="rounded-full px-2 py-0.5 text-xs font-medium"
-                                    :class="d.status === 'reversed' ? 'bg-gray-200 text-gray-800' : d.is_reversal ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-800'"
+                                    class="inline-flex rounded-full px-3 py-1 text-sm font-medium"
+                                    :class="d.status === 'reversed' ? 'bg-gray-200 text-gray-900' : d.is_reversal ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-900'"
                                 >
                                     {{ d.status === 'reversed' ? 'Reversed' : d.is_reversal ? 'Reversal' : 'Saved' }}
                                 </span>
                             </td>
+                            <td class="num font-semibold">{{ d.total }}</td>
                         </tr>
                         <tr v-if="!documents.data.length">
-                            <td colspan="6" class="px-4 py-10 text-center">
-                                <p class="text-gray-600">{{ hasFilter ? 'No transactions match your search.' : 'No transactions yet.' }}</p>
-                                <button v-if="hasFilter" type="button" @click="clear" class="mt-3 min-h-[44px] rounded-md border border-gray-300 px-4 text-gray-700 hover:bg-gray-50">Clear search</button>
-                                <Link v-else-if="canRecord" :href="route('receipts.create')" class="mt-3 inline-block">
-                                    <PrimaryButton type="button" class="min-h-[44px]">Record the first receipt</PrimaryButton>
-                                </Link>
+                            <td colspan="6" class="py-10 text-center">
+                                <p class="text-base text-gray-700">{{ hasFilter ? 'No transactions match your search.' : 'No transactions yet.' }}</p>
+                                <SecondaryButton v-if="hasFilter" type="button" class="mt-3" @click="clear">Clear search</SecondaryButton>
+                                <ButtonLink v-else-if="canRecord" :href="route('purchases.create')" class="mt-3">Record the first purchase</ButtonLink>
                             </td>
                         </tr>
                     </tbody>

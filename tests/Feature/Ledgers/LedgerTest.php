@@ -464,3 +464,18 @@ it('does not offer actions people cannot use', function () {
     $viewer = $rows($this->w->kumasiViewer);
     expect($viewer['Passion Gold']['can_edit'])->toBeFalse();
 });
+
+// ---------------------------------------------------------------- list order
+
+it('lists ledgers in sections by type, then by name', function () {
+    ledger($this->w, $this->w->kumasi, 'Zed Supplier', LedgerKind::Supplier);
+    ledger($this->w, $this->w->kumasi, 'Zara Customer', LedgerKind::Customer);
+    ledger($this->w, $this->w->kumasi, 'Cash Kumasi', LedgerKind::Cash);
+    ledger($this->w, $this->w->kumasi, 'Abe Customer', LedgerKind::Customer);
+    ledger($this->w, $this->w->kumasi, 'Black', LedgerKind::Supplier);
+
+    $page = $this->actingAs($this->w->kumasiClerk)->get(route('ledgers.index'))->assertOk()->viewData('page')['props'];
+    $rows = collect($page['ledgers']['data'])->whereIn('kind', ['customer', 'supplier', 'cash']);
+
+    expect($rows->pluck('name')->values()->all())->toBe(['Abe Customer', 'Zara Customer', 'Black', 'Zed Supplier', 'Cash Kumasi']);
+});

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Domain\Audit\AuditLog;
 use App\Domain\Documents\Document;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
@@ -38,19 +37,25 @@ class DashboardController extends Controller
             ->groupBy('kind')
             ->pluck('total', 'kind');
 
-        $recent = Ledger::query()
-            ->with('branch')
-            ->where('is_system', false)
-            ->latest('id')
-            ->limit(5)
-            ->get()
-            ->map(fn (Ledger $ledger) => [
-                'id' => $ledger->id,
-                'name' => $ledger->name,
-                'kind_label' => $ledger->kind->label(),
-                'office' => $ledger->is_shared ? 'All offices' : $ledger->branch?->name,
-                'added' => $ledger->created_at->toIso8601String(),
-            ]);
+        // The latest transactions the signed-in person may read, newest first, for the office in context.
+        $recent = $user->can('viewAny', Document::class)
+            ? Document::query()
+                ->with(['ledger', 'branch'])
+                ->orderByDesc('date')->orderByDesc('id')
+                ->limit(5)
+                ->get()
+                ->map(fn (Document $d) => [
+                    'id' => $d->id,
+                    'number' => $d->number,
+                    'type_label' => $d->type->label(),
+                    'date' => $d->date->toDateString(),
+                    'party' => $d->ledger?->name,
+                    'office' => $d->branch?->name,
+                    'total' => Money::format(Money::cents($d->total)),
+                    'status' => $d->status,
+                    'is_reversal' => $d->isReversal(),
+                ])->values()
+            : collect();
 
         // Gold in stock, for the offices in context: the number an owner looks for first.
         $goldInStock = StockLot::query()->where('remaining_g', '>', 0)->sum('remaining_g');
@@ -66,14 +71,6 @@ class DashboardController extends Controller
             'recent' => $recent,
             'canCreate' => $user->can('createAny', Ledger::class),
             'canRecord' => $user->can('create', [Document::class, 'receipt']),
-            'activity' => $user->can('viewAny', AuditLog::class)
-                ? AuditLog::query()->orderByDesc('id')->limit(5)->get()->map(fn (AuditLog $log) => [
-                    'id' => $log->id,
-                    'actor' => $log->actor_name ?? 'The system',
-                    'description' => $log->describe(),
-                    'when' => $log->created_at->toIso8601String(),
-                ])
-                : null,
         ]);
     }
 }

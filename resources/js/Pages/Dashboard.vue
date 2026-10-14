@@ -2,7 +2,10 @@
 import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import ButtonLink from '@/Components/ButtonLink.vue';
+import MenuItem from '@/Components/MenuItem.vue';
+import MoreMenu from '@/Components/MoreMenu.vue';
+import StatCard from '@/Components/StatCard.vue';
 
 const props = defineProps({
     where: String,
@@ -11,13 +14,11 @@ const props = defineProps({
     recent: Array,
     canCreate: Boolean,
     canRecord: Boolean,
-    activity: { type: Array, default: null },
 });
 
 const isEmpty = computed(() => props.stats.every((s) => s.count === 0) && props.recent.length === 0);
 
-const ago = (iso) =>
-    new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 </script>
 
 <template>
@@ -25,113 +26,87 @@ const ago = (iso) =>
 
     <AuthenticatedLayout>
         <template #header>
-            <h1 class="text-xl font-semibold leading-tight text-gray-900">Home</h1>
-            <p class="mt-1 text-sm text-gray-600">{{ where }}</p>
+            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Home</h1>
+            <p class="mt-1 text-base text-gray-700">{{ where }}</p>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-            <!-- What you have. Most important first. -->
+            <!-- 1. What you have. The stock total opens the page, in the same card as every other figure. -->
             <section aria-labelledby="have-heading">
-                <h2 id="have-heading" class="text-base font-semibold text-gray-900">What you have</h2>
+                <h2 id="have-heading" class="text-lg font-semibold text-gray-900">What you have</h2>
                 <ul class="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
                     <li class="col-span-2 lg:col-span-1">
-                        <div class="block min-h-[44px] rounded-lg bg-teal-700 p-4 text-white shadow-sm">
-                            <p class="text-sm text-teal-50">Gold in stock</p>
-                            <p class="mt-1 text-3xl font-semibold tabular-nums">{{ goldInStock }}<span class="ms-1 text-base font-normal text-teal-100">g</span></p>
-                        </div>
+                        <StatCard label="Gold in stock" :value="goldInStock" unit="g" />
                     </li>
                     <li v-for="stat in stats" :key="stat.label">
-                        <Link
-                            :href="stat.href"
-                            class="block min-h-[44px] rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-100 transition hover:ring-teal-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                        >
-                            <p class="text-sm text-gray-600">{{ stat.label }}</p>
-                            <p class="mt-1 text-3xl font-semibold tabular-nums text-gray-900">{{ stat.count }}</p>
-                        </Link>
+                        <StatCard :label="stat.label" :value="stat.count" :href="stat.href" />
                     </li>
                 </ul>
             </section>
 
-            <!-- Record money: one main action, one quieter one. -->
-            <section v-if="canRecord" aria-labelledby="record-heading" class="rounded-lg bg-white p-6 shadow-sm">
-                <h2 id="record-heading" class="text-base font-semibold text-gray-900">Record a transaction</h2>
-                <p class="mt-1 text-sm text-gray-600">Gold you bought or sold, or money that came in or went out.</p>
-                <div class="mt-4 flex flex-wrap items-center gap-3">
-                    <Link :href="route('purchases.create')">
-                        <PrimaryButton class="min-h-[44px]" type="button">Record a purchase</PrimaryButton>
-                    </Link>
-                    <Link
-                        v-for="item in [
-                            { label: 'Record a sale', href: route('sales.create') },
-                            { label: 'Record a receipt', href: route('receipts.create') },
-                            { label: 'Record a payment', href: route('payments.create') },
-                        ]"
-                        :key="item.label"
-                        :href="item.href"
-                        class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        {{ item.label }}
-                    </Link>
-                </div>
-            </section>
-
-            <!-- Ledgers: one main action, one quieter one. -->
-            <section aria-labelledby="next-heading" class="rounded-lg bg-white p-6 shadow-sm">
-                <h2 id="next-heading" class="text-base font-semibold text-gray-900">
-                    {{ isEmpty ? 'Start by adding your first ledger' : 'What would you like to do?' }}
+            <!-- 2. What to do next: one main action, one quieter one, the rest in More. -->
+            <section aria-labelledby="next-heading" class="card p-6">
+                <h2 id="next-heading" class="text-lg font-semibold text-gray-900">
+                    {{ isEmpty && canCreate ? 'Start by adding your first ledger' : 'Record a transaction' }}
                 </h2>
-                <p class="mt-1 text-sm text-gray-600">
-                    {{ isEmpty
+                <p class="mt-1 text-base text-gray-700">
+                    {{ isEmpty && canCreate
                         ? 'A ledger is an account for a customer, supplier, bank or cost. Add the ones you deal with most.'
-                        : 'Add a new customer, supplier or account, or look up one you already have.' }}
+                        : 'Gold you bought or sold, or money that came in or went out.' }}
                 </p>
+
                 <div class="mt-4 flex flex-wrap items-center gap-3">
-                    <Link v-if="canCreate" :href="route('ledgers.create')">
-                        <PrimaryButton class="min-h-[44px]" type="button">Add ledger</PrimaryButton>
-                    </Link>
-                    <Link
-                        :href="route('ledgers.index')"
-                        class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        Find a ledger
-                    </Link>
+                    <template v-if="isEmpty && canCreate">
+                        <ButtonLink :href="route('ledgers.create')">Add a ledger</ButtonLink>
+                        <ButtonLink :href="route('ledgers.index')" variant="secondary">Find a ledger</ButtonLink>
+                    </template>
+
+                    <template v-else-if="canRecord">
+                        <ButtonLink :href="route('purchases.create')">Record a purchase</ButtonLink>
+                        <ButtonLink :href="route('sales.create')" variant="secondary">Record a sale</ButtonLink>
+                        <MoreMenu label="More ways to record">
+                            <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
+                            <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
+                            <MenuItem v-if="canCreate" :href="route('ledgers.create')">Add a ledger</MenuItem>
+                            <MenuItem :href="route('ledgers.index')">Find a ledger</MenuItem>
+                        </MoreMenu>
+                    </template>
+
+                    <template v-else>
+                        <ButtonLink :href="route('ledgers.index')">Find a ledger</ButtonLink>
+                    </template>
                 </div>
             </section>
 
-            <div class="grid gap-8 lg:grid-cols-2">
-                <!-- Recently added -->
-                <section v-if="recent.length" aria-labelledby="recent-heading" class="rounded-lg bg-white p-6 shadow-sm">
-                    <h2 id="recent-heading" class="text-base font-semibold text-gray-900">Recently added</h2>
-                    <ul class="mt-3 divide-y divide-gray-100">
-                        <li v-for="item in recent" :key="item.id" class="flex items-baseline justify-between gap-4 py-3">
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-medium text-gray-900">{{ item.name }}</p>
-                                <p class="text-xs text-gray-600">{{ item.kind_label }} · {{ item.office }}</p>
-                            </div>
-                            <p class="shrink-0 text-xs text-gray-500">{{ ago(item.added) }}</p>
-                        </li>
-                    </ul>
-                    <Link :href="route('ledgers.index')" class="mt-3 inline-block text-sm font-medium text-teal-700 hover:underline">
-                        See all ledgers
-                    </Link>
-                </section>
+            <!-- 3. Recent activity comes last: what just happened. -->
+            <section aria-labelledby="recent-heading" class="card p-6">
+                <h2 id="recent-heading" class="text-lg font-semibold text-gray-900">Recent activity</h2>
 
-                <!-- Recent activity, for owners and admins -->
-                <section v-if="activity && activity.length" aria-labelledby="activity-heading" class="rounded-lg bg-white p-6 shadow-sm">
-                    <h2 id="activity-heading" class="text-base font-semibold text-gray-900">Recent activity</h2>
-                    <ul class="mt-3 divide-y divide-gray-100">
-                        <li v-for="log in activity" :key="log.id" class="py-3">
-                            <p class="text-sm text-gray-900">
-                                <span class="font-semibold">{{ log.actor }}</span> {{ log.description }}
-                            </p>
-                            <p class="text-xs text-gray-500">{{ ago(log.when) }}</p>
-                        </li>
-                    </ul>
-                    <Link :href="route('activity.index')" class="mt-3 inline-block text-sm font-medium text-teal-700 hover:underline">
-                        See all activity
-                    </Link>
-                </section>
-            </div>
+                <ul v-if="recent.length" class="mt-3 divide-y divide-gray-200">
+                    <li v-for="item in recent" :key="item.id">
+                        <Link :href="route('documents.show', item.id)" class="flex min-h-12 items-center justify-between gap-4 py-3 hover:bg-gray-50">
+                            <span class="min-w-0">
+                                <span class="block truncate text-base font-medium text-gray-900">{{ item.party ?? item.type_label }}</span>
+                                <span class="block text-sm text-gray-700">
+                                    {{ item.type_label }} · {{ item.number }} · {{ day(item.date) }}
+                                    <span v-if="item.status === 'reversed'" class="font-medium"> · Reversed</span>
+                                    <span v-else-if="item.is_reversal" class="font-medium"> · Reversal</span>
+                                </span>
+                            </span>
+                            <span class="shrink-0 text-right text-base font-semibold tabular-nums text-gray-900">{{ item.total }}</span>
+                        </Link>
+                    </li>
+                </ul>
+                <p v-else class="mt-3 text-base text-gray-700">Nothing has been recorded yet.</p>
+
+                <Link
+                    v-if="recent.length"
+                    :href="route('documents.index')"
+                    class="mt-3 inline-flex min-h-12 items-center text-base font-medium text-teal-800 hover:underline"
+                >
+                    See all transactions
+                </Link>
+            </section>
         </div>
     </AuthenticatedLayout>
 </template>

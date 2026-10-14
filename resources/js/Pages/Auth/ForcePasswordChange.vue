@@ -24,7 +24,7 @@ const submit = () => {
         <Head title="Choose a new password" />
 
         <h1 class="text-lg font-semibold text-gray-900">Choose your own password</h1>
-        <p class="mb-4 mt-1 text-sm text-gray-600">
+        <p class="mb-4 mt-1 text-base text-gray-700">
             Your admin gave you a temporary password. Choose a new one to continue.
         </p>
 
@@ -53,7 +53,7 @@ const submit = () => {
                     required
                     autocomplete="new-password"
                 />
-                <p class="mt-1 text-xs text-gray-500">At least 10 characters, with letters and numbers.</p>
+                <p class="mt-1 text-base text-gray-700">At least 10 characters, with letters and numbers.</p>
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
@@ -75,11 +75,11 @@ const submit = () => {
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="text-sm text-gray-600 underline hover:text-gray-900"
+                    class="text-base text-gray-700 underline hover:text-gray-900"
                 >
                     Sign out
                 </Link>
-                <PrimaryButton class="min-h-[44px]" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                <PrimaryButton class="min-h-12" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                     Save new password
                 </PrimaryButton>
             </div>

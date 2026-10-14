@@ -15,8 +15,8 @@ defineProps({
 
     <AuthenticatedLayout>
         <template #header>
-            <h1 class="text-xl font-semibold leading-tight text-gray-800">Add a user</h1>
-            <p class="mt-1 text-sm text-gray-600">
+            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Add a user</h1>
+            <p class="mt-1 text-base text-gray-700">
                 You will get a temporary password to give them. They choose their own when they first sign in.
             </p>
         </template>

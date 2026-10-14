@@ -1,9 +1,16 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Banner from '@/Components/Banner.vue';
+import ButtonLink from '@/Components/ButtonLink.vue';
+import ConfirmDialog from '@/Components/ConfirmDialog.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import MenuItem from '@/Components/MenuItem.vue';
+import MoreMenu from '@/Components/MoreMenu.vue';
 import Pagination from '@/Components/Pagination.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import TextInput from '@/Components/TextInput.vue';
 
 const props = defineProps({
     ledgers: Object,
@@ -39,15 +46,32 @@ function clearFilters() {
     filter.show_off = false;
 }
 
-function toggle(ledger) {
-    const message = ledger.is_active
-        ? `Switch off ${ledger.name}? It stays in reports but cannot be used in new transactions.`
-        : `Switch on ${ledger.name}?`;
-
-    if (confirm(message)) {
-        router.patch(route('ledgers.toggle', ledger.id), {}, { preserveScroll: true });
+// The list arrives sorted by type, so each run of the same type becomes one titled section.
+const sections = computed(() => {
+    const result = [];
+    for (const ledger of props.ledgers.data) {
+        const last = result[result.length - 1];
+        if (last && last.kind === ledger.kind) last.rows.push(ledger);
+        else result.push({ kind: ledger.kind, label: ledger.kind_label, rows: [ledger] });
     }
+    return result;
+});
+
+const target = ref(null);
+const working = ref(false);
+
+function toggle() {
+    working.value = true;
+    router.patch(route('ledgers.toggle', target.value.id), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            working.value = false;
+            target.value = null;
+        },
+    });
 }
+
+const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-48';
 </script>
 
 <template>
@@ -57,114 +81,81 @@ function toggle(ledger) {
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-xl font-semibold leading-tight text-gray-800">Ledgers</h1>
-                    <p class="mt-1 text-sm text-gray-600">Customers, suppliers, banks, cash accounts and expenses.</p>
+                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">Ledgers</h1>
+                    <p class="mt-1 text-base text-gray-700">Customers, suppliers, banks, cash accounts and expenses.</p>
                 </div>
-                <Link v-if="canCreate" :href="route('ledgers.create')">
-                    <PrimaryButton class="min-h-[44px]" type="button">Add ledger</PrimaryButton>
-                </Link>
+                <ButtonLink v-if="canCreate" :href="route('ledgers.create')">Add ledger</ButtonLink>
             </div>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
-            <div v-if="success" role="status" class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-                {{ success }}
-            </div>
+            <Banner v-if="success" variant="success">{{ success }}</Banner>
 
             <!-- Find -->
-            <div class="flex flex-col gap-3 rounded-lg bg-white p-4 shadow-sm sm:flex-row sm:items-end">
+            <div class="card flex flex-col gap-4 p-4 sm:flex-row sm:items-end">
                 <div class="flex-1">
-                    <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
-                    <input
-                        id="search"
-                        type="search"
-                        v-model="filter.q"
-                        placeholder="Name or phone"
-                        class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600"
-                    />
+                    <InputLabel for="search" value="Search" />
+                    <TextInput id="search" type="search" v-model="filter.q" placeholder="Name or phone" class="mt-1 block w-full" />
                 </div>
                 <div>
-                    <label for="kind" class="block text-sm font-medium text-gray-700">Type</label>
-                    <select
-                        id="kind"
-                        v-model="filter.kind"
-                        class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-48"
-                    >
+                    <InputLabel for="kind" value="Type" />
+                    <select id="kind" v-model="filter.kind" :class="select">
                         <option value="">All types</option>
                         <option v-for="kind in kinds" :key="kind.value" :value="kind.value">{{ kind.label }}</option>
                     </select>
                 </div>
-                <label class="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-gray-700">
-                    <input type="checkbox" v-model="filter.show_off" class="rounded text-teal-700 focus:ring-teal-600" />
+                <label class="flex min-h-12 cursor-pointer items-center gap-3 text-base text-gray-800">
+                    <input type="checkbox" v-model="filter.show_off" class="h-5 w-5 rounded text-teal-700 focus:ring-teal-600" />
                     Show switched-off
                 </label>
             </div>
 
-            <div class="overflow-x-auto rounded-lg bg-white shadow-sm">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <div class="card overflow-x-auto">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">Name</th>
-                            <th scope="col" class="px-4 py-3">Type</th>
-                            <th scope="col" class="px-4 py-3">Group</th>
-                            <th scope="col" class="px-4 py-3">Office</th>
-                            <th scope="col" class="px-4 py-3">Balance</th>
-                            <th scope="col" class="px-4 py-3 text-right">Actions</th>
+                            <th scope="col">Name</th>
+                            <th scope="col" class="hidden sm:table-cell">Office</th>
+                            <th scope="col" class="num">Balance</th>
+                            <th scope="col"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <tr v-for="ledger in ledgers.data" :key="ledger.id" :class="{ 'bg-gray-50 text-gray-500': !ledger.is_active }">
-                            <td class="px-4 py-3">
-                                <div class="font-medium" :class="ledger.is_active ? 'text-gray-900' : 'text-gray-500'">
+
+                    <tbody v-for="section in sections" :key="section.kind">
+                        <tr class="group-row">
+                            <th scope="colgroup" colspan="4">{{ section.label }}s</th>
+                        </tr>
+                        <tr v-for="ledger in section.rows" :key="ledger.id" :class="{ 'bg-gray-50': !ledger.is_active }">
+                            <td>
+                                <Link :href="route('ledgers.statement', ledger.id)" class="inline-flex min-h-12 items-center font-medium text-teal-800 hover:underline">
                                     {{ ledger.name }}
-                                    <span v-if="!ledger.is_active" class="ms-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">Switched off</span>
-                                </div>
-                                <div v-if="ledger.phone" class="text-gray-500">{{ ledger.phone }}</div>
+                                </Link>
+                                <span v-if="!ledger.is_active" class="ms-2 rounded-full bg-gray-200 px-3 py-1 text-sm font-medium text-gray-900">Switched off</span>
+                                <span v-if="ledger.phone" class="block text-sm text-gray-700">{{ ledger.phone }}</span>
                             </td>
-                            <td class="px-4 py-3">{{ ledger.kind_label }}</td>
-                            <td class="px-4 py-3">{{ ledger.group }}</td>
-                            <td class="px-4 py-3">{{ ledger.office }}</td>
-                            <td class="whitespace-nowrap px-4 py-3 tabular-nums text-gray-800">{{ ledger.balance }}</td>
-                            <td class="px-4 py-3">
-                                <div class="flex flex-wrap justify-end gap-2">
-                                    <Link
-                                        :href="route('ledgers.statement', ledger.id)"
-                                        class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-3 text-gray-700 hover:bg-gray-50"
-                                    >
-                                        Statement
-                                    </Link>
-                                    <Link
-                                        v-if="ledger.can_edit"
-                                        :href="route('ledgers.edit', ledger.id)"
-                                        class="inline-flex min-h-[44px] items-center rounded-md border border-gray-300 px-3 text-gray-700 hover:bg-gray-50"
-                                    >
-                                        Edit
-                                    </Link>
-                                    <button
-                                        v-if="ledger.can_toggle"
-                                        type="button"
-                                        @click="toggle(ledger)"
-                                        class="min-h-[44px] rounded-md border px-3"
-                                        :class="ledger.is_active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-                                    >
+                            <td class="hidden sm:table-cell">{{ ledger.office }}</td>
+                            <td class="num whitespace-nowrap">{{ ledger.balance }}</td>
+                            <td class="text-right">
+                                <MoreMenu v-if="ledger.can_edit || ledger.can_toggle" :label="`More actions for ${ledger.name}`">
+                                    <MenuItem :href="route('ledgers.statement', ledger.id)">Statement</MenuItem>
+                                    <MenuItem v-if="ledger.can_edit" :href="route('ledgers.edit', ledger.id)">Edit</MenuItem>
+                                    <MenuItem v-if="ledger.can_toggle" :danger="ledger.is_active" @click="target = ledger">
                                         {{ ledger.is_active ? 'Switch off' : 'Switch on' }}
-                                    </button>
-                                    <span v-if="ledger.is_system" class="self-center text-xs text-gray-400">Managed by the system</span>
-                                </div>
+                                    </MenuItem>
+                                </MoreMenu>
+                                <span v-else-if="ledger.is_system" class="text-sm text-gray-700">System</span>
                             </td>
                         </tr>
+                    </tbody>
 
-                        <tr v-if="!ledgers.data.length">
-                            <td colspan="6" class="px-4 py-10 text-center">
-                                <p class="text-gray-600">
+                    <tbody v-if="!ledgers.data.length">
+                        <tr>
+                            <td colspan="4" class="py-10 text-center">
+                                <p class="text-base text-gray-700">
                                     {{ hasFilter ? 'No ledgers match your search.' : 'No ledgers yet.' }}
                                 </p>
-                                <button v-if="hasFilter" type="button" @click="clearFilters" class="mt-3 min-h-[44px] rounded-md border border-gray-300 px-4 text-gray-700 hover:bg-gray-50">
-                                    Clear search
-                                </button>
-                                <Link v-else-if="canCreate" :href="route('ledgers.create')" class="mt-3 inline-block">
-                                    <PrimaryButton class="min-h-[44px]" type="button">Add the first ledger</PrimaryButton>
-                                </Link>
+                                <SecondaryButton v-if="hasFilter" type="button" class="mt-3" @click="clearFilters">Clear search</SecondaryButton>
+                                <ButtonLink v-else-if="canCreate" :href="route('ledgers.create')" class="mt-3">Add the first ledger</ButtonLink>
                             </td>
                         </tr>
                     </tbody>
@@ -173,5 +164,18 @@ function toggle(ledger) {
 
             <Pagination :paginator="ledgers" />
         </div>
+
+        <ConfirmDialog
+            :show="target !== null"
+            :title="target?.is_active ? `Switch off ${target?.name}?` : `Switch on ${target?.name}?`"
+            :confirm-label="target?.is_active ? 'Switch off' : 'Switch on'"
+            :danger="target?.is_active"
+            :processing="working"
+            @close="target = null"
+            @confirm="toggle"
+        >
+            <p v-if="target?.is_active">It stays in reports and keeps its history, but it cannot be used in new transactions. You can switch it on again later.</p>
+            <p v-else>It will be available in new transactions again.</p>
+        </ConfirmDialog>
     </AuthenticatedLayout>
 </template>

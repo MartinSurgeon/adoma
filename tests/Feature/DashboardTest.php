@@ -1,10 +1,12 @@
 <?php
 
-use App\Domain\Audit\AuditLog;
+use App\Domain\Documents\DocumentType;
+use App\Domain\Documents\PostingService;
 use App\Domain\Ledgers\ChartOfAccounts;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\Branch;
+use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
 use Tests\Support\World;
 
@@ -93,17 +95,35 @@ it('links each figure to the matching list', function () {
         ->and($stats->firstWhere('label', 'Cash accounts')['href'])->toBe(route('ledgers.index', ['kind' => 'cash']));
 });
 
-it('lists the five newest ledgers, newest first, without system accounts or other offices', function () {
-    foreach (range(1, 7) as $i) {
-        dashLedger($this->w->kumasi, "Customer $i");
+function dashPost(object $t, Branch $branch, string $partyName, int $cents, string $date): void
+{
+    $party = dashLedger($branch, $partyName);
+    $cash = dashLedger($branch, "Cash {$partyName}", LedgerKind::Cash);
+
+    $context = app(TenantContext::class);
+    $context->set($t->w->adoma, $branch);
+
+    try {
+        app(PostingService::class)->postCash(
+            DocumentType::Receipt, $branch, $date, $party, $cash, $cents, null, null,
+            $branch->is($t->w->kumasi) ? $t->w->kumasiClerk : $t->w->centralManager,
+        );
+    } finally {
+        $context->clear();
     }
-    dashLedger($this->w->central, 'Central Only');
+}
+
+it('lists the five latest transactions, newest first, from the office in view only', function () {
+    foreach (range(1, 7) as $i) {
+        dashPost($this, $this->w->kumasi, "Customer $i", $i * 100, "2026-03-0$i");
+    }
+    dashPost($this, $this->w->central, 'Central Only', 999, '2026-03-09');
 
     $recent = collect(dashProps($this->actingAs($this->w->kumasiClerk)->get(route('dashboard')))['recent']);
 
-    expect($recent->pluck('name')->all())->toBe(['Customer 7', 'Customer 6', 'Customer 5', 'Customer 4', 'Customer 3'])
+    expect($recent->pluck('party')->all())->toBe(['Customer 7', 'Customer 6', 'Customer 5', 'Customer 4', 'Customer 3'])
         ->and($recent->first()['office'])->toBe('Kumasi')
-        ->and($recent->first()['kind_label'])->toBe('Customer');
+        ->and($recent->first()['type_label'])->toBe('Receipt');
 });
 
 it('shows the add button only to people who can add a ledger', function (string $who, bool $expected) {
@@ -116,29 +136,16 @@ it('shows the add button only to people who can add a ledger', function (string 
     ['kumasiViewer', false],
 ]);
 
-it('shows recent activity to owners and admins only', function () {
+it('no longer sends the audit trail to the home page', function () {
     dashLedger($this->w->kumasi, 'Passion Gold');
 
-    foreach (['kumasiClerk', 'kumasiManager', 'kumasiViewer', 'centralManager'] as $who) {
-        expect(dashProps($this->actingAs($this->w->{$who})->get(route('dashboard')))['activity'])->toBeNull();
-    }
-
-    foreach (['owner', 'admin'] as $who) {
-        $activity = dashProps($this->actingAs($this->w->{$who})->get(route('dashboard')))['activity'];
-        expect($activity)->not->toBeNull()->and(collect($activity)->pluck('description')->first())->toBe('added ledger “Passion Gold”');
-    }
+    expect(dashProps($this->actingAs($this->w->owner)->get(route('dashboard')))['activity'] ?? null)->toBeNull();
 });
 
-it('limits recent activity to five entries from the owner\'s own business', function () {
-    foreach (range(1, 8) as $i) {
-        dashLedger($this->w->kumasi, "Customer $i");
-    }
-    dashLedger($this->w->otherBranch, 'Other Co Secret');
+it('never shows another business\'s transactions on the home page', function () {
+    dashPost($this, $this->w->kumasi, 'Passion Gold', 5000, '2026-03-01');
 
-    $text = json_encode(dashProps($this->actingAs($this->w->owner)->get(route('dashboard')))['activity']);
-
-    expect(count(dashProps($this->actingAs($this->w->owner)->get(route('dashboard')))['activity']))->toBe(5)
-        ->and($text)->not->toContain('Other Co Secret');
+    expect(dashProps($this->actingAs($this->w->otherAdmin)->get(route('dashboard')))['recent'])->toBe([]);
 });
 
 it('works for a business with nothing in it yet', function () {
@@ -155,8 +162,7 @@ it('works for a signed-in person who belongs to no business, and shows them noth
 
     expect(dashStats($props))->toBe(['Customers' => 0, 'Suppliers' => 0, 'Banks' => 0, 'Cash accounts' => 0])
         ->and($props['recent'])->toBe([])
-        ->and($props['canCreate'])->toBeFalse()
-        ->and($props['activity'])->toBeNull();
+        ->and($props['canCreate'])->toBeFalse();
 });
 
 it('does not run a query for every ledger or log line', function () {

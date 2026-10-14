@@ -33,6 +33,10 @@ class LedgerController extends Controller
             ))
             ->when(LedgerKind::tryFrom($filters['kind']) !== null, fn ($q) => $q->where('kind', $filters['kind']))
             ->when(! $filters['show_off'], fn ($q) => $q->where('is_active', true))
+            // Grouped by type in a fixed, familiar order, then by name, so the list reads in sections.
+            ->orderByRaw(
+                'CASE kind '.collect(LedgerKind::cases())->map(fn (LedgerKind $k, int $i) => "WHEN '{$k->value}' THEN {$i}")->implode(' ').' ELSE 99 END'
+            )
             ->orderBy('name')
             ->paginate(25)
             ->withQueryString();

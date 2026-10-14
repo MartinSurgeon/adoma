@@ -1,3 +1,90 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * The visual system, in one place.
+ *
+ * Type: Inter. 16px for body text and form fields, 14px as the smallest size anywhere.
+ * Scale: 14, 16, 18, 24, 30. Numbers use tabular figures so amounts line up.
+ * Space: steps of 8px. Touch targets: 48px, which clears the 44px minimum.
+ * Colour: deep teal for action, gold for a highlight only (never body text),
+ * green for success, red for error, amber for a warning, always with an icon or words.
+ */
+
+@layer base {
+    html {
+        font-size: 16px;
+    }
+
+    body {
+        @apply text-base text-gray-900;
+    }
+
+    /* A placeholder must be readable too: gray-500 on white is 4.8 to 1. */
+    input::placeholder,
+    textarea::placeholder {
+        @apply text-gray-500;
+        opacity: 1;
+    }
+
+    /* Every field and select is at least 48px tall, so it is easy to hit with a thumb. */
+    input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='range']),
+    select {
+        min-height: 3rem;
+    }
+
+    textarea {
+        min-height: 6rem;
+    }
+
+    /* One focus ring, teal, never removed. */
+    :focus-visible {
+        outline: 2px solid theme('colors.teal.600');
+        outline-offset: 2px;
+    }
+
+    .tabular-nums,
+    table {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@layer components {
+    /* A white card on the grey page. Every card, stat card and list container looks like this. */
+    .card {
+        @apply rounded-lg bg-white shadow-sm ring-1 ring-gray-100;
+    }
+
+    /* Every table in the app. Header in plain words, rows with room to breathe, numbers on the right. */
+    .data-table {
+        @apply min-w-full text-base;
+    }
+
+    .data-table thead {
+        @apply bg-gray-50 text-left text-sm font-semibold text-gray-700;
+    }
+
+    .data-table th,
+    .data-table td {
+        @apply px-4 py-4 align-middle;
+    }
+
+    .data-table tbody tr,
+    .data-table tfoot tr {
+        @apply border-t border-gray-100;
+    }
+
+    .data-table tfoot {
+        @apply border-t-2 border-gray-300 bg-gray-50 font-semibold text-gray-900;
+    }
+
+    .data-table .num {
+        @apply text-right;
+    }
+
+    /* A heading row that groups the rows below it, such as "Customers". */
+    .data-table .group-row th {
+        @apply bg-gray-50 py-2 text-left text-sm font-semibold text-teal-900;
+    }
+}
