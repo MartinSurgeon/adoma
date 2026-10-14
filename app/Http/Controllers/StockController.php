@@ -7,6 +7,7 @@ use App\Domain\Stock\StockLot;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\Role;
 use App\Domain\Tenancy\TenantContext;
+use App\Domain\Transfers\PendingTransfers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -56,7 +57,16 @@ class StockController extends Controller
         $canSeeCost = $user->isTenantAdmin()
             || ($context->branchId() !== null && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false));
 
+        // Gold sent and not yet accepted is in neither office's stock. Show it, so it is never "lost" on screen.
+        $office = $context->viewingAllBranches() ? null : $context->branch();
+        $sent = $office ? PendingTransfers::summary(PendingTransfers::sentBy($office)) : null;
+        $incoming = $office && $canSeeCost ? PendingTransfers::summary(PendingTransfers::addressedTo($office)) : null;
+
         return Inertia::render('Stock/Index', [
+            'onTheWay' => [
+                'sent' => $sent && $sent['count'] ? ['count' => $sent['count'], 'grams' => Money::format($sent['weightH'])] : null,
+                'incoming' => $incoming && $incoming['count'] ? ['count' => $incoming['count'], 'grams' => Money::format($incoming['weightH'])] : null,
+            ],
             'where' => $context->viewingAllBranches() ? 'All offices' : $context->branch()?->name,
             'showOffice' => $context->viewingAllBranches(),
             'lots' => $lots->through(function (array $row) use ($canSeeCost) {

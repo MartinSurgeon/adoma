@@ -29,6 +29,9 @@ const reversed = computed(() => props.document.status === 'reversed');
 const noun = computed(() => props.document.type_label.toLowerCase());
 const partyLabel = computed(() => ({ receipt: 'Received from', payment: 'Paid to', purchase: 'Bought from', sale: 'Sold to', transfer: 'Sent to', transfer_in: 'Received from' })[props.document.type] ?? 'With');
 
+// A transfer nobody has accepted yet is cancelled, not reversed: there is nothing on the other side to undo.
+const undoWord = computed(() => (props.transfer?.state === 'waiting' ? 'Cancel' : 'Reverse'));
+
 const confirming = ref(false);
 const reverseForm = useForm({ reason: '' });
 
@@ -107,7 +110,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     <MenuItem v-if="canRecordAnother" :href="route(`${document.type}s.create`)">Start a blank {{ noun }}</MenuItem>
                     <MenuItem :href="route('documents.print', { document: document.id, layout: 'thermal' })" external>Print small receipt</MenuItem>
                     <MenuItem :href="route('documents.index')">All transactions</MenuItem>
-                    <MenuItem v-if="canReverse" danger @click="confirming = true">Reverse this {{ noun }}</MenuItem>
+                    <MenuItem v-if="canReverse" danger @click="confirming = true">{{ undoWord }} this {{ noun }}</MenuItem>
                 </MoreMenu>
             </div>
 
@@ -165,7 +168,13 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         </dd>
                     </div>
                 </dl>
-                <p class="mt-4 text-base text-gray-700">
+                <Banner v-if="transfer.state === 'waiting'" variant="warning" class="mt-4">
+                    <p class="font-semibold">Waiting for {{ transfer.other_office }} to accept this gold</p>
+                    <p class="mt-1">
+                        Until they do, the gold is in nobody's stock. If they decline, or you cancel, it goes back to your stock.
+                    </p>
+                </Banner>
+                <p v-else class="mt-4 text-base text-gray-700">
                     The gold moved at what it cost, so neither office shows a profit or a loss on it.
                     <template v-if="transfer.direction === 'in'">To put this right, the sending office reverses its transfer, which undoes both halves.</template>
                 </p>
@@ -229,8 +238,8 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
         <ConfirmDialog
             :show="confirming"
-            :title="`Reverse ${document.number}?`"
-            :confirm-label="`Reverse ${noun}`"
+            :title="`${undoWord} ${document.number}?`"
+            :confirm-label="`${undoWord} ${noun}`"
             danger
             :processing="reverseForm.processing"
             @close="confirming = false"

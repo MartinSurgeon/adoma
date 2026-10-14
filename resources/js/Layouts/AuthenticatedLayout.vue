@@ -10,6 +10,7 @@ const tenancy = computed(() => page.props.tenancy);
 const isAdmin = computed(() => Boolean(tenancy.value?.can_view_all));
 const canRecord = computed(() => Boolean(tenancy.value?.can_record));
 const canTransfer = computed(() => Boolean(tenancy.value?.can_transfer));
+const incoming = computed(() => Number(tenancy.value?.incoming_transfers ?? 0));
 
 // Icons are 24 x 24 outlines. Each page that exists gets one entry; more arrive with each phase.
 const icons = {
@@ -21,6 +22,7 @@ const icons = {
     transactions: 'M5 6h14M5 12h14M5 18h9',
     transfer: 'M4 8h13m0 0l-3-3m3 3l-3 3M20 16H7m0 0l3-3m-3 3l3 3',
     stock: 'M3 9l9-5 9 5v8l-9 5-9-5V9zM3 9l9 5 9-5M12 14v8',
+    inbox: 'M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5a3 3 0 006 0h5',
     ledgers: 'M5 4h12a2 2 0 012 2v14H7a2 2 0 01-2-2V4zM9 8h6M9 12h6',
     users: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3 3 0 100-6 3 3 0 000 6zM20 20v-1a3 3 0 00-2-2.8M15 5.2a3 3 0 010 5.6',
     activity: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
@@ -50,6 +52,8 @@ const sections = computed(() =>
                 { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Stock', href: route('stock.index'), active: route().current('stock.*'), icon: 'stock', show: Boolean(tenancy.value), mobile: false },
+                // Gold other offices have sent, waiting for a manager here to accept it. The badge counts what is waiting.
+                { label: 'Incoming gold', href: route('transfers.incoming'), active: route().current('transfers.incoming'), icon: 'inbox', show: canTransfer.value, mobile: false, badge: incoming.value },
             ],
         },
         {
@@ -113,7 +117,10 @@ const phoneSettings = computed(() =>
                                     <path :d="icons[item.icon]" />
                                 </svg>
                                 {{ item.label }}
-                                <span v-if="item.active" class="ms-auto h-2 w-2 rounded-full bg-amber-400" aria-hidden="true"></span>
+                                <span v-if="item.badge" class="ms-auto rounded-full bg-amber-400 px-2.5 py-0.5 text-sm font-semibold text-teal-950">
+                                    {{ item.badge }}<span class="sr-only"> waiting</span>
+                                </span>
+                                <span v-else-if="item.active" class="ms-auto h-2 w-2 rounded-full bg-amber-400" aria-hidden="true"></span>
                             </Link>
                         </li>
                     </ul>
@@ -152,7 +159,7 @@ const phoneSettings = computed(() =>
                         <template #content>
                             <div class="border-b border-gray-100 px-4 py-2 text-base text-gray-700">{{ $page.props.auth.user.email }}</div>
                             <div v-if="phoneSettings.length" class="lg:hidden">
-                                <DropdownLink v-for="item in phoneSettings" :key="item.label" :href="item.href">{{ item.label }}</DropdownLink>
+                                <DropdownLink v-for="item in phoneSettings" :key="item.label" :href="item.href">{{ item.label }}<template v-if="item.badge"> ({{ item.badge }} waiting)</template></DropdownLink>
                             </div>
                             <DropdownLink :href="route('profile.edit')">My profile</DropdownLink>
                             <DropdownLink :href="route('logout')" method="post" as="button">Log out</DropdownLink>

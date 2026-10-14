@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Tenancy\Role;
+use App\Domain\Transfers\PendingTransfers;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -72,6 +73,12 @@ class HandleInertiaRequests extends Middleware
             'can_transfer' => ! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false),
+            // How many transfers are waiting for this office to accept, for managers who can answer them.
+            'incoming_transfers' => (! $context->viewingAllBranches()
+                && $context->branchId() !== null
+                && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false))
+                ? PendingTransfers::addressedTo($context->branch())->count()
+                : 0,
             'branches' => $user->accessibleBranches()->map->only(['id', 'code', 'name'])->values(),
             // The kinds of ledger this person may add here, so a form can offer "add new" only when it will work.
             'addable_ledger_kinds' => collect(LedgerKind::creatable())

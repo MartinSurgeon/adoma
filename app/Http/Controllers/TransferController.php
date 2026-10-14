@@ -9,6 +9,7 @@ use App\Domain\Stock\LotAllocator;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\TenantContext;
+use App\Domain\Transfers\PendingTransfers;
 use App\Http\Requests\SaveTransferRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -96,6 +97,77 @@ class TransferController extends Controller
         }
 
         return redirect()->route('documents.show', $document)
-            ->with('success', sprintf('%s was saved. %s g is now at %s.', $document->number, Money::format($request->weightH), $request->toBranch->name));
+            ->with('success', sprintf('%s was sent. %s g is waiting for %s to accept it.', $document->number, Money::format($request->weightH), $request->toBranch->name));
+    }
+
+    /** Gold sent to this office and waiting for it to accept or decline. */
+    public function incoming(Request $request): Response
+    {
+        $this->authorize('receiveTransfer', Document::class);
+
+        $office = app(TenantContext::class)->branch();
+        $waiting = PendingTransfers::addressedTo($office)->orderBy('documents.date')->orderBy('documents.id')->get();
+        $figures = PendingTransfers::figures($waiting);
+        $senders = Branch::withoutGlobalScopes()->whereIn('id', $waiting->pluck('branch_id')->unique())->pluck('name', 'id');
+
+        return Inertia::render('Transfers/Incoming', [
+            'office' => $office->name,
+            'transfers' => $waiting->map(fn (Document $d) => [
+                'id' => $d->id,
+                'number' => $d->number,
+                'date' => $d->date->toDateString(),
+                'from' => $senders[$d->branch_id] ?? '',
+                'note' => $d->note,
+                'weight' => Money::format($figures[$d->id]['weightH']),
+                'cost' => Money::cedis($figures[$d->id]['costCents']),
+                'lots' => $figures[$d->id]['lots'],
+            ])->values(),
+        ]);
+    }
+
+    public function accept(Request $request, int $transfer, PostingService $posting): RedirectResponse
+    {
+        $this->authorize('receiveTransfer', Document::class);
+
+        $office = app(TenantContext::class)->branch();
+        $document = PendingTransfers::addressedTo($office)->whereKey($transfer)->first();
+
+        // Another office's transfer, or one already answered, is simply not there for this office.
+        abort_if($document === null, 404);
+
+        try {
+            $received = $posting->acceptTransfer($document, $office, $request->user());
+        } catch (PostingError $error) {
+            return redirect()->route('transfers.incoming')->withErrors(['transfer' => $error->getMessage()]);
+        }
+
+        $weight = Money::format(PendingTransfers::figures([$document])[$document->id]['weightH']);
+
+        return redirect()->route('documents.show', $received)
+            ->with('success', sprintf('Accepted. %s g from %s is now in %s\'s stock.', $weight, Branch::withoutGlobalScopes()->find($document->branch_id)?->name, $office->name));
+    }
+
+    public function decline(Request $request, int $transfer, PostingService $posting): RedirectResponse
+    {
+        $this->authorize('receiveTransfer', Document::class);
+
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:200']], [
+            'reason.required' => 'Say why you are declining it, so the sending office knows.',
+            'reason.min' => 'Say why you are declining it, so the sending office knows.',
+        ]);
+
+        $office = app(TenantContext::class)->branch();
+        $document = PendingTransfers::addressedTo($office)->whereKey($transfer)->first();
+
+        abort_if($document === null, 404);
+
+        try {
+            $posting->declineTransfer($document, $office, $data['reason'], $request->user());
+        } catch (PostingError $error) {
+            return redirect()->route('transfers.incoming')->withErrors(['transfer' => $error->getMessage()]);
+        }
+
+        return redirect()->route('transfers.incoming')
+            ->with('success', "{$document->number} was declined. The gold goes back to the sending office.");
     }
 }

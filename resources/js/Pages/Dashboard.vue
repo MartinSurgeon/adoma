@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Banner from '@/Components/Banner.vue';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import MenuItem from '@/Components/MenuItem.vue';
 import MoreMenu from '@/Components/MoreMenu.vue';
@@ -18,6 +19,9 @@ const props = defineProps({
     stockByOffice: { type: Array, default: null }, // owners and admins looking at every office
 });
 
+// Gold other offices have sent that a manager here has not yet accepted.
+const waiting = computed(() => Number(usePage().props.tenancy?.incoming_transfers ?? 0));
+
 const isEmpty = computed(() => props.stats.every((s) => s.count === 0) && props.recent.length === 0);
 
 const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -33,6 +37,11 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
         </template>
 
         <div class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+            <Banner v-if="waiting > 0" variant="warning">
+                <p class="font-semibold">{{ waiting === 1 ? 'Gold is waiting for you to accept' : `${waiting} transfers of gold are waiting for you to accept` }}</p>
+                <Link :href="route('transfers.incoming')" class="mt-1 inline-flex min-h-12 items-center font-medium underline">Review and accept</Link>
+            </Banner>
+
             <!-- 1. What you have. The stock total opens the page, in the same card as every other figure. -->
             <section aria-labelledby="have-heading">
                 <h2 id="have-heading" class="text-lg font-semibold text-gray-900">What you have</h2>

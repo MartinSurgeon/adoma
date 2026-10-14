@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Banner from '@/Components/Banner.vue';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import Pagination from '@/Components/Pagination.vue';
 import StatCard from '@/Components/StatCard.vue';
@@ -12,6 +13,7 @@ defineProps({
     totals: Object,
     canSeeCost: Boolean,
     canTransfer: Boolean,
+    onTheWay: { type: Object, default: () => ({ sent: null, incoming: null }) },
 });
 
 const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -37,6 +39,15 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 <li><StatCard label="Lots" :value="totals.lots" /></li>
                 <li v-if="canSeeCost"><StatCard label="What it cost" :value="totals.cost" /></li>
             </ul>
+
+            <!-- Gold sent and not yet accepted is in nobody's stock, so say where it is. -->
+            <Banner v-if="onTheWay.incoming" variant="info">
+                {{ onTheWay.incoming.grams }} g from other offices is waiting for you to accept.
+                <Link :href="route('transfers.incoming')" class="font-medium underline">Review it</Link>
+            </Banner>
+            <Banner v-if="onTheWay.sent" variant="info">
+                {{ onTheWay.sent.grams }} g you sent is on its way, waiting for the other office to accept. It is not in your stock until it comes back.
+            </Banner>
 
             <div class="card overflow-x-auto">
                 <table class="data-table">

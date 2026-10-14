@@ -36,7 +36,7 @@ class DocumentController extends Controller
             'q' => trim((string) $request->query('q', '')),
         ];
 
-        $documents = Document::query()
+        $page = Document::query()
             ->with(['ledger', 'branch'])
             ->when($filters['type'], fn ($q, $v) => $q->where('type', $v))
             ->when($filters['status'], fn ($q, $v) => $q->where('status', $v))
@@ -48,9 +48,19 @@ class DocumentController extends Controller
             ))
             ->orderByDesc('date')->orderByDesc('id')
             ->paginate(25)
-            ->withQueryString()
+            ->withQueryString();
+
+        // A transfer out is "waiting" until the receiving office accepts it, which writes its other half.
+        $sent = $page->getCollection()
+            ->filter(fn (Document $d) => $d->type === DocumentType::Transfer && $d->status === Document::POSTED && ! $d->isReversal())
+            ->pluck('id')->all();
+        $accepted = $sent === [] ? [] : Document::withoutGlobalScopes()->whereIn('paired_id', $sent)->pluck('paired_id')->all();
+        $waitingIds = array_values(array_diff($sent, $accepted));
+
+        $documents = $page
             ->through(fn (Document $d) => [
                 'id' => $d->id,
+                'waiting' => in_array($d->id, $waitingIds, true),
                 'number' => $d->number,
                 'type_label' => $d->type->label(),
                 'date' => $d->date->toDateString(),
@@ -177,13 +187,22 @@ class DocumentController extends Controller
             ->sum(fn ($m) => abs(Money::fromDb($m->weight_g)));
 
         $other = $document->otherHalf();
-        $otherBranch = $other === null ? null : Branch::withoutGlobalScopes()->find($other->branch_id);
         $mayOpen = $other !== null && $viewer !== null && $viewer->can('view', $other);
+
+        // Where it stands. A transfer out is waiting until the receiving office accepts it, which writes its other half.
+        $state = match (true) {
+            $document->isReversal() => 'reversal',
+            $document->status === Document::REVERSED => 'cancelled',
+            $document->type === DocumentType::TransferIn || $other !== null => 'accepted',
+            default => 'waiting',
+        };
 
         return [
             'direction' => $document->type === DocumentType::Transfer ? 'out' : 'in',
+            'state' => $state,
             'weight' => Money::format($weightH),
-            'other_office' => $otherBranch?->name,
+            // The party on a transfer is the other office's account, which is named after the office.
+            'other_office' => $document->ledger?->name,
             'other_id' => $mayOpen ? $other->id : null,
             'other_number' => $other?->number,
         ];

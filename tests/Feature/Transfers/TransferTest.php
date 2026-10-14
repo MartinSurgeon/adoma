@@ -56,12 +56,26 @@ function trSendForm(object $t, array $overrides = []): array
     ], $overrides);
 }
 
-/** Kumasi's manager sends gold to Central and returns the sending document. */
-function trSend(object $t, array $overrides = []): Document
+/**
+ * Kumasi's manager sends gold to Central and returns the sending document. By default Central's manager then
+ * accepts it, so the gold has arrived. Pass accept: false to leave it waiting.
+ */
+function trSend(object $t, array $overrides = [], bool $accept = true): Document
 {
     $t->actingAs($t->w->kumasiManager)->post(route('transfers.store'), trSendForm($t, $overrides))->assertSessionHasNoErrors();
 
-    return Document::withoutGlobalScopes()->where('type', 'transfer')->whereNull('reverses_id')->latest('id')->firstOrFail();
+    $out = Document::withoutGlobalScopes()->where('type', 'transfer')->whereNull('reverses_id')->latest('id')->firstOrFail();
+
+    if ($accept) {
+        trAccept($t, $out);
+    }
+
+    return $out;
+}
+
+function trAccept(object $t, Document $out): void
+{
+    $t->actingAs($t->w->centralManager)->post(route('transfers.accept', $out->id))->assertSessionHasNoErrors();
 }
 
 function trIn(Document $out): Document
@@ -250,9 +264,10 @@ it('saves a transfer once however many times the button is pressed', function ()
     $this->post(route('transfers.store'), $form)->assertSessionHasNoErrors();
     $this->post(route('transfers.store'), $form)->assertSessionHasNoErrors();
 
+    // One transfer, waiting: nothing has arrived until Central accepts.
     expect(Document::withoutGlobalScopes()->where('type', 'transfer')->count())->toBe(1)
-        ->and(Document::withoutGlobalScopes()->where('type', 'transfer_in')->count())->toBe(1)
-        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(1);
+        ->and(Document::withoutGlobalScopes()->where('type', 'transfer_in')->count())->toBe(0)
+        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(0);
 });
 
 it('does not touch any other business', function () {
@@ -380,12 +395,12 @@ it('shows each office its own half, with the other half named but opened only by
     $receiving = trProps($this->actingAs($this->w->centralManager)->get(route('documents.show', $in->id))->assertOk());
 
     expect($sending['transfer'])->toBe([
-        'direction' => 'out', 'weight' => '1,000.00', 'other_office' => 'Central', 'other_id' => null, 'other_number' => $in->number,
+        'direction' => 'out', 'state' => 'accepted', 'weight' => '1,000.00', 'other_office' => 'Central', 'other_id' => null, 'other_number' => $in->number,
     ])->and($sending['document']['type_label'])->toBe('Transfer out')->and($sending['document']['party']['name'])->toBe('Central')
         ->and($sending['canReverse'])->toBeTrue()
         // Central's manager cannot open Kumasi's document, so no link is given, only its number.
         ->and($receiving['transfer'])->toBe([
-            'direction' => 'in', 'weight' => '1,000.00', 'other_office' => 'Kumasi', 'other_id' => null, 'other_number' => $out->number,
+            'direction' => 'in', 'state' => 'accepted', 'weight' => '1,000.00', 'other_office' => 'Kumasi', 'other_id' => null, 'other_number' => $out->number,
         ])->and($receiving['document']['type_label'])->toBe('Transfer in')->and($receiving['document']['party']['name'])->toBe('Kumasi');
 
     // An owner can open both, so the link is there.
@@ -409,6 +424,7 @@ it('lists each office\'s own half in its transactions, and offers both as filter
 });
 
 it('lets the two offices settle what they owe each other with an ordinary payment', function () {
+    $cash = trLedger($this->w->kumasi, 'Cash Kumasi', LedgerKind::Cash);
     trBuy($this);
     $out = trSend($this);
     $cost = Money::fromDb($out->total);
@@ -419,8 +435,6 @@ it('lets the two offices settle what they owe each other with an ordinary paymen
 
     // Kumasi is owed the cost by Central until it is settled.
     expect($balance())->toBe($cost);
-
-    $cash = trLedger($this->w->kumasi, 'Cash Kumasi', LedgerKind::Cash);
 
     $this->actingAs($this->w->kumasiManager)->post(route('receipts.store'), [
         'date' => now()->toDateString(), 'ledger_id' => $kumasiAccountOfCentral->id, 'cash_ledger_id' => $cash->id,
@@ -508,3 +522,226 @@ it('tells the menu who may send gold', function (string $who, bool $expected) {
     ['kumasiClerk', false],
     ['kumasiViewer', false],
 ]);
+
+// ======================================================= the receiving office accepts
+
+it('keeps sent gold out of both offices\' stock, and Central\'s books untouched, while it waits', function () {
+    $purchase = trBuy($this);
+    $out = trSend($this, ['weight' => '1000.00'], accept: false);
+    $cost = Money::fromDb($out->total);
+
+    expect(Document::withoutGlobalScopes()->where('paired_id', $out->id)->exists())->toBeFalse()
+        ->and(Document::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->where('type', 'transfer_in')->count())->toBe(0)
+        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(0)
+        ->and(trStockBalance($this, $this->w->central))->toBe(0)
+        ->and(JournalLine::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(0)
+        // Kumasi has already let go of it, and its own books balance.
+        ->and(trStockBalance($this, $this->w->kumasi))->toBe(Money::fromDb($purchase->total) - $cost)
+        ->and(trBranchBalance($out)[0])->toBe(trBranchBalance($out)[1])
+        ->and(Money::fromDb(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->kumasi->id)->first()->remaining_g))->toBe(109425);
+
+    $page = trProps($this->actingAs($this->w->kumasiManager)->get(route('documents.show', $out->id))->assertOk());
+
+    expect($page['transfer']['state'])->toBe('waiting')->and($page['transfer']['other_office'])->toBe('Central')
+        ->and($page['transfer']['other_number'])->toBeNull()->and($page['canReverse'])->toBeTrue();
+});
+
+it('says the gold is waiting when it is sent, and marks it waiting in the list', function () {
+    trBuy($this);
+    $this->actingAs($this->w->kumasiManager)->post(route('transfers.store'), trSendForm($this))
+        ->assertSessionHas('success', fn ($message) => str_contains($message, 'waiting for Central to accept'));
+
+    $out = Document::withoutGlobalScopes()->where('type', 'transfer')->firstOrFail();
+    $rows = collect(trProps($this->actingAs($this->w->kumasiManager)->get(route('documents.index'))->assertOk())['documents']['data']);
+
+    expect($rows->firstWhere('number', $out->number)['waiting'])->toBeTrue();
+
+    trAccept($this, $out);
+
+    $rows = collect(trProps($this->actingAs($this->w->kumasiManager)->get(route('documents.index'))->assertOk())['documents']['data']);
+    expect($rows->firstWhere('number', $out->number)['waiting'])->toBeFalse();
+});
+
+it('shows the receiving office what is waiting for it, and nobody else', function () {
+    trBuy($this);
+    $out = trSend($this, ['weight' => '1000.00', 'note' => 'Carried by Kofi'], accept: false);
+
+    $central = trProps($this->actingAs($this->w->centralManager)->get(route('transfers.incoming'))->assertOk());
+
+    expect($central['office'])->toBe('Central')->and($central['transfers'])->toHaveCount(1)
+        ->and($central['transfers'][0])->toMatchArray([
+            'id' => $out->id, 'number' => $out->number, 'from' => 'Kumasi', 'note' => 'Carried by Kofi', 'weight' => '1,000.00', 'lots' => 1,
+        ])->and($central['transfers'][0]['cost'])->toStartWith('GH₵ ');
+
+    // The sending office has nothing to accept, and a clerk may not answer for an office.
+    expect(trProps($this->actingAs($this->w->kumasiManager)->get(route('transfers.incoming'))->assertOk())['transfers'])->toBe([]);
+    $this->actingAs($this->w->kumasiClerk)->get(route('transfers.incoming'))->assertForbidden();
+});
+
+it('tells the menu how many are waiting, to managers of the receiving office only', function () {
+    trBuy($this);
+    trSend($this, [], accept: false);
+    trSend($this, ['weight' => '200.00'], accept: false);
+
+    $central = trProps($this->actingAs($this->w->centralManager)->get(route('dashboard'))->assertOk());
+    $kumasi = trProps($this->actingAs($this->w->kumasiManager)->get(route('dashboard'))->assertOk());
+    $clerk = trProps($this->actingAs($this->w->kumasiClerk)->get(route('dashboard'))->assertOk());
+
+    expect($central['tenancy']['incoming_transfers'])->toBe(2)
+        ->and($kumasi['tenancy']['incoming_transfers'])->toBe(0)
+        ->and($clerk['tenancy']['incoming_transfers'])->toBe(0);
+});
+
+it('brings the gold in when the receiving office accepts, and says so', function () {
+    trBuy($this, ['date' => now()->subDays(20)->toDateString(), 'weight' => '500.00', 'water_weight' => '27.30']);
+    trBuy($this);
+    $out = trSend($this, ['weight' => '700.00'], accept: false);
+
+    $this->actingAs($this->w->centralManager)->post(route('transfers.accept', $out->id))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('documents.show', trIn($out)->id))
+        ->assertSessionHas('success', fn ($message) => str_contains($message, 'Accepted. 700.00 g from Kumasi is now in Central\'s stock.'));
+
+    $in = trIn($out);
+    $arrived = StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->orderBy('id')->get();
+
+    expect($in->number)->toBe('TRI-CEN-000001')->and($in->branch_id)->toBe($this->w->central->id)
+        ->and($in->created_by)->toBe($this->w->centralManager->id)
+        ->and(Money::fromDb($in->total))->toBe(Money::fromDb($out->total))
+        ->and($arrived)->toHaveCount(2)
+        // The gold keeps the date it was first bought, so the oldest still sells first.
+        ->and($arrived[0]->date->toDateString())->toBe(now()->subDays(20)->toDateString())
+        ->and(Money::fromDb($arrived->sum('remaining_g')))->toBe(70000)
+        ->and(trStockBalance($this, $this->w->central))->toBe(Money::fromDb($out->total))
+        ->and(trBranchBalance($in)[0])->toBe(trBranchBalance($in)[1])
+        ->and(trBranchBalance($in)[2])->toBe([$this->w->central->id]);
+
+    // It is no longer waiting, for anyone.
+    expect(trProps($this->actingAs($this->w->centralManager)->get(route('transfers.incoming')))['transfers'])->toBe([])
+        ->and(trProps($this->actingAs($this->w->kumasiManager)->get(route('documents.show', $out->id)))['transfer']['state'])->toBe('accepted');
+});
+
+it('lets only a manager of the receiving office accept', function () {
+    trBuy($this);
+    $out = trSend($this, [], accept: false);
+
+    // The sending office cannot accept its own gold, and neither can a clerk of the receiving office.
+    $this->actingAs($this->w->kumasiManager)->post(route('transfers.accept', $out->id))->assertNotFound();
+    $this->actingAs($this->w->kumasiClerk)->post(route('transfers.accept', $out->id))->assertForbidden();
+    $this->actingAs($this->w->otherAdmin)->post(route('transfers.accept', $out->id))->assertNotFound();
+
+    $centralClerk = App\Models\User::factory()->make();
+    $centralClerk->forceFill(['tenant_id' => $this->w->adoma->id])->save();
+    $centralClerk->branches()->attach($this->w->central->id, ['role' => App\Domain\Tenancy\Role::Clerk->value]);
+    $this->actingAs($centralClerk)->post(route('transfers.accept', $out->id))->assertForbidden();
+
+    expect(Document::withoutGlobalScopes()->where('type', 'transfer_in')->count())->toBe(0)
+        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(0);
+});
+
+it('accepts a transfer once, however many times the button is pressed', function () {
+    trBuy($this);
+    $out = trSend($this, [], accept: false);
+
+    $this->actingAs($this->w->centralManager);
+    $this->post(route('transfers.accept', $out->id))->assertSessionHasNoErrors();
+    $this->post(route('transfers.accept', $out->id))->assertNotFound();
+
+    expect(Document::withoutGlobalScopes()->where('type', 'transfer_in')->count())->toBe(1)
+        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(1)
+        ->and(trStockBalance($this, $this->w->central))->toBe(Money::fromDb($out->total));
+
+    // Even asked directly, the service refuses a second acceptance.
+    expect(fn () => app(PostingService::class)->acceptTransfer($out, $this->w->central, $this->w->centralManager))
+        ->toThrow(PostingError::class, 'already been accepted');
+});
+
+it('puts the gold back when the receiving office declines, with its reason on the record', function () {
+    $purchase = trBuy($this);
+    $out = trSend($this, ['weight' => '1000.00'], accept: false);
+
+    $this->actingAs($this->w->centralManager)->post(route('transfers.decline', $out->id), ['reason' => 'Weight does not match'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('transfers.incoming'));
+
+    $reversal = Document::withoutGlobalScopes()->where('reverses_id', $out->id)->firstOrFail();
+
+    expect($out->fresh()->status)->toBe('reversed')
+        ->and($reversal->branch_id)->toBe($this->w->kumasi->id)
+        ->and($reversal->note)->toContain('declined by Central: Weight does not match')
+        ->and($reversal->created_by)->toBe($this->w->centralManager->id)
+        ->and(trStockBalance($this, $this->w->kumasi))->toBe(Money::fromDb($purchase->total))
+        ->and(Money::fromDb(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->kumasi->id)->first()->remaining_g))->toBe(209425)
+        // Central never had it.
+        ->and(Document::withoutGlobalScopes()->where('type', 'transfer_in')->count())->toBe(0)
+        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->count())->toBe(0)
+        ->and(trProps($this->actingAs($this->w->centralManager)->get(route('transfers.incoming')))['transfers'])->toBe([]);
+
+    // It can neither be accepted nor declined now.
+    $this->post(route('transfers.accept', $out->id))->assertNotFound();
+    $this->post(route('transfers.decline', $out->id), ['reason' => 'again'])->assertNotFound();
+});
+
+it('asks the receiving office for a reason when it declines', function () {
+    trBuy($this);
+    $out = trSend($this, [], accept: false);
+
+    $this->actingAs($this->w->centralManager)->post(route('transfers.decline', $out->id), ['reason' => ''])
+        ->assertSessionHasErrors(['reason' => 'Say why you are declining it, so the sending office knows.']);
+
+    expect($out->fresh()->status)->toBe('posted');
+});
+
+it('lets the sending office cancel gold nobody has accepted yet, and then it cannot be accepted', function () {
+    $purchase = trBuy($this);
+    $out = trSend($this, ['weight' => '1000.00'], accept: false);
+
+    $this->actingAs($this->w->kumasiManager)->post(route('documents.reverse', $out->id), ['reason' => 'Sent too much'])
+        ->assertSessionHasNoErrors();
+
+    expect($out->fresh()->status)->toBe('reversed')
+        ->and(Document::withoutGlobalScopes()->where('reverses_id', $out->id)->count())->toBe(1)
+        ->and(Document::withoutGlobalScopes()->where('type', 'transfer_in')->count())->toBe(0)
+        ->and(trStockBalance($this, $this->w->kumasi))->toBe(Money::fromDb($purchase->total))
+        ->and(Money::fromDb(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->kumasi->id)->first()->remaining_g))->toBe(209425);
+
+    $this->actingAs($this->w->centralManager)->post(route('transfers.accept', $out->id))->assertNotFound();
+
+    expect(fn () => app(PostingService::class)->acceptTransfer($out, $this->w->central, $this->w->centralManager))
+        ->toThrow(PostingError::class, 'was cancelled by the sending office');
+});
+
+it('refuses to accept or decline a transfer meant for another office', function () {
+    trBuy($this);
+    $out = trSend($this, [], accept: false);
+
+    // Called directly, with Kumasi named as the receiver of a transfer that is addressed to Central.
+    expect(fn () => app(PostingService::class)->acceptTransfer($out, $this->w->kumasi, $this->w->kumasiManager))
+        ->toThrow(PostingError::class, 'not addressed to this office')
+        ->and(fn () => app(PostingService::class)->declineTransfer($out, $this->w->kumasi, 'no', $this->w->kumasiManager))
+        ->toThrow(PostingError::class, 'not addressed to this office');
+});
+
+it('shows the sending office its gold on the way, and the receiving office what is waiting for it', function () {
+    trBuy($this);
+    trSend($this, ['weight' => '300.00'], accept: false);
+
+    $kumasi = trProps($this->actingAs($this->w->kumasiManager)->get(route('stock.index'))->assertOk());
+    $central = trProps($this->actingAs($this->w->centralManager)->get(route('stock.index'))->assertOk());
+
+    expect($kumasi['onTheWay']['sent'])->toBe(['count' => 1, 'grams' => '300.00'])->and($kumasi['onTheWay']['incoming'])->toBeNull()
+        // It is not in Kumasi's stock any more, and not yet in Central's.
+        ->and($kumasi['totals']['grams'])->toBe('1,794.25')->and($central['totals']['grams'])->toBe('0.00')
+        ->and($central['onTheWay']['incoming'])->toBe(['count' => 1, 'grams' => '300.00'])->and($central['onTheWay']['sent'])->toBeNull();
+});
+
+it('writes the receiving half as the receiving office even when an owner accepts for it', function () {
+    trBuy($this);
+    $out = trSend($this, [], accept: false);
+
+    // An owner working in Central's office may answer for it, and the document still lands in Central's books.
+    $this->actingAs($this->w->owner)->withSession(['active_branch_id' => $this->w->central->id])
+        ->post(route('transfers.accept', $out->id))->assertSessionHasNoErrors();
+
+    expect(trIn($out)->branch_id)->toBe($this->w->central->id)->and(trIn($out)->created_by)->toBe($this->w->owner->id);
+});

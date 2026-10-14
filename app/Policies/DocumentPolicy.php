@@ -55,6 +55,21 @@ class DocumentPolicy
         return $user->roleIn($context->branchId())?->atLeast($minimum) ?? false;
     }
 
+    /**
+     * May this person accept or decline gold sent to the office they are working in? A manager, like
+     * sending it. It needs one office: someone viewing all offices must choose which office is receiving.
+     */
+    public function receiveTransfer(User $user): bool
+    {
+        $context = app(TenantContext::class);
+
+        if ($context->viewingAllBranches() || $context->branchId() === null) {
+            return false;
+        }
+
+        return $user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false;
+    }
+
     public function reverse(User $user, Document $document): bool
     {
         if ($document->status !== Document::POSTED || $document->isReversal()) {

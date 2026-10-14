@@ -124,18 +124,18 @@ const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm
                             <td>
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium"
-                                    :class="d.status === 'reversed' ? 'bg-gray-200 text-gray-800' : d.is_reversal ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-900'"
+                                    :class="d.status === 'reversed' ? 'bg-gray-200 text-gray-800' : d.is_reversal || d.waiting ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-900'"
                                 >
                                     <svg v-if="d.status === 'reversed'" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
                                     </svg>
-                                    <svg v-else-if="d.is_reversal" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg v-else-if="d.is_reversal || d.waiting" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
                                     </svg>
                                     <svg v-else class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                                     </svg>
-                                    {{ d.status === 'reversed' ? 'Reversed' : d.is_reversal ? 'Reversal' : 'Saved' }}
+                                    {{ d.status === 'reversed' ? 'Reversed' : d.is_reversal ? 'Reversal' : d.waiting ? 'Waiting' : 'Saved' }}
                                 </span>
                             </td>
                             <td class="num font-semibold text-gray-900">{{ d.total }}</td>

@@ -33,10 +33,12 @@ use Illuminate\Support\Facades\DB;
  *   Purchase  Dr Gold Stock            Cr the supplier          and a new lot of gold in stock
  *   Sale      Dr the customer          Cr Sales
  *             Dr Cost of Sales         Cr Gold Stock            and gold leaves the oldest lots
- *   Transfer  two documents, one in each office's books, so each office's books balance by themselves:
- *     out, in the sending office    Dr the receiving office's account   Cr Gold Stock   (gold leaves the oldest lots)
- *     in, in the receiving office   Dr Gold Stock   Cr the sending office's account     (the gold becomes new lots)
- *     Gold moves at what it cost, so neither office shows a profit or a loss on it.
+ *   Transfer  two documents, one in each office's books, so each office's books balance by themselves.
+ *     Sent, in the sending office:       Dr the receiving office's account   Cr Gold Stock   (gold leaves the oldest lots)
+ *     Accepted, in the receiving office: Dr Gold Stock   Cr the sending office's account     (the gold becomes new lots)
+ *     Nothing changes in the receiving office until it accepts. If it declines, or the sender cancels, the
+ *     sender's document is reversed and the gold goes back. Gold moves at what it cost, so neither office
+ *     shows a profit or a loss on it.
  */
 final class PostingService
 {
@@ -157,21 +159,21 @@ final class PostingService
     }
 
     /**
-     * Gold sent from one office to another, at what it cost. It leaves the sending office's oldest
-     * lots, keeping the date it was first bought, and arrives as new lots in the receiving office with
-     * the same weight, karat and cost. Returns the sending office's document, and the receiving
-     * office's document is its other half.
+     * Gold sent from one office to another, at what it cost. It leaves the sending office's oldest lots
+     * and is then on its way: the receiving office's books and stock do not change until it accepts
+     * (acceptTransfer). Until then the sender can cancel it, or the receiver can decline it, and the gold
+     * goes back. Returns the sending office's document.
      *
-     * The two offices then owe each other the cost of the gold, through their office accounts, until
-     * that is settled with a receipt or a payment.
+     * Once accepted, the two offices owe each other the cost of the gold, through their office accounts,
+     * until that is settled with a receipt or a payment.
      */
     public function postTransfer(Branch $from, Branch $to, string $date, int $weightH, ?string $note, ?string $idempotencyKey, User $by): Document
     {
         return $this->once($from, $idempotencyKey, $by, function () use ($from, $to, $date, $weightH, $note, $idempotencyKey, $by) {
             $this->assertTransfer($from, $to, $date, $weightH);
 
-            // Both offices' gold, lowest office first, so two offices sending to each other wait their turn.
-            $this->lots->lockOffices([$from, $to]);
+            // The sending office's gold is locked while it is taken out, so two sales or transfers cannot take the same gold.
+            $this->lots->lockOffices([$from]);
 
             $taken = $this->lots->allocate($from, $weightH);   // locks the lots until we finish
             $costCents = array_sum(array_column($taken, 'costCents'));
@@ -181,7 +183,6 @@ final class PostingService
             }
 
             $toAccount = ChartOfAccounts::ensureBranchLedger($to);
-            $fromAccount = ChartOfAccounts::ensureBranchLedger($from);
             $stock = $this->systemLedger($from, 'gold_stock');
 
             $out = $this->write(
@@ -199,37 +200,106 @@ final class PostingService
                 ])->save();
             }
 
-            // The receiving office's side, written as that office: its document, its lines, its new lots.
-            $this->asOffice($to, function () use ($to, $date, $fromAccount, $stock, $costCents, $note, $by, $out, $taken) {
+            // The gold is now on its way. It is in neither office's stock until the receiving office accepts it.
+            return $out;
+        });
+    }
+
+    /**
+     * The receiving office accepts gold that was sent to it. Only now does the gold arrive: the receiving
+     * office's own document is written, and the gold becomes new lots in its stock. They keep the date the
+     * gold was first bought, so the oldest still sells first, and the weight, karat and cost it left with.
+     * Returns the receiving office's document.
+     */
+    public function acceptTransfer(Document $transfer, Branch $receiver, User $by): Document
+    {
+        return DB::transaction(function () use ($transfer, $receiver, $by) {
+            // Lock the transfer, so two people accepting it, or one accepting while the sender cancels, cannot both win.
+            $out = $this->lockedWaitingTransfer($transfer, $receiver, 'accepted');
+
+            $from = Branch::withoutGlobalScopes()->findOrFail($out->branch_id);
+            $this->lots->lockOffices([$from, $receiver]);
+
+            $date = now()->toDateString();
+            $fromAccount = ChartOfAccounts::ensureBranchLedger($from);
+            $stock = $this->systemLedger($receiver, 'gold_stock');
+            $cents = Money::fromDb($out->total);
+
+            $moves = StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->orderBy('id')->get();
+
+            // Written as the receiving office: its document, its lines and its new lots.
+            return $this->asOffice($receiver, function () use ($receiver, $date, $fromAccount, $stock, $cents, $out, $by, $moves) {
                 $in = $this->write(
-                    DocumentType::TransferIn, $to, $date, $fromAccount, null, $costCents, $note, null, $by,
-                    [[$stock, $costCents, 0], [$fromAccount, 0, $costCents]],
+                    DocumentType::TransferIn, $receiver, $date, $fromAccount, null, $cents, $out->note, null, $by,
+                    [[$stock, $cents, 0], [$fromAccount, 0, $cents]],
                     $out->id,
                 );
 
-                foreach ($taken as ['lot' => $lot, 'weightH' => $takenH, 'costCents' => $lotCost]) {
-                    // The same gold, now held by the receiving office. It keeps its original date so it still sells in order.
+                foreach ($moves as $move) {
+                    $source = StockLot::withoutGlobalScopes()->findOrFail($move->lot_id);
+                    $weightH = abs(Money::fromDb($move->weight_g));
+                    $cost = abs(Money::fromDb($move->cost));
+
                     $arrived = StockLot::create([
-                        'tenant_id' => $to->tenant_id,
-                        'branch_id' => $to->id,
+                        'tenant_id' => $receiver->tenant_id,
+                        'branch_id' => $receiver->id,
                         'gold_line_id' => null,
-                        'source_lot_id' => $lot->id,
+                        'source_lot_id' => $source->id,
                         'document_id' => $in->id,
-                        'date' => $lot->date->toDateString(),
-                        'form' => $lot->form,
-                        'karat' => $lot->getRawOriginal('karat'),
-                        'weight_g' => Money::decimal($takenH),
-                        'remaining_g' => Money::decimal($takenH),
-                        'cost' => Money::decimal($lotCost),
-                        'remaining_cost' => Money::decimal($lotCost),
+                        'date' => $source->date->toDateString(),
+                        'form' => $source->form,
+                        'karat' => $source->getRawOriginal('karat'),
+                        'weight_g' => Money::decimal($weightH),
+                        'remaining_g' => Money::decimal($weightH),
+                        'cost' => Money::decimal($cost),
+                        'remaining_cost' => Money::decimal($cost),
                     ]);
 
-                    $this->writeMovement($arrived, $in, $date, $takenH, $lotCost);
+                    $this->writeMovement($arrived, $in, $date, $weightH, $cost);
                 }
-            });
 
-            return $out;
-        });
+                return $in;
+            });
+        }, 3);
+    }
+
+    /**
+     * The receiving office turns gold away. The sending office's transfer is reversed, so the gold goes back
+     * into its lots, with the receiving office's reason on the record. Returns the sending office's reversal.
+     */
+    public function declineTransfer(Document $transfer, Branch $receiver, string $reason, User $by): Document
+    {
+        return DB::transaction(function () use ($transfer, $receiver, $reason, $by) {
+            $out = $this->lockedWaitingTransfer($transfer, $receiver, 'declined');
+
+            $from = Branch::withoutGlobalScopes()->findOrFail($out->branch_id);
+            $this->lots->lockOffices([$from]);
+
+            return $this->asOffice($from, fn () => $this->reverseOne($out, "declined by {$receiver->name}: {$reason}", $by, now()->toDateString(), null));
+        }, 3);
+    }
+
+    /** A transfer out that is still waiting for this office to answer, locked. Anything else is refused in plain words. */
+    private function lockedWaitingTransfer(Document $transfer, Branch $receiver, string $verb): Document
+    {
+        $out = Document::withoutGlobalScopes()->whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+
+        $toAccount = Ledger::withoutGlobalScopes()->find($out->ledger_id);
+
+        if ($out->type !== DocumentType::Transfer || $out->isReversal()
+            || $out->tenant_id !== $receiver->tenant_id || $toAccount?->linked_branch_id !== $receiver->id) {
+            throw new PostingError('This transfer is not addressed to this office.');
+        }
+
+        if ($out->status !== Document::POSTED) {
+            throw new PostingError("{$out->number} was cancelled by the sending office, so it cannot be {$verb}.");
+        }
+
+        if (Document::withoutGlobalScopes()->where('paired_id', $out->id)->lockForUpdate()->exists()) {
+            throw new PostingError("{$out->number} has already been accepted.");
+        }
+
+        return $out;
     }
 
     /**
@@ -257,9 +327,11 @@ final class PostingService
             $other = null;
 
             if ($original->type === DocumentType::Transfer) {
+                // Still waiting to be accepted: there is no other half, and cancelling undoes just this one.
+                // Accepted: both halves are undone together.
                 $other = Document::withoutGlobalScopes()->where('paired_id', $original->id)->lockForUpdate()->first();
 
-                if ($other === null || $other->status !== Document::POSTED) {
+                if ($other !== null && $other->status !== Document::POSTED) {
                     throw new PostingError("{$original->number} cannot be reversed, because the receiving office's half is not in order.");
                 }
             }
