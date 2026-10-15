@@ -196,6 +196,70 @@ class ReportController extends Controller
         ], $extra + ['truncated' => $truncated, 'notes' => ["{$person->name} now: {$balance}."]]);
     }
 
+    /** One ledger's entries for the period, with a running balance: what the books say about one account. */
+    public function ledger(Request $request): Response|StreamedResponse
+    {
+        $this->authorize('viewAny', Document::class);
+
+        $period = ReportPeriod::fromRequest($request);
+
+        // Found through the usual scopes, so only a ledger this branch can see.
+        $ledger = $request->integer('ledger_id') > 0 ? Ledger::query()->find($request->integer('ledger_id')) : null;
+        $extra = ['person' => $ledger ? ['id' => $ledger->id, 'name' => $ledger->name, 'kind_label' => $ledger->kind->label()] : null];
+
+        if ($ledger === null) {
+            return $this->respond($request, 'ledger', 'Ledger report', $period, [], [], $extra);
+        }
+
+        $base = JournalLine::query()->where('ledger_id', $ledger->id);
+
+        $opening = Money::fromDb((clone $base)->whereDate('date', '<', $period->from)->sum('debit'))
+            - Money::fromDb((clone $base)->whereDate('date', '<', $period->from)->sum('credit'));
+
+        $lines = (clone $base)->with('document')
+            ->whereDate('date', '>=', $period->from)->whereDate('date', '<=', $period->to)
+            ->orderBy('date')->orderBy('id')->limit(self::LIMIT + 1)->get();
+
+        $truncated = $lines->count() > self::LIMIT;
+
+        // The totals cover the whole period, even when only the first rows are listed.
+        $sums = (clone $base)->whereDate('date', '>=', $period->from)->whereDate('date', '<=', $period->to)
+            ->selectRaw('COALESCE(SUM(debit), 0) as debits, COALESCE(SUM(credit), 0) as credits')->first();
+        $debits = Money::fromDb($sums->debits);
+        $credits = Money::fromDb($sums->credits);
+        $closing = $opening + $debits - $credits;
+
+        $running = $opening;
+        $rows = [['', '', '', 'Balance brought forward', '', '', Money::drCr($opening)]];
+
+        foreach ($lines->take(self::LIMIT) as $line) {
+            $debit = Money::fromDb($line->debit);
+            $credit = Money::fromDb($line->credit);
+            $running += $debit - $credit;
+
+            $rows[] = [
+                $this->day($line->date), (string) $line->document?->number, (string) $line->document?->type->label(),
+                (string) $line->document?->note,
+                $debit > 0 ? Money::format($debit) : '', $credit > 0 ? Money::format($credit) : '', Money::drCr($running),
+            ];
+        }
+
+        $table = new ReportTable($ledger->name, [
+            ['label' => 'Date'], ['label' => 'Number'], ['label' => 'Type'], ['label' => 'Note'],
+            ['label' => 'Debit', 'number' => true], ['label' => 'Credit', 'number' => true], ['label' => 'Balance', 'number' => true],
+        ], $rows, ['Total', '', '', '', Money::format($debits), Money::format($credits), Money::drCr($closing)]);
+
+        return $this->respond($request, 'ledger', 'Ledger report', $period, [$table], [
+            ['label' => 'Opening balance', 'value' => Money::drCr($opening)],
+            ['label' => 'Debits', 'value' => Money::format($debits)],
+            ['label' => 'Credits', 'value' => Money::format($credits)],
+            ['label' => 'Closing balance', 'value' => Money::drCr($closing)],
+        ], $extra + ['truncated' => $truncated, 'notes' => [
+            LedgerBalances::describe($ledger->kind, $closing).'.',
+            'Dr means debit, Cr means credit. A customer who owes you has a debit balance.',
+        ]]);
+    }
+
     /** Every account's opening and closing balance for the period, and the gold in stock. */
     public function summary(Request $request): Response|StreamedResponse
     {

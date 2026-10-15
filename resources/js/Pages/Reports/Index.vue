@@ -9,6 +9,7 @@ const reports = [
     { name: 'reports.purchases', title: 'Purchases', text: 'All the gold bought in a period: who from, how much, and what it came to.' },
     { name: 'reports.sales', title: 'Sales', text: 'All the gold sold in a period: who to, how much, and what it came to.' },
     { name: 'reports.supplier', title: 'Supplier report', text: 'The gold one supplier or customer supplied to you in a period.' },
+    { name: 'reports.ledger', title: 'Ledger report', text: 'One account\'s entries in a period, with its running balance: a customer, supplier, bank or cash account.' },
     { name: 'reports.summary', title: 'Balances summary', text: 'Every account\'s opening balance and closing balance for a period, and the gold in stock.' },
 ];
 </script>

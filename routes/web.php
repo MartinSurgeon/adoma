@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
         Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
         Route::get('/supplier', [ReportController::class, 'supplier'])->name('supplier');
+        Route::get('/ledger', [ReportController::class, 'ledger'])->name('ledger');
         Route::get('/summary', [ReportController::class, 'summary'])->name('summary');
     });
 

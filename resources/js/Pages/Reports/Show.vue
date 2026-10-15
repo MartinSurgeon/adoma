@@ -29,7 +29,13 @@ const props = defineProps({
 });
 
 const filter = reactive({ from: props.period.from, to: props.period.to, ledger_id: props.person?.id ?? '' });
-const isSupplier = computed(() => props.report === 'supplier');
+
+// Two reports are about one person or account, so they ask which, above the period.
+const pickers = {
+    supplier: { label: 'Supplier or customer', kinds: 'supplier,customer', ask: 'Choose the supplier or customer above, then the period, to see the gold they supplied.' },
+    ledger: { label: 'Ledger', kinds: '', ask: 'Choose the ledger above, then the period, to see its entries and balance.' },
+};
+const picker = computed(() => pickers[props.report] ?? null);
 
 // Quick periods, worked out on this computer's own calendar.
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -76,12 +82,12 @@ const select = 'mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base 
         <div class="mx-auto max-w-6xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
             <!-- The period, and for the supplier report, who. -->
             <form class="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5 lg:items-end print:hidden" @submit.prevent="show">
-                <div v-if="isSupplier" class="sm:col-span-2 lg:col-span-5">
+                <div v-if="picker" class="sm:col-span-2 lg:col-span-5">
                     <LedgerPicker
                         v-model="filter.ledger_id"
                         input-id="person"
-                        label="Supplier or customer"
-                        kinds="supplier,customer"
+                        :label="picker.label"
+                        :kinds="picker.kinds"
                         :initial="person ? { id: person.id, name: person.name, kind_label: person.kind_label, balance: '' } : null"
                     />
                 </div>
@@ -110,9 +116,7 @@ const select = 'mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base 
                 </div>
             </form>
 
-            <p v-if="isSupplier && !person" class="card p-6 text-base text-gray-700 print:hidden">
-                Choose the supplier or customer above, then the period, to see the gold they supplied.
-            </p>
+            <p v-if="picker && !person" class="card p-6 text-base text-gray-700 print:hidden">{{ picker.ask }}</p>
 
             <Banner v-if="truncated" variant="warning">
                 This period has more than {{ limit }} rows, so only the first {{ limit }} are listed. The totals still cover all of it.
