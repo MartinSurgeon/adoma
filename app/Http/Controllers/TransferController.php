@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Domain\Documents\Document;
 use App\Domain\Documents\PostingError;
 use App\Domain\Documents\PostingService;
+use App\Domain\Gold\FormulaSet;
+use App\Domain\Gold\GoldCalculator;
 use App\Domain\Stock\LotAllocator;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\TenantContext;
 use App\Domain\Transfers\PendingTransfers;
+use App\Domain\Transfers\TransferPricing;
 use App\Http\Requests\SaveTransferRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +44,7 @@ class TransferController extends Controller
             'today' => now()->toDateString(),
             'idempotencyKey' => (string) Str::uuid(),
             'inStock' => Money::format(LotAllocator::availableH($from)),
+            'baseKarat' => FormulaSet::currentFor($from->tenant_id)->karat_base,
             'offices' => Branch::query()->where('id', '!=', $from->id)->orderBy('name')->get()
                 ->map(fn (Branch $b) => ['id' => $b->id, 'name' => $b->name])->values(),
         ]);
@@ -70,14 +74,40 @@ class TransferController extends Controller
             return response()->json(['ok' => false, 'enough' => false, 'in_stock' => Money::format($available), 'message' => $error->getMessage()]);
         }
 
-        return response()->json([
+        $costCents = array_sum(array_column($taken, 'costCents'));
+        $response = [
             'ok' => true,
             'enough' => true,
             'weight' => Money::format($weightH),
-            'cost' => Money::cedis(array_sum(array_column($taken, 'costCents'))),
+            'cost' => Money::cedis($costCents),
             'lots' => count($taken),
             'in_stock' => Money::format($available),
-        ]);
+            'amount' => null,
+            'profit' => null,
+        ];
+
+        // With a price, the amount it comes to and what the sending branch makes on it: the same rule that saving uses.
+        $price = trim((string) $request->input('price'));
+
+        if ($price !== '') {
+            try {
+                $priceH = Money::cents($price);
+            } catch (InvalidArgumentException) {
+                return response()->json(['ok' => false, 'field' => 'price', 'message' => 'Enter the price as a number, for example 10600.']);
+            }
+
+            if ($priceH <= 0 || $priceH > GoldCalculator::MAX_PRICE * 100) {
+                return response()->json(['ok' => false, 'field' => 'price', 'message' => 'The price must be more than zero and not a typing mistake.']);
+            }
+
+            $amountCents = array_sum(TransferPricing::values($taken, FormulaSet::currentFor($from->tenant_id), $priceH));
+            $response['amount'] = Money::cedis($amountCents);
+            $response['amount_cents'] = $amountCents;
+            $response['profit'] = Money::cedis($amountCents - $costCents);
+            $response['is_loss'] = $amountCents < $costCents;
+        }
+
+        return response()->json($response);
     }
 
     public function store(SaveTransferRequest $request, PostingService $posting): RedirectResponse
@@ -88,6 +118,7 @@ class TransferController extends Controller
                 $request->toBranch,
                 $request->validated('date'),
                 $request->weightH,
+                $request->priceH,
                 $request->validated('note'),
                 $request->validated('idempotency_key'),
                 $request->user(),
@@ -97,7 +128,10 @@ class TransferController extends Controller
         }
 
         return redirect()->route('documents.show', $document)
-            ->with('success', sprintf('%s was sent. %s g is waiting for %s to accept it.', $document->number, Money::format($request->weightH), $request->toBranch->name));
+            ->with('success', sprintf(
+                '%s was sent. %s g for %s is waiting for %s to accept it.',
+                $document->number, Money::format($request->weightH), Money::cedis(Money::cents($document->total)), $request->toBranch->name,
+            ));
     }
 
     /** Gold sent to this branch and waiting for it to accept or decline. */
@@ -119,7 +153,8 @@ class TransferController extends Controller
                 'from' => $senders[$d->branch_id] ?? '',
                 'note' => $d->note,
                 'weight' => Money::format($figures[$d->id]['weightH']),
-                'cost' => Money::cedis($figures[$d->id]['costCents']),
+                // What this branch will owe. The sending branch's own cost is not for this branch to see.
+                'amount' => Money::cedis($figures[$d->id]['valueCents']),
                 'lots' => $figures[$d->id]['lots'],
             ])->values(),
         ]);

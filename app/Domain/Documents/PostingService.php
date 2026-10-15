@@ -2,6 +2,7 @@
 
 namespace App\Domain\Documents;
 
+use App\Domain\Gold\FormulaSet;
 use App\Domain\Gold\GoldFigures;
 use App\Domain\Gold\GoldLine;
 use App\Domain\Ledgers\ChartOfAccounts;
@@ -14,6 +15,7 @@ use App\Domain\Support\Money;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\Tenant;
 use App\Domain\Tenancy\TenantContext;
+use App\Domain\Transfers\TransferPricing;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Closure;
@@ -33,12 +35,15 @@ use Illuminate\Support\Facades\DB;
  *   Purchase  Dr Gold Stock            Cr the supplier          and a new lot of gold in stock
  *   Sale      Dr the customer          Cr Sales
  *             Dr Cost of Sales         Cr Gold Stock            and gold leaves the oldest lots
- *   Transfer  two documents, one in each branch's books, so each branch's books balance by themselves.
- *     Sent, in the sending branch:       Dr the receiving branch's account   Cr Gold Stock   (gold leaves the oldest lots)
- *     Accepted, in the receiving branch: Dr Gold Stock   Cr the sending branch's account     (the gold becomes new lots)
+ *   Transfer  a sale from one branch to another, in two documents, one in each branch's books, so each
+ *             branch's books balance by themselves.
+ *     Sent, in the sending branch:       Dr the receiving branch's account   Cr Sales          (the price)
+ *                                        Dr Cost of Sales                    Cr Gold Stock      (what the gold cost)
+ *                                        and the gold leaves the oldest lots
+ *     Accepted, in the receiving branch: Dr Gold Stock   Cr the sending branch's account       (the price)
+ *                                        and the gold becomes new lots that cost that price
  *     Nothing changes in the receiving branch until it accepts. If it declines, or the sender cancels, the
- *     sender's document is reversed and the gold goes back. Gold moves at what it cost, so neither office
- *     shows a profit or a loss on it.
+ *     sender's document is reversed and the gold goes back.
  */
 final class PostingService
 {
@@ -159,40 +164,52 @@ final class PostingService
     }
 
     /**
-     * Gold sent from one branch to another, at what it cost. It leaves the sending branch's oldest lots
-     * and is then on its way: the receiving branch's books and stock do not change until it accepts
+     * Gold sold by one branch to another, at a price per pound. It leaves the sending branch's oldest lots and
+     * is then on its way: the receiving branch's books and stock do not change until it accepts
      * (acceptTransfer). Until then the sender can cancel it, or the receiver can decline it, and the gold
      * goes back. Returns the sending branch's document.
      *
-     * Once accepted, the two branches owe each other the cost of the gold, through their branch accounts,
-     * until that is settled with a receipt or a payment.
+     * The sending branch books it as a sale (the receiving branch owes the price, the price is income, and the gold's
+     * cost leaves Gold Stock for Cost of Sales), priced slice by slice with the same rule as any sale. The
+     * receiving branch owes that price, through the branch accounts, until it is settled with a payment.
      */
-    public function postTransfer(Branch $from, Branch $to, string $date, int $weightH, ?string $note, ?string $idempotencyKey, User $by): Document
+    public function postTransfer(Branch $from, Branch $to, string $date, int $weightH, int $priceH, ?string $note, ?string $idempotencyKey, User $by): Document
     {
-        return $this->once($from, $idempotencyKey, $by, function () use ($from, $to, $date, $weightH, $note, $idempotencyKey, $by) {
+        return $this->once($from, $idempotencyKey, $by, function () use ($from, $to, $date, $weightH, $priceH, $note, $idempotencyKey, $by) {
             $this->assertTransfer($from, $to, $date, $weightH);
+
+            if ($priceH <= 0) {
+                throw new PostingError('Enter the price per pound the gold is being sold to the other branch at.');
+            }
 
             // The sending branch's gold is locked while it is taken out, so two sales or transfers cannot take the same gold.
             $this->lots->lockOffices([$from]);
 
             $taken = $this->lots->allocate($from, $weightH);   // locks the lots until we finish
             $costCents = array_sum(array_column($taken, 'costCents'));
+            $values = TransferPricing::values($taken, FormulaSet::currentFor($from->tenant_id), $priceH);
+            $amountCents = array_sum($values);
 
-            if ($costCents <= 0) {
-                throw new PostingError('This gold has no cost on record, so it cannot be moved between branches.');
+            if ($amountCents <= 0) {
+                throw new PostingError('The amount works out to nothing. Check the weight and the price.');
             }
 
             $toAccount = ChartOfAccounts::ensureBranchLedger($to);
-            $stock = $this->systemLedger($from, 'gold_stock');
 
-            $out = $this->write(
-                DocumentType::Transfer, $from, $date, $toAccount, null, $costCents, $note, $idempotencyKey, $by,
-                [[$toAccount, $costCents, 0], [$stock, 0, $costCents]],
-            );
+            // Booked like a sale: the other branch owes the price and the price is income, and what the gold had
+            // cost moves from Gold Stock to Cost of Sales, so the sale's profit is the price less that cost.
+            $lines = [[$toAccount, $amountCents, 0], [$this->systemLedger($from, 'sales'), 0, $amountCents]];
 
-            // The sending branch's side: the gold leaves its oldest lots.
-            foreach ($taken as ['lot' => $lot, 'weightH' => $takenH, 'costCents' => $lotCost]) {
-                $this->writeMovement($lot, $out, $date, -$takenH, -$lotCost);
+            if ($costCents > 0) {
+                $lines[] = [$this->systemLedger($from, 'cost_of_sales'), $costCents, 0];
+                $lines[] = [$this->systemLedger($from, 'gold_stock'), 0, $costCents];
+            }
+
+            $out = $this->write(DocumentType::Transfer, $from, $date, $toAccount, null, $amountCents, $note, $idempotencyKey, $by, $lines);
+
+            // The sending branch's side: the gold leaves its oldest lots, each slice carrying the price it was sold at.
+            foreach ($taken as $index => ['lot' => $lot, 'weightH' => $takenH, 'costCents' => $lotCost]) {
+                $this->writeMovement($lot, $out, $date, -$takenH, -$lotCost, $values[$index]);
 
                 $lot->forceFill([
                     'remaining_g' => Money::decimal(Money::fromDb($lot->remaining_g) - $takenH),
@@ -223,12 +240,16 @@ final class PostingService
             $date = now()->toDateString();
             $fromAccount = ChartOfAccounts::ensureBranchLedger($from);
             $stock = $this->systemLedger($receiver, 'gold_stock');
-            $cents = Money::fromDb($out->total);
 
             $moves = StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->orderBy('id')->get();
 
+            // What the receiving branch pays, and so what the gold costs it: the price each slice was sold at. A
+            // transfer made before transfers were priced moved at cost, and has no price on its slices.
+            $priceOf = fn ($move) => $move->value !== null ? Money::fromDb($move->value) : abs(Money::fromDb($move->cost));
+            $cents = $moves->sum($priceOf);
+
             // Written as the receiving branch: its document, its lines and its new lots.
-            return $this->asOffice($receiver, function () use ($receiver, $date, $fromAccount, $stock, $cents, $out, $by, $moves) {
+            return $this->asOffice($receiver, function () use ($receiver, $date, $fromAccount, $stock, $cents, $out, $by, $moves, $priceOf) {
                 $in = $this->write(
                     DocumentType::TransferIn, $receiver, $date, $fromAccount, null, $cents, $out->note, null, $by,
                     [[$stock, $cents, 0], [$fromAccount, 0, $cents]],
@@ -238,7 +259,7 @@ final class PostingService
                 foreach ($moves as $move) {
                     $source = StockLot::withoutGlobalScopes()->findOrFail($move->lot_id);
                     $weightH = abs(Money::fromDb($move->weight_g));
-                    $cost = abs(Money::fromDb($move->cost));
+                    $cost = $priceOf($move);
 
                     $arrived = StockLot::create([
                         'tenant_id' => $receiver->tenant_id,
@@ -477,7 +498,8 @@ final class PostingService
         ]);
     }
 
-    private function writeMovement(StockLot $lot, Document $document, string $date, int $weightH, int $costCents): void
+    /** $valueCents is only for the gold leaving on a transfer: the price that slice was sold at. */
+    private function writeMovement(StockLot $lot, Document $document, string $date, int $weightH, int $costCents, ?int $valueCents = null): void
     {
         StockMovement::create([
             'tenant_id' => $document->tenant_id,
@@ -487,6 +509,7 @@ final class PostingService
             'document_id' => $document->id,
             'weight_g' => Money::decimal($weightH),
             'cost' => Money::decimal($costCents),
+            'value' => $valueCents === null ? null : Money::decimal($valueCents),
             'date' => $date,
         ]);
     }

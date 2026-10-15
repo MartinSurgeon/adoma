@@ -175,9 +175,16 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     </p>
                 </Banner>
                 <p v-else class="mt-4 text-base text-gray-700">
-                    The gold moved at what it cost, so neither branch shows a profit or a loss on it.
+                    {{ transfer.direction === 'out'
+                        ? 'This was a sale to the other branch. They owe the amount above until it is settled with a payment.'
+                        : 'This was bought from the other branch. You owe the amount above until it is settled with a payment.' }}
                     <template v-if="transfer.direction === 'in'">To put this right, the sending branch reverses its transfer, which undoes both halves.</template>
                 </p>
+
+                <Banner v-if="profit" :variant="profit.is_loss ? 'error' : 'success'" class="mt-4">
+                    This gold had cost {{ profit.cost }}. {{ profit.is_loss ? 'The sale made a loss of' : 'The sale made a profit of' }}
+                    <span class="font-semibold">{{ profit.profit }}</span>.
+                </Banner>
             </section>
 
             <!-- The weighing, for a purchase or a sale. The working out is folded away. -->

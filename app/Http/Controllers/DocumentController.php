@@ -234,12 +234,12 @@ class DocumentController extends Controller
     }
 
     /**
-     * What a sale earned: the amount less what its gold had cost. A margin is sensitive,
-     * so only managers, admins and owners of the branch see it.
+     * What a sale earned: the amount less what its gold had cost. A transfer out is a sale to another branch, so it
+     * has one too. A margin is sensitive, so only managers, admins and owners of the branch see it.
      */
     private function profit(Document $document, ?User $viewer): ?array
     {
-        if ($viewer === null || $document->type !== DocumentType::Sale || $document->isReversal()) {
+        if ($viewer === null || ! in_array($document->type, [DocumentType::Sale, DocumentType::Transfer], true) || $document->isReversal()) {
             return null;
         }
 

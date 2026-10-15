@@ -80,16 +80,30 @@ final class GoldCalculator
 
     private static function finish(FormulaSet $formula, string $form, int $weightH, ?int $waterH, ?int $densityH, int $karatH, int $priceH, ?int $bigH = null): GoldFigures
     {
-        $poundsH = intdiv($weightH * 100, self::hundredths($formula->grams_per_pound));   // TRUNC(weight / 7.75, 2)
-
-        // TRUNC((karat / base) * price * pounds, 0), all three in hundredths: divide by 100 three times.
-        $amountCedis = intdiv($karatH * $priceH * $poundsH, $formula->karat_base * 1_000_000);
+        $poundsH = self::poundsFor($formula, $weightH);
+        $amountCedis = self::amountFor($formula, $weightH, $karatH, $priceH);
 
         if ($amountCedis <= 0) {
             throw new CalculationError('The amount works out to nothing. Check the weight and the price.', 'price');
         }
 
         return new GoldFigures($form, $weightH, $waterH, $poundsH, $densityH, $karatH, $priceH, $amountCedis, $formula, $bigH);
+    }
+
+    /** TRUNC(weight / 7.75, 2), in hundredths. */
+    public static function poundsFor(FormulaSet $formula, int $weightH): int
+    {
+        return intdiv($weightH * 100, self::hundredths($formula->grams_per_pound));
+    }
+
+    /**
+     * What a weight of gold of a given karat comes to at a price per pound, in whole cedis:
+     * TRUNC((karat / base) * price * pounds, 0), all three in hundredths, so divided by 100 three times.
+     * A sale of this gold, and a transfer of it between branches, are priced by this one rule.
+     */
+    public static function amountFor(FormulaSet $formula, int $weightH, int $karatH, int $priceH): int
+    {
+        return intdiv($karatH * $priceH * self::poundsFor($formula, $weightH), $formula->karat_base * 1_000_000);
     }
 
     /** Karat is a share of 24. Outside 0 to 24 means the weights are wrong, so the answer is refused. */

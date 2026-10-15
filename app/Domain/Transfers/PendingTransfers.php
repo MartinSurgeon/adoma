@@ -47,10 +47,12 @@ final class PendingTransfers
     }
 
     /**
-     * Weight and cost of each transfer, from the gold that left the sending branch.
+     * Weight, cost and price of each transfer, from the gold that left the sending branch. The cost is the sending
+     * branch's own business. The price is what the receiving branch will owe, and is all it should be shown.
+     * A transfer made before transfers were priced moved at cost, so its price is its cost.
      *
      * @param  Collection<int, Document>|list<int>  $documents
-     * @return array<int, array{weightH: int, costCents: int, lots: int}>  by document id
+     * @return array<int, array{weightH: int, costCents: int, valueCents: int, lots: int}>  by document id
      */
     public static function figures(Collection|array $documents): array
     {
@@ -60,11 +62,14 @@ final class PendingTransfers
             return [];
         }
 
-        $figures = array_fill_keys($ids, ['weightH' => 0, 'costCents' => 0, 'lots' => 0]);
+        $figures = array_fill_keys($ids, ['weightH' => 0, 'costCents' => 0, 'valueCents' => 0, 'lots' => 0]);
 
         StockMovement::withoutGlobalScopes()->whereIn('document_id', $ids)->get()->each(function ($move) use (&$figures) {
+            $cost = abs(Money::fromDb($move->cost));
+
             $figures[$move->document_id]['weightH'] += abs(Money::fromDb($move->weight_g));
-            $figures[$move->document_id]['costCents'] += abs(Money::fromDb($move->cost));
+            $figures[$move->document_id]['costCents'] += $cost;
+            $figures[$move->document_id]['valueCents'] += $move->value !== null ? Money::fromDb($move->value) : $cost;
             $figures[$move->document_id]['lots']++;
         });
 

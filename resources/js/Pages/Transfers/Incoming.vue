@@ -73,7 +73,7 @@ function confirm() {
                         </div>
                         <div class="text-right">
                             <p class="text-3xl font-semibold tabular-nums text-gray-900">{{ transfer.weight }} <span class="text-base font-normal text-gray-700">g</span></p>
-                            <p class="mt-1 text-base tabular-nums text-gray-700">Cost {{ transfer.cost }}</p>
+                            <p class="mt-1 text-base tabular-nums text-gray-700">You will owe {{ transfer.amount }}</p>
                         </div>
                     </div>
 
@@ -103,8 +103,8 @@ function confirm() {
         >
             <template v-if="answering?.kind === 'accept'">
                 <p>
-                    Check that the gold has arrived and the weight matches. Accepting adds it to {{ office }}'s stock at what it cost,
-                    {{ answering.transfer.cost }}, and {{ office }} will owe {{ answering.transfer.from }} that amount until it is settled.
+                    Check that the gold has arrived and the weight matches. Accepting buys it for {{ answering.transfer.amount }}: it joins
+                    {{ office }}'s stock at that cost, and {{ office }} will owe {{ answering.transfer.from }} that amount until it is settled.
                 </p>
             </template>
             <template v-else-if="answering">

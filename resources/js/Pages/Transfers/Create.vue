@@ -15,6 +15,7 @@ const props = defineProps({
     today: String,
     idempotencyKey: String,
     inStock: String,
+    baseKarat: Number,
     offices: { type: Array, default: () => [] },
 });
 
@@ -22,6 +23,7 @@ const form = useForm({
     date: props.today ?? '',
     to_branch_id: '',
     weight: '',
+    price: '',
     note: '',
     idempotency_key: props.idempotencyKey ?? '',
 });
@@ -33,7 +35,7 @@ onMounted(() => document.getElementById('to')?.focus());
 
 const destination = computed(() => props.offices.find((o) => o.id === Number(form.to_branch_id))?.name ?? null);
 
-// The cost comes from the server, worked out from the oldest lots, so what is shown is what will be saved.
+// The figures come from the server, worked out from the oldest lots, so what is shown is what will be saved.
 const quote = ref(null);
 const working = ref(false);
 let timer = null;
@@ -49,7 +51,7 @@ async function ask() {
     working.value = true;
 
     try {
-        const { data } = await axios.post(route('transfers.quote'), { weight: form.weight });
+        const { data } = await axios.post(route('transfers.quote'), { weight: form.weight, price: form.price });
         if (mine === latest) quote.value = data;
     } catch {
         // No connection or a server error: the form stays usable, and saving checks everything again.
@@ -59,12 +61,14 @@ async function ask() {
     }
 }
 
-watch(() => form.weight, () => {
+watch(() => [form.weight, form.price], () => {
     clearTimeout(timer);
     timer = setTimeout(ask, 300);
 });
 
 const blocked = computed(() => quote.value !== null && quote.value.ok === false);
+const problem = (field) => (quote.value && !quote.value.ok && quote.value.field === field ? quote.value.message : '');
+const stockProblem = computed(() => quote.value && !quote.value.ok && quote.value.enough === false);
 const submit = () => form.post(route('transfers.store'));
 </script>
 
@@ -85,7 +89,7 @@ const submit = () => form.post(route('transfers.store'));
         <FormSection title="1. Where to">
             <div class="grid gap-4 sm:grid-cols-3">
                 <div class="sm:col-span-2">
-                    <InputLabel for="to" value="Send to" />
+                    <InputLabel for="to" value="Sell to" />
                     <select
                         id="to"
                         v-model="form.to_branch_id"
@@ -109,8 +113,7 @@ const submit = () => form.post(route('transfers.store'));
             </div>
         </FormSection>
 
-        <!-- The weight last, and the largest thing on the form. -->
-        <FormSection title="2. How much">
+        <FormSection title="2. How much gold">
             <InputLabel for="weight" value="Weight to send (g)" />
             <TextInput
                 id="weight"
@@ -121,40 +124,55 @@ const submit = () => form.post(route('transfers.store'));
                 v-model="form.weight"
                 required
             />
-            <InputError class="mt-2" :message="form.errors.weight || (quote && !quote.ok && quote.enough !== false ? quote.message : '')" />
+            <InputError class="mt-2" :message="form.errors.weight || (quote && !quote.ok && quote.enough !== false && !quote.field ? quote.message : '')" />
 
             <dl class="mt-4 grid grid-cols-2 gap-4 rounded-md bg-gray-50 p-4 ring-1 ring-gray-200">
-                <div>
-                    <dt class="text-sm text-gray-700">What this gold cost</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">{{ quote?.ok ? quote.cost : working ? 'Working it out…' : '—' }}</dd>
-                </div>
                 <div>
                     <dt class="text-sm text-gray-700">Taken from</dt>
                     <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">
                         {{ quote?.ok ? `${quote.lots} ${quote.lots === 1 ? 'lot' : 'lots'}, oldest first` : '—' }}
                     </dd>
                 </div>
+                <div>
+                    <dt class="text-sm text-gray-700">What this gold cost you</dt>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">{{ quote?.ok ? quote.cost : working ? 'Working it out…' : '—' }}</dd>
+                </div>
             </dl>
+        </FormSection>
+
+        <!-- The price, and the amount it comes to: last on the form and the largest figure on it. -->
+        <FormSection title="3. Price and amount">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <InputLabel for="price" :value="`Price per pound at ${baseKarat} karat (GH₵)`" />
+                    <TextInput id="price" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0.00" v-model="form.price" required />
+                    <p class="mt-1 text-sm text-gray-700">The same price a sale uses. Each lot is priced by its own karat.</p>
+                    <InputError class="mt-2" :message="form.errors.price || problem('price')" />
+                </div>
+                <div class="rounded-lg bg-teal-50/80 p-5 ring-1 ring-teal-200/80 shadow-sm">
+                    <p class="text-sm font-medium uppercase tracking-wide text-teal-900">{{ destination ?? 'The other branch' }} will owe you</p>
+                    <p class="mt-1 text-3xl font-bold tabular-nums text-teal-950">{{ quote?.ok && quote.amount ? quote.amount : working ? 'Working it out…' : '—' }}</p>
+                    <p v-if="quote?.ok && quote.profit" class="mt-2 text-base font-medium" :class="quote.is_loss ? 'text-red-800' : 'text-green-800'">
+                        {{ quote.is_loss ? 'A loss of' : 'You make' }} {{ quote.profit }} on it
+                    </p>
+                </div>
+            </div>
         </FormSection>
 
         <template #summary>
             <div class="rounded-lg bg-teal-50 p-6 ring-1 ring-teal-100">
                 <h2 class="text-lg font-semibold text-gray-900">Summary</h2>
 
-                <Banner v-if="quote && quote.ok === false && quote.enough === false" variant="warning" class="mt-4">
+                <Banner v-if="stockProblem" variant="warning" class="mt-4">
                     Not enough gold in stock. {{ office }} has {{ quote.in_stock }} g.
                 </Banner>
 
-                <p v-if="quote?.ok && destination" class="mt-4 text-base text-gray-900">
-                    {{ quote.weight }} g leaves {{ office }}'s stock and arrives at {{ destination }}, at what it cost, {{ quote.cost }}.
-                    Neither branch shows a profit or a loss on it.
+                <p v-if="quote?.ok && quote.amount && destination" class="mt-4 text-base text-gray-900">
+                    This is a sale. {{ quote.weight }} g leaves {{ office }}'s stock for {{ quote.amount }}, and {{ destination }} will owe
+                    {{ office }} that until it is settled with a payment. The gold counts as {{ destination }}'s stock only after they accept it.
                 </p>
                 <p v-else class="mt-4 text-base text-gray-700">
-                    Choose the branch and enter the weight to see how this will be recorded.
-                </p>
-
-                <p v-if="quote?.ok && destination" class="mt-4 text-base text-gray-900">
-                    {{ destination }} will owe {{ office }} {{ quote.cost }} until it is settled with a payment.
+                    Choose the branch, then enter the weight and the price to see how this will be recorded.
                 </p>
 
                 <p class="mt-4 text-sm text-gray-700">The server works the figures out again when you save.</p>

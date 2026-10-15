@@ -14,11 +14,11 @@ class StockMovement extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['tenant_id', 'branch_id', 'lot_id', 'document_id', 'weight_g', 'cost', 'date'];
+    protected $fillable = ['tenant_id', 'branch_id', 'lot_id', 'document_id', 'weight_g', 'cost', 'value', 'date'];
 
     protected function casts(): array
     {
-        return ['date' => 'date', 'weight_g' => 'decimal:2', 'cost' => 'decimal:2'];
+        return ['date' => 'date', 'weight_g' => 'decimal:2', 'cost' => 'decimal:2', 'value' => 'decimal:2'];
     }
 
     protected static function booted(): void

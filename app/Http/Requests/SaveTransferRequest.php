@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Domain\Documents\Document;
+use App\Domain\Gold\GoldCalculator;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\TenantContext;
@@ -19,6 +20,9 @@ class SaveTransferRequest extends FormRequest
     /** The weight in hundredths of a gram. */
     public int $weightH = 0;
 
+    /** The price per pound, in hundredths of a cedi. */
+    public int $priceH = 0;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', [Document::class, 'transfer']);
@@ -30,6 +34,7 @@ class SaveTransferRequest extends FormRequest
             'date' => ['required', 'date_format:Y-m-d', 'after:2000-01-01', 'before_or_equal:today'],
             'to_branch_id' => ['required', 'integer'],
             'weight' => ['required', 'string', 'max:20'],
+            'price' => ['required', 'string', 'max:20'],
             'note' => ['nullable', 'string', 'max:500'],
             'idempotency_key' => ['required', 'string', 'max:64'],
         ];
@@ -58,6 +63,18 @@ class SaveTransferRequest extends FormRequest
                 } catch (InvalidArgumentException) {
                     $validator->errors()->add('weight', 'Enter the weight in grams as a number, for example 250 or 250.50.');
                 }
+
+                try {
+                    $this->priceH = Money::cents($this->input('price'));
+
+                    if ($this->priceH <= 0) {
+                        $validator->errors()->add('price', 'The price must be more than zero.');
+                    } elseif ($this->priceH > GoldCalculator::MAX_PRICE * 100) {
+                        $validator->errors()->add('price', 'The price is more than '.number_format(GoldCalculator::MAX_PRICE).', which looks like a typing mistake.');
+                    }
+                } catch (InvalidArgumentException) {
+                    $validator->errors()->add('price', 'Enter the price as a number, for example 10600.');
+                }
             },
         ];
     }
@@ -71,6 +88,7 @@ class SaveTransferRequest extends FormRequest
             'to_branch_id.required' => 'Choose the branch the gold is going to.',
             'to_branch_id.integer' => 'Choose the branch the gold is going to.',
             'weight.required' => 'Enter the weight.',
+            'price.required' => 'Enter the price per pound the gold is being sold to the other branch at.',
         ];
     }
 }

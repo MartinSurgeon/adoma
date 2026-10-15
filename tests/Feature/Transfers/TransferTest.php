@@ -14,7 +14,8 @@ use App\Domain\Tenancy\Branch;
 use Illuminate\Support\Str;
 use Tests\Support\World;
 
-// Gold sent from one branch to another, at what it cost. Two documents, one in each branch's books.
+// Gold sold by one branch to another, at a price per pound, and accepted by the receiving branch.
+// Two documents, one in each branch's books.
 
 beforeEach(function () {
     $this->w = World::build();
@@ -51,7 +52,7 @@ function trBuy(object $t, array $overrides = []): Document
 function trSendForm(object $t, array $overrides = []): array
 {
     return array_merge([
-        'date' => now()->toDateString(), 'to_branch_id' => $t->w->central->id, 'weight' => '1000.00',
+        'date' => now()->toDateString(), 'to_branch_id' => $t->w->central->id, 'weight' => '1000.00', 'price' => '12000',
         'note' => 'Carried by Kofi', 'idempotency_key' => (string) Str::uuid(),
     ], $overrides);
 }
@@ -114,22 +115,59 @@ it('sends gold as two documents, each balanced inside its own branch', function 
         // Each document's lines stay in its own branch, so each branch's books balance by themselves.
         ->and($outDebit)->toBe($outCredit)->and($outDebit)->toBeGreaterThan(0)
         ->and($outBranches)->toBe([$this->w->kumasi->id])
-        ->and($inDebit)->toBe($inCredit)->and($inDebit)->toBe($outDebit)
+        // The receiving branch books only the price. The sending branch also moves the gold's cost into Cost of Sales.
+        ->and($inDebit)->toBe($inCredit)->and($inDebit)->toBe(Money::fromDb($out->total))
         ->and($inBranches)->toBe([$this->w->central->id])
         ->and($out->note)->toBe('Carried by Kofi')->and($in->note)->toBe('Carried by Kofi');
 });
 
-it('moves gold at what it cost, so neither office shows a profit or a loss', function () {
+it('sells the gold to the other branch at the price, like any sale', function () {
     $purchase = trBuy($this);
     $cost = Money::fromDb($purchase->total);
 
-    $out = trSend($this, ['weight' => '1000.00']);
-    $moved = Money::fromDb($out->total);
+    $out = trSend($this, ['weight' => '1000.00', 'price' => '12000']);
 
-    // 1,000 of 2,094.25 g carries its share of the cost, and Kumasi keeps the rest, to the pesewa.
-    expect($moved)->toBe(intdiv($cost * 100000, 209425))
-        ->and(trStockBalance($this, $this->w->kumasi))->toBe($cost - $moved)
-        ->and(trStockBalance($this, $this->w->central))->toBe($moved);
+    // 1,000 g of 22.45 karat at 12,000 a pound is the same GH₵ 1,511,334 a sale of it would be.
+    $amount = Money::fromDb($out->total);
+    // And it cost its share of the purchase: 1,000 of 2,094.25 g, to the pesewa.
+    $sliceCost = intdiv($cost * 100000, 209425);
+
+    $ledger = fn (string $key) => Ledger::withoutGlobalScopes()->where('tenant_id', $this->w->adoma->id)->where('system_key', $key)->firstOrFail();
+    $net = fn (Ledger $l, Branch $b) => Money::fromDb(JournalLine::withoutGlobalScopes()->where('ledger_id', $l->id)->where('branch_id', $b->id)->sum('debit'))
+        - Money::fromDb(JournalLine::withoutGlobalScopes()->where('ledger_id', $l->id)->where('branch_id', $b->id)->sum('credit'));
+
+    $central = Ledger::withoutGlobalScopes()->where('linked_branch_id', $this->w->central->id)->firstOrFail();
+    $kumasi = Ledger::withoutGlobalScopes()->where('linked_branch_id', $this->w->kumasi->id)->firstOrFail();
+
+    expect($amount)->toBe(151133400)
+        // Kumasi: Central owes it the price, the price is sales, the gold's cost leaves stock for cost of sales.
+        ->and($net($central, $this->w->kumasi))->toBe($amount)
+        ->and($net($ledger('sales'), $this->w->kumasi))->toBe(-$amount)
+        ->and($net($ledger('cost_of_sales'), $this->w->kumasi))->toBe($sliceCost)
+        ->and(trStockBalance($this, $this->w->kumasi))->toBe($cost - $sliceCost)
+        // Central: the gold is in stock at the price it paid, and it owes Kumasi that.
+        ->and(trStockBalance($this, $this->w->central))->toBe($amount)
+        ->and($net($kumasi, $this->w->central))->toBe(-$amount);
+});
+
+it('prices every lot by its own karat, with the rule a sale uses', function () {
+    // Two lots of different karat: 500 g at 22.50 and 2,094.25 g at 22.45.
+    trBuy($this, ['date' => now()->subDays(20)->toDateString(), 'weight' => '500.00', 'water_weight' => '27.30']);
+    trBuy($this, ['date' => now()->subDays(2)->toDateString()]);
+    $formula = App\Domain\Gold\FormulaSet::currentFor($this->w->adoma->id);
+
+    $out = trSend($this, ['weight' => '700.00', 'price' => '12000']);
+
+    $slices = StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->orderBy('id')->get();
+    $expected = [
+        App\Domain\Gold\GoldCalculator::amountFor($formula, 50000, 2250, 1200000) * 100,
+        App\Domain\Gold\GoldCalculator::amountFor($formula, 20000, 2245, 1200000) * 100,
+    ];
+
+    expect($slices->map(fn ($m) => Money::fromDb($m->value))->all())->toBe($expected)
+        ->and(Money::fromDb($out->total))->toBe(array_sum($expected))
+        // The gold arrives at the price paid for each slice.
+        ->and(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->orderBy('id')->get()->map(fn ($l) => Money::fromDb($l->cost))->all())->toBe($expected);
 });
 
 it('puts the gold into the receiving branch as new lots that keep their age, karat and cost', function () {
@@ -151,9 +189,10 @@ it('puts the gold into the receiving branch as new lots that keep their age, kar
         ->and(Money::fromDb($arrived[1]->weight_g))->toBe(20000)
         ->and($arrived[1]->date->toDateString())->toBe(now()->subDays(2)->toDateString())
         ->and($arrived[1]->karat)->toEqual($kumasiLots[1]->karat)
-        // Nothing lost between the two branches: what left Kumasi is exactly what arrived.
+        // The gold arrives costing what Central pays for it, the price. Kumasi's cost of what it kept and what it
+        // sent still adds up to exactly what it paid, with nothing lost.
         ->and(Money::fromDb($arrived->sum('cost')))->toBe(Money::fromDb($out->total))
-        ->and(Money::fromDb($kumasiLots->sum('remaining_cost')) + Money::fromDb($arrived->sum('cost')))
+        ->and(Money::fromDb($kumasiLots->sum('remaining_cost')) - Money::fromDb(StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->sum('cost')))
         ->toBe(Money::fromDb($old->total) + Money::fromDb($new->total))
         ->and(Money::fromDb($kumasiLots[0]->remaining_g))->toBe(0)
         ->and(Money::fromDb($kumasiLots[1]->remaining_g))->toBe(Money::fromDb($kumasiLots[1]->weight_g) - 20000);
@@ -171,7 +210,9 @@ it('writes every gram that moved as stock movements in the branch that holds it'
         ->and($inMoves->pluck('branch_id')->unique()->all())->toBe([$this->w->central->id])
         ->and(Money::fromDb($outMoves->sum('weight_g')))->toBe(-100000)
         ->and(Money::fromDb($inMoves->sum('weight_g')))->toBe(100000)
-        ->and(Money::fromDb($outMoves->sum('cost')))->toBe(-Money::fromDb($inMoves->sum('cost')));
+        // What Kumasi sold it for is what it cost Central.
+        ->and(Money::fromDb($outMoves->sum('value')))->toBe(Money::fromDb($inMoves->sum('cost')))
+        ->and($inMoves->first()->value)->toBeNull();
 });
 
 it('lets the branch that received the gold sell it, oldest first, at the cost it arrived with', function () {
@@ -252,7 +293,7 @@ it('cannot send gold to another business, even by calling the service directly',
     trBuy($this);
     $this->actingAs($this->w->kumasiManager);
 
-    expect(fn () => app(PostingService::class)->postTransfer($this->w->kumasi, $this->w->otherBranch, now()->toDateString(), 1000, null, null, $this->w->kumasiManager))
+    expect(fn () => app(PostingService::class)->postTransfer($this->w->kumasi, $this->w->otherBranch, now()->toDateString(), 1000, 1200000, null, null, $this->w->kumasiManager))
         ->toThrow(PostingError::class, 'same business');
 });
 
@@ -295,10 +336,15 @@ it('quotes what it would cost exactly as saving then does', function () {
     trBuy($this);
     $this->actingAs($this->w->kumasiManager);
 
-    $quote = $this->postJson(route('transfers.quote'), ['weight' => '1000'])->json();
-    $out = trSend($this, ['weight' => '1000.00']);
+    $quote = $this->postJson(route('transfers.quote'), ['weight' => '1000', 'price' => '12000'])->json();
+    $out = trSend($this, ['weight' => '1000.00', 'price' => '12000']);
+    $cost = abs(Money::fromDb(StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->sum('cost')));
 
-    expect($quote['cost'])->toBe(Money::cedis(Money::fromDb($out->total)));
+    // The amount and the profit shown while typing are exactly what is saved.
+    expect($quote['amount'])->toBe(Money::cedis(Money::fromDb($out->total)))
+        ->and($quote['cost'])->toBe(Money::cedis($cost))
+        ->and($quote['profit'])->toBe(Money::cedis(Money::fromDb($out->total) - $cost))
+        ->and($quote['is_loss'])->toBeFalse();
 });
 
 it('says so when there is not enough gold, or the weight is not a number', function () {
@@ -528,7 +574,8 @@ it('tells the menu who may send gold', function (string $who, bool $expected) {
 it('keeps sent gold out of both branches\' stock, and Central\'s books untouched, while it waits', function () {
     $purchase = trBuy($this);
     $out = trSend($this, ['weight' => '1000.00'], accept: false);
-    $cost = Money::fromDb($out->total);
+    // What leaves Kumasi's stock is what the gold cost it, not the price it was sold at.
+    $cost = abs(Money::fromDb(StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->sum('cost')));
 
     expect(Document::withoutGlobalScopes()->where('paired_id', $out->id)->exists())->toBeFalse()
         ->and(Document::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->where('type', 'transfer_in')->count())->toBe(0)
@@ -571,7 +618,9 @@ it('shows the receiving branch what is waiting for it, and nobody else', functio
     expect($central['office'])->toBe('Central')->and($central['transfers'])->toHaveCount(1)
         ->and($central['transfers'][0])->toMatchArray([
             'id' => $out->id, 'number' => $out->number, 'from' => 'Kumasi', 'note' => 'Carried by Kofi', 'weight' => '1,000.00', 'lots' => 1,
-        ])->and($central['transfers'][0]['cost'])->toStartWith('GH₵ ');
+        ])->and($central['transfers'][0]['amount'])->toBe('GH₵ 1,511,334.00')
+        // Kumasi's cost is Kumasi's business, and is not sent to the receiving branch at all.
+        ->and($central['transfers'][0])->not->toHaveKey('cost');
 
     // The sending branch has nothing to accept, and a clerk may not answer for a branch.
     expect(trProps($this->actingAs($this->w->kumasiManager)->get(route('transfers.incoming'))->assertOk())['transfers'])->toBe([]);
