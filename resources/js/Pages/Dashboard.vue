@@ -11,6 +11,7 @@ import StatCard from '@/Components/StatCard.vue';
 const props = defineProps({
     where: String,
     goldInStock: String,
+    goldByForm: { type: Array, default: () => [] },
     stats: Array,
     recent: Array,
     canCreate: Boolean,
@@ -53,6 +54,14 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <StatCard :label="stat.label" :value="stat.count" :href="stat.href" />
                     </li>
                 </ul>
+
+                <!-- The total is made of separate kinds of gold, kept apart in the stock. -->
+                <p v-if="goldByForm.length" class="mt-3 text-base text-gray-700">
+                    Of the gold in stock:
+                    <template v-for="(part, index) in goldByForm" :key="part.label">
+                        <span class="font-semibold tabular-nums text-gray-900">{{ part.label }} {{ part.grams }} g</span><span v-if="index < goldByForm.length - 1"> · </span>
+                    </template>
+                </p>
 
                 <!-- Looking at every branch: how much gold each one holds, with a way to see the lots. -->
                 <div v-if="stockByOffice && stockByOffice.length" class="card mt-4 overflow-x-auto">

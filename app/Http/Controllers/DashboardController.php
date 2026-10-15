@@ -61,6 +61,14 @@ class DashboardController extends Controller
         // Gold in stock, for the branches in context: the number an owner looks for first.
         $goldInStock = StockLot::query()->where('remaining_g', '>', 0)->sum('remaining_g');
 
+        // The same gold split by kind, kept separate in the stock and shown here under the total. After a sale or a
+        // purchase these change with the total, because they are worked out from the same lots each time.
+        $byForm = StockLot::query()->where('remaining_g', '>', 0)
+            ->selectRaw('form, SUM(remaining_g) as grams')->groupBy('form')->pluck('grams', 'form');
+        $goldByForm = collect(['raw' => 'Raw', 'refined' => 'Refined'])
+            ->map(fn (string $label, string $form) => ['label' => $label, 'grams' => Money::format(Money::fromDb($byForm[$form] ?? 0))])
+            ->values();
+
         // For an owner or admin looking at every branch: how much gold each one holds.
         $stockByOffice = null;
 
@@ -78,6 +86,7 @@ class DashboardController extends Controller
             'canTransfer' => $user->can('create', [Document::class, 'transfer']),
             'where' => $context->viewingAllBranches() ? 'All branches' : $context->branch()?->name,
             'goldInStock' => Money::format(Money::fromDb($goldInStock)),
+            'goldByForm' => $goldByForm,
             'stats' => collect(self::STATS)->map(fn (array $stat) => [
                 'label' => $stat['label'],
                 'count' => (int) ($counts[$stat['kind']->value] ?? 0),
