@@ -27,6 +27,7 @@ const form = useForm({
     ledger_id: props.prefill?.ledger?.id ?? '',
     form: props.prefill?.form ?? 'raw',
     weight: '',
+    big_weight: '',
     water_weight: '',
     karat: '',
     price: props.prefill?.price ?? '',
@@ -67,6 +68,7 @@ async function calculate() {
             type: props.type,
             form: form.form,
             weight: form.weight,
+            big_weight: isRaw.value ? form.big_weight : null,
             water_weight: isRaw.value ? form.water_weight : null,
             karat: isRaw.value ? null : form.karat,
             price: form.price,
@@ -80,7 +82,7 @@ async function calculate() {
     }
 }
 
-watch(() => [form.form, form.weight, form.water_weight, form.karat, form.price], () => {
+watch(() => [form.form, form.weight, form.big_weight, form.water_weight, form.karat, form.price], () => {
     clearTimeout(timer);
     timer = setTimeout(calculate, 300);
 });
@@ -155,17 +157,25 @@ const submit = () => form.post(route(`${props.type}s.store`));
                 <InputError class="mt-2" :message="form.errors.form" />
             </fieldset>
 
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div class="mt-4 grid gap-4" :class="isRaw ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
                 <div>
-                    <InputLabel for="weight" value="Weight (g)" />
+                    <InputLabel for="weight" :value="isRaw ? 'All the gold (g)' : 'Weight (g)'" />
                     <TextInput id="weight" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0.00" v-model="form.weight" required />
+                    <p v-if="isRaw" class="mt-1 text-sm text-gray-700">Everything on the scale, particles and all. This gives the pounds and the amount.</p>
                     <InputError class="mt-2" :message="form.errors.weight || problem('weight')" />
+                </div>
+
+                <div v-if="isRaw">
+                    <InputLabel for="big" value="Without particles (g)" />
+                    <TextInput id="big" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="Same as all" v-model="form.big_weight" />
+                    <p class="mt-1 text-sm text-gray-700">Weigh again after taking out the particles that have no volume. Leave empty if there are none.</p>
+                    <InputError class="mt-2" :message="form.errors.big_weight || problem('big_weight')" />
                 </div>
 
                 <div v-if="isRaw">
                     <InputLabel for="water" value="Water weight (g)" />
                     <TextInput id="water" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0.00" v-model="form.water_weight" />
-                    <p class="mt-1 text-sm text-gray-700">The weight of the water the gold pushes aside.</p>
+                    <p class="mt-1 text-sm text-gray-700">The weight of the water the gold without particles pushes aside.</p>
                     <InputError class="mt-2" :message="form.errors.water_weight || problem('water_weight')" />
                 </div>
                 <div v-else>

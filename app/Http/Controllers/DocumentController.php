@@ -222,6 +222,7 @@ class DocumentController extends Controller
         return [
             'form' => $line->form,
             'weight' => $format($line->weight_g),
+            'big_weight' => $format($line->big_weight_g),
             'water_weight' => $format($line->water_weight_g),
             'pounds' => $format($line->pounds),
             'density' => $format($line->density),

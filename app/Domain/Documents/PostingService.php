@@ -466,6 +466,7 @@ final class PostingService
             'document_id' => $document->id,
             'form' => $figures->form,
             'weight_g' => Money::decimal($figures->weightH),
+            'big_weight_g' => $figures->bigH === null ? null : Money::decimal($figures->bigH),
             'water_weight_g' => $figures->waterH === null ? null : Money::decimal($figures->waterH),
             'pounds' => Money::decimal($figures->poundsH),
             'density' => $figures->densityH === null ? null : Money::decimal($figures->densityH),

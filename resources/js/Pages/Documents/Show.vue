@@ -199,6 +199,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 <details class="mt-4">
                     <summary class="flex min-h-12 cursor-pointer items-center text-base font-medium text-gray-900">How it was worked out</summary>
                     <dl class="grid grid-cols-2 gap-x-6 gap-y-4 pb-2 text-base sm:grid-cols-3">
+                        <div v-if="gold.big_weight"><dt class="text-gray-700">Without particles</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.big_weight }} g</dd></div>
                         <div v-if="gold.water_weight"><dt class="text-gray-700">Water weight</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.water_weight }} g</dd></div>
                         <div v-if="gold.density"><dt class="text-gray-700">Density</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.density }}</dd></div>
                         <div><dt class="text-gray-700">Formulas version</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.formula_version }}</dd></div>

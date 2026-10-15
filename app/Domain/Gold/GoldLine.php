@@ -20,14 +20,14 @@ class GoldLine extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'tenant_id', 'branch_id', 'document_id', 'form', 'weight_g', 'water_weight_g', 'pounds',
+        'tenant_id', 'branch_id', 'document_id', 'form', 'weight_g', 'big_weight_g', 'water_weight_g', 'pounds',
         'density', 'karat', 'price', 'amount', 'formula_set_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'weight_g' => 'decimal:2', 'water_weight_g' => 'decimal:2', 'pounds' => 'decimal:2',
+            'weight_g' => 'decimal:2', 'big_weight_g' => 'decimal:2', 'water_weight_g' => 'decimal:2', 'pounds' => 'decimal:2',
             'density' => 'decimal:2', 'karat' => 'decimal:2', 'price' => 'decimal:2', 'amount' => 'decimal:2',
         ];
     }

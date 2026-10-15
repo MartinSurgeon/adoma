@@ -21,6 +21,7 @@ final readonly class GoldFigures
         public int $priceH,             // cedis per pound x 100
         public int $amountCedis,        // whole cedis
         public FormulaSet $formula,
+        public ?int $bigH = null,         // grams x 100: the weight with the particles taken out, which goes with the water weight
     ) {
     }
 
@@ -36,6 +37,7 @@ final readonly class GoldFigures
         return [
             'form' => $this->form,
             'weight' => Money::decimal($this->weightH),
+            'big_weight' => $this->bigH === null ? null : Money::decimal($this->bigH),
             'water_weight' => $this->waterH === null ? null : Money::decimal($this->waterH),
             'pounds' => Money::decimal($this->poundsH),
             'density' => $this->densityH === null ? null : Money::decimal($this->densityH),

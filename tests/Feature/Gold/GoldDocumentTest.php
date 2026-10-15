@@ -93,6 +93,63 @@ it('shows the sale form with how much gold the branch has', function () {
     expect($props['words']['party'])->toBe('Sold to')->and($props['inStock'])->toBe('2,094.25');
 });
 
+// ------------------------------------------------- the weight without particles ("big")
+
+it('saves the weight without particles, and uses it for the density but not the pounds', function () {
+    $document = gdhBuy($this, ['big_weight' => '2000.00']);
+    $line = $document->goldLine;
+
+    expect($line->big_weight_g)->toEqual('2000.00')
+        ->and($line->weight_g)->toEqual('2094.25')
+        ->and($line->pounds)->toEqual('270.22')
+        ->and($line->density)->toEqual('17.45')
+        ->and($line->karat)->toEqual('21.01');
+
+    // The lot in stock is all the gold that came in, particles and all.
+    expect(StockLot::withoutGlobalScopes()->first()->weight_g)->toEqual('2094.25');
+});
+
+it('saves nothing for the weight without particles when it is left empty, and works as before', function () {
+    $document = gdhBuy($this, ['big_weight' => '']);
+
+    expect($document->goldLine->big_weight_g)->toBeNull()
+        ->and($document->goldLine->density)->toEqual('18.28')
+        ->and($document->goldLine->karat)->toEqual('22.45')
+        ->and((int) $document->total)->toBe(2795837);
+});
+
+it('refuses a weight without particles that is more than all the gold, in words, next to that box', function () {
+    $this->actingAs($this->w->kumasiClerk)->post(route('purchases.store'), purchaseForm($this, ['big_weight' => '3000']))
+        ->assertSessionHasErrors(['big_weight' => 'The weight without particles cannot be more than the full weight.']);
+
+    expect(Document::withoutGlobalScopes()->count())->toBe(0);
+});
+
+it('shows the weight without particles in the live figures, and the pounds do not change with it', function () {
+    $data = $this->actingAs($this->w->kumasiClerk)->postJson(route('gold.calculate'), [
+        'type' => 'purchase', 'form' => 'raw', 'weight' => '2094.25', 'big_weight' => '2000.00', 'water_weight' => '114.56', 'price' => '10600',
+    ])->assertOk()->json();
+
+    expect($data['ok'])->toBeTrue()
+        ->and($data['figures']['big_weight'])->toBe('2000.00')
+        ->and($data['figures']['pounds'])->toBe('270.22')
+        ->and($data['figures']['density'])->toBe('17.45');
+
+    $refused = $this->postJson(route('gold.calculate'), [
+        'type' => 'purchase', 'form' => 'raw', 'weight' => '2094.25', 'big_weight' => '3000', 'water_weight' => '114.56', 'price' => '10600',
+    ])->json();
+
+    expect($refused['ok'])->toBeFalse()->and($refused['field'])->toBe('big_weight');
+});
+
+it('shows the weight without particles on the saved document', function () {
+    $document = gdhBuy($this, ['big_weight' => '2000.00']);
+
+    $props = gdhProps($this->actingAs($this->w->kumasiClerk)->get(route('documents.show', $document->id))->assertOk());
+
+    expect($props['gold']['big_weight'])->toBe('2,000.00');
+});
+
 it('keeps viewers off the forms and the calculation', function () {
     $this->actingAs($this->w->kumasiViewer);
 
@@ -330,7 +387,7 @@ it('shows the weighing on the saved page', function () {
     $props = gdhProps($this->actingAs($this->w->kumasiClerk)->get(route('documents.show', $document))->assertOk());
 
     expect($props['gold'])->toBe([
-        'form' => 'raw', 'weight' => '2,094.25', 'water_weight' => '114.56', 'pounds' => '270.22', 'density' => '18.28',
+        'form' => 'raw', 'weight' => '2,094.25', 'big_weight' => null, 'water_weight' => '114.56', 'pounds' => '270.22', 'density' => '18.28',
         'karat' => '22.45', 'price' => 'GH₵ 10,600.00', 'base_karat' => 23, 'formula_version' => 1,
     ])
         ->and($props['document']['total'])->toBe('GH₵ 2,795,837.00')

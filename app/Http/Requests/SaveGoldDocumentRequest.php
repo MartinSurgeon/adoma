@@ -37,6 +37,7 @@ class SaveGoldDocumentRequest extends FormRequest
             'ledger_id' => ['required', 'integer'],
             'form' => ['required', Rule::in(['raw', 'refined'])],
             'weight' => ['required', 'string', 'max:20'],
+            'big_weight' => ['nullable', 'string', 'max:20'],
             'water_weight' => [Rule::requiredIf($this->input('form') === 'raw'), 'nullable', 'string', 'max:20'],
             'karat' => [Rule::requiredIf($this->input('form') === 'refined'), 'nullable', 'string', 'max:20'],
             'price' => ['required', 'string', 'max:20'],
@@ -92,7 +93,7 @@ class SaveGoldDocumentRequest extends FormRequest
 
         return ($input['form'] ?? '') === 'refined'
             ? GoldCalculator::refined($formula, (string) ($input['weight'] ?? ''), (string) ($input['karat'] ?? ''), (string) ($input['price'] ?? ''))
-            : GoldCalculator::raw($formula, (string) ($input['weight'] ?? ''), (string) ($input['water_weight'] ?? ''), (string) ($input['price'] ?? ''));
+            : GoldCalculator::raw($formula, (string) ($input['weight'] ?? ''), (string) ($input['water_weight'] ?? ''), (string) ($input['price'] ?? ''), $input['big_weight'] ?? null);
     }
 
     public function messages(): array

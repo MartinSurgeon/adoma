@@ -24,7 +24,7 @@ class GoldCalculationController extends Controller
         $this->authorize('create', [Document::class, $type]);
 
         try {
-            $figures = SaveGoldDocumentRequest::calculate($request->user()->tenant_id, $request->only(['form', 'weight', 'water_weight', 'karat', 'price']));
+            $figures = SaveGoldDocumentRequest::calculate($request->user()->tenant_id, $request->only(['form', 'weight', 'big_weight', 'water_weight', 'karat', 'price']));
         } catch (CalculationError $error) {
             return response()->json(['ok' => false, 'field' => $error->field, 'message' => $error->getMessage()]);
         }

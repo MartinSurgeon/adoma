@@ -176,6 +176,58 @@ it('refuses a weighing so small the amount is nothing', function () {
     expect(fn () => GoldCalculator::refined(sheetFormula(), '0.01', '1', '1'))->toThrow(CalculationError::class, 'amount works out to nothing');
 });
 
+// ------------------------------------------------- the weight without particles ("big")
+
+it('works the pounds from all the gold and the density from the weight without particles', function () {
+    // 2,094.25 g on the scale. With the particles taken out, 2,000.00 g goes with the 114.56 g of water.
+    $figures = GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600', '2000.00');
+
+    // 2000.00 / 114.56 = 17.45 (cut off), not the 18.28 that the whole weight would give.
+    expect($figures->poundsH)->toBe(27022)                    // still from all the gold: 2094.25 / 7.75
+        ->and($figures->densityH)->toBe(1745)
+        ->and($figures->karatH)->toBe(2101)
+        ->and($figures->bigH)->toBe(200000)
+        ->and($figures->weightH)->toBe(209425)
+        ->and($figures->amountCedis)->toBe(intdiv(2101 * 1060000 * 27022, 23 * 1_000_000))
+        ->and($figures->toArray()['big_weight'])->toBe('2000.00');
+});
+
+it('gives exactly the old answer when there are no particles, blank or the same as all the gold', function (?string $big) {
+    $old = GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600');
+    $new = GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600', $big);
+
+    expect([$new->poundsH, $new->densityH, $new->karatH, $new->amountCedis])->toBe([$old->poundsH, $old->densityH, $old->karatH, $old->amountCedis]);
+})->with([null, '', '  ', '2094.25']);
+
+it('keeps blank as "no particles" and a typed weight as typed', function () {
+    expect(GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600')->bigH)->toBeNull()
+        ->and(GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600', '')->bigH)->toBeNull()
+        ->and(GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600', '2094.25')->bigH)->toBe(209425);
+});
+
+it('refuses a weight without particles that is more than all the gold, or not a number', function (string $big, string $message) {
+    expect(fn () => GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600', $big))
+        ->toThrow(CalculationError::class, $message);
+})->with([
+    'more than all' => ['2094.26', 'cannot be more than the full weight'],
+    'zero' => ['0', 'must be more than zero'],
+    'text' => ['lots', 'must be a number'],
+    'negative' => ['-5', 'must be a number'],
+]);
+
+it('says which box is wrong when the weight without particles is', function () {
+    try {
+        GoldCalculator::raw(sheetFormula(), '2094.25', '114.56', '10600', '3000');
+        $this->fail('Expected a CalculationError');
+    } catch (CalculationError $error) {
+        expect($error->field)->toBe('big_weight');
+    }
+});
+
+it('leaves refined gold alone, which has its karat typed in and no density step', function () {
+    expect(GoldCalculator::refined(sheetFormula(), '1000.00', '22.45', '10600')->bigH)->toBeNull();
+});
+
 it('accepts amounts typed with a thousands separator', function () {
     expect(GoldCalculator::raw(sheetFormula(), '2,094.25', '114.56', '10,600')->amountCedis)->toBe(2795837);
 });

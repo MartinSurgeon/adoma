@@ -8,8 +8,9 @@ use InvalidArgumentException;
 /**
  * The client's Excel formulas, in whole-number arithmetic.
  *
- *   pounds  = TRUNC(weight / 7.75, 2)
- *   density = TRUNC(weight / water weight, 2)
+ *   pounds  = TRUNC(weight / 7.75, 2)             the whole gold, particles and all
+ *   density = TRUNC(big weight / water weight, 2)   big weight = the gold with the particles taken out;
+ *                                                   when there are none it is the same as the weight
  *   karat   = TRUNC(((density - 10.51) * 52.838) / density, 2)
  *   amount  = TRUNC((karat / 23) * price * pounds, 0)
  *
@@ -31,13 +32,25 @@ final class GoldCalculator
 
     public const MAX_PRICE = 1_000_000;
 
-    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price): GoldFigures
+    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null): GoldFigures
     {
         $weightH = self::positive($weight, 'The weight', self::MAX_WEIGHT_G, 'weight');
         $waterH = self::positive($waterWeight, 'The water weight', self::MAX_WEIGHT_G, 'water_weight');
         $priceH = self::positive($price, 'The price', self::MAX_PRICE, 'price');
 
-        $densityH = intdiv($weightH * 100, $waterH);                       // TRUNC(weight / water, 2)
+        // The client weighs all the gold (that gives the pounds), takes out the particles they cannot find a volume for,
+        // and weighs again (the big weight). Only the big weight goes with the water weight. No particles: the same weight.
+        $bigH = null;
+
+        if ($bigWeight !== null && trim($bigWeight) !== '') {
+            $bigH = self::positive($bigWeight, 'The weight without particles', self::MAX_WEIGHT_G, 'big_weight');
+
+            if ($bigH > $weightH) {
+                throw new CalculationError('The weight without particles cannot be more than the full weight.', 'big_weight');
+            }
+        }
+
+        $densityH = intdiv(($bigH ?? $weightH) * 100, $waterH);        // TRUNC(big weight / water, 2)
 
         $offsetH = self::hundredths($formula->density_offset);
         $factorK = self::thousandths($formula->karat_factor);
@@ -51,7 +64,7 @@ final class GoldCalculator
 
         self::assertKarat($karatH, $densityH);
 
-        return self::finish($formula, 'raw', $weightH, $waterH, $densityH, $karatH, $priceH);
+        return self::finish($formula, 'raw', $weightH, $waterH, $densityH, $karatH, $priceH, $bigH);
     }
 
     public static function refined(FormulaSet $formula, string $weight, string $karat, string $price): GoldFigures
@@ -65,7 +78,7 @@ final class GoldCalculator
         return self::finish($formula, 'refined', $weightH, null, null, $karatH, $priceH);
     }
 
-    private static function finish(FormulaSet $formula, string $form, int $weightH, ?int $waterH, ?int $densityH, int $karatH, int $priceH): GoldFigures
+    private static function finish(FormulaSet $formula, string $form, int $weightH, ?int $waterH, ?int $densityH, int $karatH, int $priceH, ?int $bigH = null): GoldFigures
     {
         $poundsH = intdiv($weightH * 100, self::hundredths($formula->grams_per_pound));   // TRUNC(weight / 7.75, 2)
 
@@ -76,7 +89,7 @@ final class GoldCalculator
             throw new CalculationError('The amount works out to nothing. Check the weight and the price.', 'price');
         }
 
-        return new GoldFigures($form, $weightH, $waterH, $poundsH, $densityH, $karatH, $priceH, $amountCedis, $formula);
+        return new GoldFigures($form, $weightH, $waterH, $poundsH, $densityH, $karatH, $priceH, $amountCedis, $formula, $bigH);
     }
 
     /** Karat is a share of 24. Outside 0 to 24 means the weights are wrong, so the answer is refused. */
