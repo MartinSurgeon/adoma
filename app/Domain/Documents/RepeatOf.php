@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
  * Staff often record the same person, the same account and the same kind of gold again and again.
  * This carries over who it was with, the cash account, the note and the gold's form and price.
  * It never carries amounts, weights, dates or anything that makes a transaction its own, and it
- * never reads a transaction from another office: the document is found through the usual scopes.
+ * never reads a transaction from another branch: the document is found through the usual scopes.
  */
 final class RepeatOf
 {

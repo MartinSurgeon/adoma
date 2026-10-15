@@ -52,7 +52,7 @@ class LedgerController extends Controller
             'kind' => $ledger->kind->value,
             'kind_label' => $ledger->kind->label(),
             'group' => $ledger->group->path(),
-            'office' => $ledger->is_shared ? 'All offices' : $ledger->branch?->name,
+            'office' => $ledger->is_shared ? 'All branches' : $ledger->branch?->name,
             'balance' => LedgerBalances::describe($ledger->kind, $balances[$ledger->id]),
             'is_active' => $ledger->is_active,
             'is_system' => $ledger->is_system,
@@ -118,7 +118,7 @@ class LedgerController extends Controller
                 'name' => $ledger->name,
                 'phone' => $ledger->phone,
                 'kind_label' => $ledger->kind->label(),
-                'office' => $ledger->is_shared ? 'All offices' : $ledger->branch?->name,
+                'office' => $ledger->is_shared ? 'All branches' : $ledger->branch?->name,
             ],
         ]);
     }

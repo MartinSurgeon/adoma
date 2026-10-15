@@ -54,7 +54,7 @@ function confirm() {
     <AuthenticatedLayout>
         <template #header>
             <h1 class="text-2xl font-semibold leading-tight text-gray-900">Incoming gold</h1>
-            <p class="mt-1 text-base text-gray-700">Gold other offices have sent to {{ office }}. It joins your stock only when you accept it.</p>
+            <p class="mt-1 text-base text-gray-700">Gold other branches have sent to {{ office }}. It joins your stock only when you accept it.</p>
         </template>
 
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
@@ -88,7 +88,7 @@ function confirm() {
 
             <div v-else class="card p-10 text-center">
                 <p class="text-lg font-semibold text-gray-900">Nothing is waiting for you</p>
-                <p class="mt-1 text-base text-gray-700">When another office sends gold to {{ office }}, it shows here.</p>
+                <p class="mt-1 text-base text-gray-700">When another branch sends gold to {{ office }}, it shows here.</p>
             </div>
         </div>
 

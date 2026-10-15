@@ -14,7 +14,7 @@ use App\Domain\Tenancy\Branch;
 use Illuminate\Support\Str;
 use Tests\Support\World;
 
-// Gold sent from one office to another, at what it cost. Two documents, one in each office's books.
+// Gold sent from one branch to another, at what it cost. Two documents, one in each branch's books.
 
 beforeEach(function () {
     $this->w = World::build();
@@ -100,7 +100,7 @@ function trBranchBalance(Document $doc): array
 
 // ------------------------------------------------------------------ the books
 
-it('sends gold as two documents, each balanced inside its own office', function () {
+it('sends gold as two documents, each balanced inside its own branch', function () {
     $purchase = trBuy($this);
     $out = trSend($this);
     $in = trIn($out);
@@ -111,7 +111,7 @@ it('sends gold as two documents, each balanced inside its own office', function 
     expect($out->type->value)->toBe('transfer')->and($in->type->value)->toBe('transfer_in')
         ->and($out->number)->toBe('TRF-KUM-000001')->and($in->number)->toBe('TRI-CEN-000001')
         ->and($out->branch_id)->toBe($this->w->kumasi->id)->and($in->branch_id)->toBe($this->w->central->id)
-        // Each document's lines stay in its own office, so each office's books balance by themselves.
+        // Each document's lines stay in its own branch, so each branch's books balance by themselves.
         ->and($outDebit)->toBe($outCredit)->and($outDebit)->toBeGreaterThan(0)
         ->and($outBranches)->toBe([$this->w->kumasi->id])
         ->and($inDebit)->toBe($inCredit)->and($inDebit)->toBe($outDebit)
@@ -132,7 +132,7 @@ it('moves gold at what it cost, so neither office shows a profit or a loss', fun
         ->and(trStockBalance($this, $this->w->central))->toBe($moved);
 });
 
-it('puts the gold into the receiving office as new lots that keep their age, karat and cost', function () {
+it('puts the gold into the receiving branch as new lots that keep their age, karat and cost', function () {
     $old = trBuy($this, ['date' => now()->subDays(20)->toDateString(), 'weight' => '500.00', 'water_weight' => '27.30']);
     $new = trBuy($this, ['date' => now()->subDays(2)->toDateString()]);
 
@@ -151,7 +151,7 @@ it('puts the gold into the receiving office as new lots that keep their age, kar
         ->and(Money::fromDb($arrived[1]->weight_g))->toBe(20000)
         ->and($arrived[1]->date->toDateString())->toBe(now()->subDays(2)->toDateString())
         ->and($arrived[1]->karat)->toEqual($kumasiLots[1]->karat)
-        // Nothing lost between the two offices: what left Kumasi is exactly what arrived.
+        // Nothing lost between the two branches: what left Kumasi is exactly what arrived.
         ->and(Money::fromDb($arrived->sum('cost')))->toBe(Money::fromDb($out->total))
         ->and(Money::fromDb($kumasiLots->sum('remaining_cost')) + Money::fromDb($arrived->sum('cost')))
         ->toBe(Money::fromDb($old->total) + Money::fromDb($new->total))
@@ -159,7 +159,7 @@ it('puts the gold into the receiving office as new lots that keep their age, kar
         ->and(Money::fromDb($kumasiLots[1]->remaining_g))->toBe(Money::fromDb($kumasiLots[1]->weight_g) - 20000);
 });
 
-it('writes every gram that moved as stock movements in the office that holds it', function () {
+it('writes every gram that moved as stock movements in the branch that holds it', function () {
     trBuy($this);
     $out = trSend($this, ['weight' => '1000.00']);
     $in = trIn($out);
@@ -174,7 +174,7 @@ it('writes every gram that moved as stock movements in the office that holds it'
         ->and(Money::fromDb($outMoves->sum('cost')))->toBe(-Money::fromDb($inMoves->sum('cost')));
 });
 
-it('lets the office that received the gold sell it, oldest first, at the cost it arrived with', function () {
+it('lets the branch that received the gold sell it, oldest first, at the cost it arrived with', function () {
     trBuy($this);
     $out = trSend($this, ['weight' => '1000.00']);
 
@@ -205,7 +205,7 @@ it('lets a manager send gold, but not a clerk or a viewer', function () {
     $this->actingAs($this->w->kumasiManager)->get(route('transfers.create'))->assertOk();
 });
 
-it('shows the form with the other offices, and how much gold there is to send', function () {
+it('shows the form with the other branches, and how much gold there is to send', function () {
     trBuy($this);
 
     $props = trProps($this->actingAs($this->w->kumasiManager)->get(route('transfers.create'))->assertOk());
@@ -215,7 +215,7 @@ it('shows the form with the other offices, and how much gold there is to send', 
         ->and(Str::isUuid($props['idempotencyKey']))->toBeTrue();
 });
 
-it('asks an owner viewing every office to choose one first', function () {
+it('asks an owner viewing every branch to choose one first', function () {
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all']);
 
     $this->get(route('transfers.create'))->assertOk()->assertInertia(fn ($page) => $page->where('needsOffice', true));
@@ -240,9 +240,9 @@ it('says in plain words what is wrong with the form', function () {
 
     $this->post(route('transfers.store'), trSendForm($this, ['weight' => '0']))->assertSessionHasErrors(['weight' => 'The weight must be more than zero.']);
     $this->post(route('transfers.store'), trSendForm($this, ['weight' => 'lots']))->assertSessionHasErrors('weight');
-    $this->post(route('transfers.store'), trSendForm($this, ['to_branch_id' => '']))->assertSessionHasErrors(['to_branch_id' => 'Choose the office the gold is going to.']);
-    $this->post(route('transfers.store'), trSendForm($this, ['to_branch_id' => $this->w->kumasi->id]))->assertSessionHasErrors(['to_branch_id' => 'Choose the office the gold is going to.']);
-    $this->post(route('transfers.store'), trSendForm($this, ['to_branch_id' => $this->w->otherBranch->id]))->assertSessionHasErrors(['to_branch_id' => 'Choose the office the gold is going to.']);
+    $this->post(route('transfers.store'), trSendForm($this, ['to_branch_id' => '']))->assertSessionHasErrors(['to_branch_id' => 'Choose the branch the gold is going to.']);
+    $this->post(route('transfers.store'), trSendForm($this, ['to_branch_id' => $this->w->kumasi->id]))->assertSessionHasErrors(['to_branch_id' => 'Choose the branch the gold is going to.']);
+    $this->post(route('transfers.store'), trSendForm($this, ['to_branch_id' => $this->w->otherBranch->id]))->assertSessionHasErrors(['to_branch_id' => 'Choose the branch the gold is going to.']);
     $this->post(route('transfers.store'), trSendForm($this, ['date' => now()->addDay()->toDateString()]))->assertSessionHasErrors(['date' => 'The date cannot be in the future.']);
 
     expect(Document::withoutGlobalScopes()->where('type', 'transfer')->count())->toBe(0);
@@ -313,7 +313,7 @@ it('says so when there is not enough gold, or the weight is not a number', funct
 
 // ---------------------------------------------------------------------- reversing
 
-it('puts everything back when the sending office reverses a transfer, both halves together', function () {
+it('puts everything back when the sending branch reverses a transfer, both halves together', function () {
     $purchase = trBuy($this);
     $out = trSend($this);
     $in = trIn($out);
@@ -332,13 +332,13 @@ it('puts everything back when the sending office reverses a transfer, both halve
         ->and(trStockBalance($this, $this->w->central))->toBe(0)
         ->and(Money::fromDb(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->kumasi->id)->first()->remaining_g))->toBe(209425)
         ->and(Money::fromDb(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->central->id)->sum('remaining_g')))->toBe(0)
-        // Each half of the reversal balances inside its own office.
+        // Each half of the reversal balances inside its own branch.
         ->and(trBranchBalance($reversal)[2])->toBe([$this->w->kumasi->id])
         ->and(trBranchBalance($inReversal)[2])->toBe([$this->w->central->id])
         ->and(trBranchBalance($inReversal)[0])->toBe(trBranchBalance($inReversal)[1]);
 });
 
-it('refuses to reverse once the receiving office has sold some of the gold, and changes nothing', function () {
+it('refuses to reverse once the receiving branch has sold some of the gold, and changes nothing', function () {
     trBuy($this);
     $out = trSend($this, ['weight' => '1000.00']);
     $in = trIn($out);
@@ -351,14 +351,14 @@ it('refuses to reverse once the receiving office has sold some of the gold, and 
     $before = Document::withoutGlobalScopes()->count();
 
     $this->actingAs($this->w->kumasiManager)->post(route('documents.reverse', $out->id), ['reason' => 'Changed my mind'])
-        ->assertSessionHasErrors(['reason' => 'Some of this gold has already been sold or sent to another office, so this transfer cannot be reversed. Reverse those first.']);
+        ->assertSessionHasErrors(['reason' => 'Some of this gold has already been sold or sent to another branch, so this transfer cannot be reversed. Reverse those first.']);
 
     expect(Document::withoutGlobalScopes()->count())->toBe($before)
         ->and($out->fresh()->status)->toBe('posted')->and($in->fresh()->status)->toBe('posted')
         ->and(Money::fromDb(StockLot::withoutGlobalScopes()->where('branch_id', $this->w->kumasi->id)->first()->remaining_g))->toBe(109425);
 });
 
-it('keeps the receiving office from reversing, and from reaching the sending office\'s half', function () {
+it('keeps the receiving branch from reversing, and from reaching the sending branch\'s half', function () {
     trBuy($this);
     $out = trSend($this);
     $in = trIn($out);
@@ -370,7 +370,7 @@ it('keeps the receiving office from reversing, and from reaching the sending off
     $this->get(route('documents.show', $out->id))->assertNotFound();
 
     expect(fn () => app(PostingService::class)->reverse($in, 'by hand', $this->w->centralManager))
-        ->toThrow(PostingError::class, 'put right by the office that sent it');
+        ->toThrow(PostingError::class, 'put right by the branch that sent it');
     expect($out->fresh()->status)->toBe('posted');
 });
 
@@ -386,7 +386,7 @@ it('never lets a transfer be reversed twice', function () {
 
 // -------------------------------------------------------------- reading a transfer
 
-it('shows each office its own half, with the other half named but opened only by who may', function () {
+it('shows each branch its own half, with the other half named but opened only by who may', function () {
     trBuy($this);
     $out = trSend($this, ['weight' => '1000.00']);
     $in = trIn($out);
@@ -408,7 +408,7 @@ it('shows each office its own half, with the other half named but opened only by
     expect($owner['transfer']['other_id'])->toBe($out->id);
 });
 
-it('lists each office\'s own half in its transactions, and offers both as filters', function () {
+it('lists each branch\'s own half in its transactions, and offers both as filters', function () {
     trBuy($this);
     $out = trSend($this);
     $in = trIn($out);
@@ -423,7 +423,7 @@ it('lists each office\'s own half in its transactions, and offers both as filter
         ->and(collect(trProps($this->actingAs($this->w->centralManager)->get(route('documents.index')))['documents']['data'])->pluck('number')->all())->toBe([$in->number]);
 });
 
-it('lets the two offices settle what they owe each other with an ordinary payment', function () {
+it('lets the two branches settle what they owe each other with an ordinary payment', function () {
     $cash = trLedger($this->w->kumasi, 'Cash Kumasi', LedgerKind::Cash);
     trBuy($this);
     $out = trSend($this);
@@ -446,7 +446,7 @@ it('lets the two offices settle what they owe each other with an ordinary paymen
 
 // ------------------------------------------------------------------ the stock page
 
-it('lists the lots an office holds, oldest first, with where each came from', function () {
+it('lists the lots a branch holds, oldest first, with where each came from', function () {
     $old = trBuy($this, ['date' => now()->subDays(9)->toDateString(), 'weight' => '500.00', 'water_weight' => '27.30']);
     $new = trBuy($this);
     trSend($this, ['weight' => '700.00']);
@@ -477,7 +477,7 @@ it('shows what the gold cost to managers and above only', function () {
         ->and($owner['canSeeCost'])->toBeTrue();
 });
 
-it('keeps one office\'s stock, and one business\'s, out of another\'s page', function () {
+it('keeps one branch\'s stock, and one business\'s, out of another\'s page', function () {
     trBuy($this);
 
     $central = trProps($this->actingAs($this->w->centralManager)->get(route('stock.index'))->assertOk());
@@ -486,12 +486,12 @@ it('keeps one office\'s stock, and one business\'s, out of another\'s page', fun
     expect($central['lots']['data'])->toBe([])->and($central['totals']['grams'])->toBe('0.00')
         ->and($other['lots']['data'])->toBe([])->and($other['totals']['grams'])->toBe('0.00');
 
-    // An owner looking at every office sees them together, with the office named on each.
+    // An owner looking at every branch sees them together, with the branch named on each.
     $owner = trProps($this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])->get(route('stock.index'))->assertOk());
     expect($owner['showOffice'])->toBeTrue()->and($owner['lots']['data'][0]['office'])->toBe('Kumasi');
 });
 
-it('keeps people with no office role off the stock page', function () {
+it('keeps people with no branch role off the stock page', function () {
     $stray = App\Models\User::factory()->create();
 
     $this->actingAs($stray)->get(route('stock.index'))->assertForbidden();
@@ -499,12 +499,12 @@ it('keeps people with no office role off the stock page', function () {
 
 // -------------------------------------------------------------------- the dashboard
 
-it('tells an owner how much gold each office holds, and nobody else', function () {
+it('tells an owner how much gold each branch holds, and nobody else', function () {
     trBuy($this);
     trSend($this, ['weight' => '1000.00']);
 
     $owner = trProps($this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])->get(route('dashboard'))->assertOk());
-    $this->flushSession();   // the owner's "all offices" choice belongs to the owner's own session
+    $this->flushSession();   // the owner's "all branches" choice belongs to the owner's own session
     $manager = trProps($this->actingAs($this->w->kumasiManager)->get(route('dashboard'))->assertOk());
 
     expect(collect($owner['stockByOffice'])->pluck('grams', 'name')->all())->toBe(['Central' => '1,000.00', 'Kumasi' => '1,094.25'])
@@ -523,9 +523,9 @@ it('tells the menu who may send gold', function (string $who, bool $expected) {
     ['kumasiViewer', false],
 ]);
 
-// ======================================================= the receiving office accepts
+// ======================================================= the receiving branch accepts
 
-it('keeps sent gold out of both offices\' stock, and Central\'s books untouched, while it waits', function () {
+it('keeps sent gold out of both branches\' stock, and Central\'s books untouched, while it waits', function () {
     $purchase = trBuy($this);
     $out = trSend($this, ['weight' => '1000.00'], accept: false);
     $cost = Money::fromDb($out->total);
@@ -562,7 +562,7 @@ it('says the gold is waiting when it is sent, and marks it waiting in the list',
     expect($rows->firstWhere('number', $out->number)['waiting'])->toBeFalse();
 });
 
-it('shows the receiving office what is waiting for it, and nobody else', function () {
+it('shows the receiving branch what is waiting for it, and nobody else', function () {
     trBuy($this);
     $out = trSend($this, ['weight' => '1000.00', 'note' => 'Carried by Kofi'], accept: false);
 
@@ -573,12 +573,12 @@ it('shows the receiving office what is waiting for it, and nobody else', functio
             'id' => $out->id, 'number' => $out->number, 'from' => 'Kumasi', 'note' => 'Carried by Kofi', 'weight' => '1,000.00', 'lots' => 1,
         ])->and($central['transfers'][0]['cost'])->toStartWith('GH₵ ');
 
-    // The sending office has nothing to accept, and a clerk may not answer for an office.
+    // The sending branch has nothing to accept, and a clerk may not answer for a branch.
     expect(trProps($this->actingAs($this->w->kumasiManager)->get(route('transfers.incoming'))->assertOk())['transfers'])->toBe([]);
     $this->actingAs($this->w->kumasiClerk)->get(route('transfers.incoming'))->assertForbidden();
 });
 
-it('tells the menu how many are waiting, to managers of the receiving office only', function () {
+it('tells the menu how many are waiting, to managers of the receiving branch only', function () {
     trBuy($this);
     trSend($this, [], accept: false);
     trSend($this, ['weight' => '200.00'], accept: false);
@@ -592,7 +592,7 @@ it('tells the menu how many are waiting, to managers of the receiving office onl
         ->and($clerk['tenancy']['incoming_transfers'])->toBe(0);
 });
 
-it('brings the gold in when the receiving office accepts, and says so', function () {
+it('brings the gold in when the receiving branch accepts, and says so', function () {
     trBuy($this, ['date' => now()->subDays(20)->toDateString(), 'weight' => '500.00', 'water_weight' => '27.30']);
     trBuy($this);
     $out = trSend($this, ['weight' => '700.00'], accept: false);
@@ -621,11 +621,11 @@ it('brings the gold in when the receiving office accepts, and says so', function
         ->and(trProps($this->actingAs($this->w->kumasiManager)->get(route('documents.show', $out->id)))['transfer']['state'])->toBe('accepted');
 });
 
-it('lets only a manager of the receiving office accept', function () {
+it('lets only a manager of the receiving branch accept', function () {
     trBuy($this);
     $out = trSend($this, [], accept: false);
 
-    // The sending office cannot accept its own gold, and neither can a clerk of the receiving office.
+    // The sending branch cannot accept its own gold, and neither can a clerk of the receiving branch.
     $this->actingAs($this->w->kumasiManager)->post(route('transfers.accept', $out->id))->assertNotFound();
     $this->actingAs($this->w->kumasiClerk)->post(route('transfers.accept', $out->id))->assertForbidden();
     $this->actingAs($this->w->otherAdmin)->post(route('transfers.accept', $out->id))->assertNotFound();
@@ -656,7 +656,7 @@ it('accepts a transfer once, however many times the button is pressed', function
         ->toThrow(PostingError::class, 'already been accepted');
 });
 
-it('puts the gold back when the receiving office declines, with its reason on the record', function () {
+it('puts the gold back when the receiving branch declines, with its reason on the record', function () {
     $purchase = trBuy($this);
     $out = trSend($this, ['weight' => '1000.00'], accept: false);
 
@@ -682,17 +682,17 @@ it('puts the gold back when the receiving office declines, with its reason on th
     $this->post(route('transfers.decline', $out->id), ['reason' => 'again'])->assertNotFound();
 });
 
-it('asks the receiving office for a reason when it declines', function () {
+it('asks the receiving branch for a reason when it declines', function () {
     trBuy($this);
     $out = trSend($this, [], accept: false);
 
     $this->actingAs($this->w->centralManager)->post(route('transfers.decline', $out->id), ['reason' => ''])
-        ->assertSessionHasErrors(['reason' => 'Say why you are declining it, so the sending office knows.']);
+        ->assertSessionHasErrors(['reason' => 'Say why you are declining it, so the sending branch knows.']);
 
     expect($out->fresh()->status)->toBe('posted');
 });
 
-it('lets the sending office cancel gold nobody has accepted yet, and then it cannot be accepted', function () {
+it('lets the sending branch cancel gold nobody has accepted yet, and then it cannot be accepted', function () {
     $purchase = trBuy($this);
     $out = trSend($this, ['weight' => '1000.00'], accept: false);
 
@@ -708,21 +708,21 @@ it('lets the sending office cancel gold nobody has accepted yet, and then it can
     $this->actingAs($this->w->centralManager)->post(route('transfers.accept', $out->id))->assertNotFound();
 
     expect(fn () => app(PostingService::class)->acceptTransfer($out, $this->w->central, $this->w->centralManager))
-        ->toThrow(PostingError::class, 'was cancelled by the sending office');
+        ->toThrow(PostingError::class, 'was cancelled by the sending branch');
 });
 
-it('refuses to accept or decline a transfer meant for another office', function () {
+it('refuses to accept or decline a transfer meant for another branch', function () {
     trBuy($this);
     $out = trSend($this, [], accept: false);
 
     // Called directly, with Kumasi named as the receiver of a transfer that is addressed to Central.
     expect(fn () => app(PostingService::class)->acceptTransfer($out, $this->w->kumasi, $this->w->kumasiManager))
-        ->toThrow(PostingError::class, 'not addressed to this office')
+        ->toThrow(PostingError::class, 'not addressed to this branch')
         ->and(fn () => app(PostingService::class)->declineTransfer($out, $this->w->kumasi, 'no', $this->w->kumasiManager))
-        ->toThrow(PostingError::class, 'not addressed to this office');
+        ->toThrow(PostingError::class, 'not addressed to this branch');
 });
 
-it('shows the sending office its gold on the way, and the receiving office what is waiting for it', function () {
+it('shows the sending branch its gold on the way, and the receiving branch what is waiting for it', function () {
     trBuy($this);
     trSend($this, ['weight' => '300.00'], accept: false);
 
@@ -735,7 +735,7 @@ it('shows the sending office its gold on the way, and the receiving office what 
         ->and($central['onTheWay']['incoming'])->toBe(['count' => 1, 'grams' => '300.00'])->and($central['onTheWay']['sent'])->toBeNull();
 });
 
-it('writes the receiving half as the receiving office even when an owner accepts for it', function () {
+it('writes the receiving half as the receiving branch even when an owner accepts for it', function () {
     trBuy($this);
     $out = trSend($this, [], accept: false);
 

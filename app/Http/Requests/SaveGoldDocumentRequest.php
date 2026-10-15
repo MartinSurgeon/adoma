@@ -49,7 +49,7 @@ class SaveGoldDocumentRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                // Found through the normal scopes: only this office's ledgers and the shared ones.
+                // Found through the normal scopes: only this branch's ledgers and the shared ones.
                 $this->party = Ledger::query()->whereKey($this->integer('ledger_id'))->where('is_active', true)
                     ->whereIn('kind', [LedgerKind::Customer->value, LedgerKind::Supplier->value])->first();
 

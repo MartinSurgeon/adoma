@@ -32,33 +32,33 @@ it('returns nothing when no business is in context', function () {
     expect(ScopeProbe::count())->toBe(0);
 });
 
-it('shows only the active office of the active business', function () {
+it('shows only the active branch of the active business', function () {
     $this->ctx->set($this->w->adoma, $this->w->kumasi);
 
     expect(names())->toBe(['kumasi-a', 'kumasi-b']);
 });
 
-it('hides another office of the same business', function () {
+it('hides another branch of the same business', function () {
     $this->ctx->set($this->w->adoma, $this->w->central);
 
     expect(names())->not->toContain('kumasi-a')->toBe(['central-a', 'central-b']);
 });
 
-it('lets all-offices view see every office of one business and nothing else', function () {
+it('lets all-offices view see every branch of one business and nothing else', function () {
     $this->ctx->set($this->w->adoma, null, allBranches: true);
 
     expect(names())->toBe(['central-a', 'central-b', 'kumasi-a', 'kumasi-b'])
         ->and(names())->not->toContain('other-a');
 });
 
-it('keeps another business out even when its office id is used', function () {
+it('keeps another business out even when its branch id is used', function () {
     // Adoma's context, Other Co's office id: nothing may match.
     $this->ctx->set($this->w->adoma, $this->w->kumasi);
 
     expect(ScopeProbe::where('branch_id', $this->w->otherBranch->id)->count())->toBe(0);
 });
 
-it('refuses an office that belongs to a different business', function () {
+it('refuses a branch that belongs to a different business', function () {
     $this->ctx->set($this->w->adoma, $this->w->otherBranch);
 })->throws(TenancyViolation::class);
 
@@ -92,7 +92,7 @@ it('refuses to create a record for a different business', function () {
     ScopeProbe::create(['name' => 'x', 'tenant_id' => $this->w->other->id, 'branch_id' => $this->w->otherBranch->id]);
 })->throws(TenancyViolation::class);
 
-it('refuses to write into another office of the same business', function () {
+it('refuses to write into another branch of the same business', function () {
     $this->ctx->set($this->w->adoma, $this->w->kumasi);
 
     ScopeProbe::create(['name' => 'x', 'branch_id' => $this->w->central->id]);
@@ -112,7 +112,7 @@ it('stops an admin in all-offices view writing into another business office', fu
     ScopeProbe::create(['name' => 'x', 'branch_id' => $this->w->otherBranch->id]);
 })->throws(TenancyViolation::class);
 
-it('asks for an office when an admin saves in all-offices view without choosing one', function () {
+it('asks for a branch when an admin saves in all-offices view without choosing one', function () {
     $this->ctx->set($this->w->adoma, null, allBranches: true);
 
     ScopeProbe::create(['name' => 'x']);
@@ -120,13 +120,13 @@ it('asks for an office when an admin saves in all-offices view without choosing 
 
 // ------------------------------------------------------------ users and access
 
-it('gives owners every office and clerks only their own', function () {
+it('gives owners every branch and clerks only their own', function () {
     expect($this->w->owner->accessibleBranches()->pluck('code')->all())->toBe(['CEN', 'KUM'])
         ->and($this->w->kumasiClerk->accessibleBranches()->pluck('code')->all())->toBe(['KUM'])
         ->and($this->w->otherAdmin->accessibleBranches()->pluck('code')->all())->toBe(['MAIN']);
 });
 
-it('reports the role a user holds in each office', function () {
+it('reports the role a user holds in each branch', function () {
     expect($this->w->kumasiClerk->roleIn($this->w->kumasi)?->value)->toBe('clerk')
         ->and($this->w->kumasiClerk->roleIn($this->w->central))->toBeNull()
         ->and($this->w->owner->roleIn($this->w->central)?->value)->toBe('owner');
@@ -146,21 +146,21 @@ function probeRoute(): void
     Route::middleware('web')->get('/_probe', fn () => names());
 }
 
-it('scopes a request to the clerk\'s own office by default', function () {
+it('scopes a request to the clerk\'s own branch by default', function () {
     probeRoute();
 
     $this->actingAs($this->w->kumasiClerk)->getJson('/_probe')
         ->assertOk()->assertExactJson(['kumasi-a', 'kumasi-b']);
 });
 
-it('rejects an office header for an office the user does not belong to', function () {
+it('rejects a branch header for a branch the user does not belong to', function () {
     probeRoute();
 
     $this->actingAs($this->w->kumasiClerk)
         ->withHeader('X-Branch-Id', (string) $this->w->central->id)
         ->getJson('/_probe')
         ->assertForbidden()
-        ->assertJson(['message' => 'You do not have access to this office.']);
+        ->assertJson(['message' => 'You do not have access to this branch.']);
 });
 
 it('rejects another business office id in the header', function () {
@@ -170,10 +170,10 @@ it('rejects another business office id in the header', function () {
         ->withHeader('X-Branch-Id', (string) $this->w->otherBranch->id)
         ->getJson('/_probe')
         ->assertForbidden()
-        ->assertJson(['message' => 'You do not have access to this office.']);
+        ->assertJson(['message' => 'You do not have access to this branch.']);
 });
 
-it('lets an owner pick an office with the header', function () {
+it('lets an owner pick a branch with the header', function () {
     probeRoute();
 
     $this->actingAs($this->w->owner)
@@ -181,7 +181,7 @@ it('lets an owner pick an office with the header', function () {
         ->getJson('/_probe')->assertOk()->assertExactJson(['kumasi-a', 'kumasi-b']);
 });
 
-it('lets an owner view all offices but never another business', function () {
+it('lets an owner view all branches but never another business', function () {
     probeRoute();
 
     $this->actingAs($this->w->owner)
@@ -190,14 +190,14 @@ it('lets an owner view all offices but never another business', function () {
         ->assertExactJson(['central-a', 'central-b', 'kumasi-a', 'kumasi-b']);
 });
 
-it('does not let a clerk view all offices', function () {
+it('does not let a clerk view all branches', function () {
     probeRoute();
 
     $this->actingAs($this->w->kumasiClerk)
         ->withHeader('X-Branch-Id', 'all')
         ->getJson('/_probe')
         ->assertForbidden()
-        ->assertJson(['message' => 'Only admins can view all offices.']);
+        ->assertJson(['message' => 'Only admins can view all branches.']);
 });
 
 it('blocks a switched-off user', function () {
@@ -227,14 +227,14 @@ it('shows nothing to a signed-in user who belongs to no business', function () {
 
 // ------------------------------------------------------------- office switcher
 
-it('lets a clerk switch to an office they belong to', function () {
+it('lets a clerk switch to a branch they belong to', function () {
     $this->actingAs($this->w->kumasiClerk)
         ->post(route('branch.switch'), ['branch' => $this->w->kumasi->id])
         ->assertRedirect()
         ->assertSessionHas('active_branch_id', $this->w->kumasi->id);
 });
 
-it('forbids switching to an office the user does not belong to', function () {
+it('forbids switching to a branch the user does not belong to', function () {
     $this->actingAs($this->w->kumasiClerk)
         ->post(route('branch.switch'), ['branch' => $this->w->central->id])
         ->assertForbidden();
@@ -246,7 +246,7 @@ it('forbids switching to another business office', function () {
         ->assertForbidden();
 });
 
-it('forbids a clerk switching to all offices but allows an admin', function () {
+it('forbids a clerk switching to all branches but allows an admin', function () {
     $this->actingAs($this->w->kumasiClerk)
         ->post(route('branch.switch'), ['branch' => 'all'])->assertForbidden();
 
@@ -255,7 +255,7 @@ it('forbids a clerk switching to all offices but allows an admin', function () {
         ->assertRedirect()->assertSessionHas('active_branch_id', 'all');
 });
 
-it('applies the chosen office on the next request', function () {
+it('applies the chosen branch on the next request', function () {
     probeRoute();
 
     $this->actingAs($this->w->owner)
@@ -263,7 +263,7 @@ it('applies the chosen office on the next request', function () {
         ->getJson('/_probe')->assertExactJson(['kumasi-a', 'kumasi-b']);
 });
 
-it('gives the page only the offices a clerk may switch to', function () {
+it('gives the page only the branches a clerk may switch to', function () {
     $this->actingAs($this->w->kumasiClerk)->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -274,7 +274,7 @@ it('gives the page only the offices a clerk may switch to', function () {
             ->has('tenancy.branches', 1));
 });
 
-it('gives an owner every office plus the all-offices option, but not another business', function () {
+it('gives an owner every branch plus the all-offices option, but not another business', function () {
     $this->actingAs($this->w->owner)
         ->withSession(['active_branch_id' => 'all'])
         ->get(route('dashboard'))

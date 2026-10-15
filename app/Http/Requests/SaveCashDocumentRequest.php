@@ -13,7 +13,7 @@ use InvalidArgumentException;
 /** A receipt or a payment: a date, an amount, who it is with, and which cash or bank account. */
 class SaveCashDocumentRequest extends FormRequest
 {
-    /** The ledgers behind the two ids, found only if this office may use them. */
+    /** The ledgers behind the two ids, found only if this branch may use them. */
     public ?Ledger $party = null;
 
     public ?Ledger $cash = null;
@@ -41,8 +41,8 @@ class SaveCashDocumentRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                // The ledgers are looked up through the normal scopes, so an office can only
-                // find its own ledgers and the shared ones, never another office's.
+                // The ledgers are looked up through the normal scopes, so a branch can only
+                // find its own ledgers and the shared ones, never another branch's.
                 $this->party = Ledger::query()->whereKey($this->integer('ledger_id'))->where('is_active', true)
                     ->whereIn('kind', array_map(fn (LedgerKind $k) => $k->value, [
                         LedgerKind::Customer, LedgerKind::Supplier, LedgerKind::Bank,

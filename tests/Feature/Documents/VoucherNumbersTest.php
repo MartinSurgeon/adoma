@@ -13,7 +13,7 @@ beforeEach(function () {
     $this->w = World::build();
 });
 
-it('gives every office a counter for every document type', function () {
+it('gives every branch a counter for every document type', function () {
     foreach ([$this->w->central, $this->w->kumasi, $this->w->otherBranch] as $branch) {
         expect(NumberSequence::where('branch_id', $branch->id)->count())->toBe(count(DocumentType::cases()));
     }
@@ -40,7 +40,7 @@ it('uses the right letters for each type', function () {
     ]);
 });
 
-it('counts each office and each type separately', function () {
+it('counts each branch and each type separately', function () {
     VoucherNumbers::next($this->w->kumasi, DocumentType::Sale);
     VoucherNumbers::next($this->w->kumasi, DocumentType::Sale);
 
@@ -94,13 +94,13 @@ it('can be asked to make the counters again without losing its place', function 
         ->and(NumberSequence::where('branch_id', $this->w->kumasi->id)->count())->toBe(count(DocumentType::cases()));
 });
 
-it('numbers a new office from one', function () {
+it('numbers a new branch from one', function () {
     $branch = Branch::create(['tenant_id' => $this->w->adoma->id, 'code' => 'TAM', 'name' => 'Tamale']);
 
     expect(VoucherNumbers::next($branch, DocumentType::Sale))->toBe('SAL-TAM-000001');
 });
 
-it('lets a transfer be numbered in the other office of the same business', function () {
+it('lets a transfer be numbered in the other branch of the same business', function () {
     app(TenantContext::class)->set($this->w->adoma, $this->w->kumasi);
 
     expect(VoucherNumbers::next($this->w->central, DocumentType::Transfer))->toBe('TRF-CEN-000001');
@@ -112,7 +112,7 @@ it('refuses to number a document for another business', function () {
     VoucherNumbers::next($this->w->otherBranch, DocumentType::Sale);
 })->throws(TenancyViolation::class);
 
-it('lets the database refuse a second counter for the same office and type', function () {
+it('lets the database refuse a second counter for the same branch and type', function () {
     expect(fn () => NumberSequence::create([
         'tenant_id' => $this->w->adoma->id, 'branch_id' => $this->w->kumasi->id, 'type' => 'sale', 'next_value' => 1,
     ]))->toThrow(Illuminate\Database\UniqueConstraintViolationException::class);

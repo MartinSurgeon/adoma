@@ -72,13 +72,13 @@ final class LotAllocator
     }
 
     /**
-     * Take the stock lock of one or more offices, lowest office first, every time.
+     * Take the stock lock of one or more branches, lowest office first, every time.
      *
      * Anything that moves gold (a sale, a transfer, a reversal) takes this first, so only one of them
-     * works on an office's gold at a time and the rest wait their turn. The lock is on the office's own
-     * row, not on a range of lots: locking ranges of lots let two offices sending to each other, or a
+     * works on a branch's gold at a time and the rest wait their turn. The lock is on the branch's own
+     * row, not on a range of lots: locking ranges of lots let two branches sending to each other, or a
      * reversal alongside a sale, each hold a range the other needed, and the database had to cancel one.
-     * One lock per office, always in the same order, cannot do that. Call it first, inside the posting
+     * One lock per branch, always in the same order, cannot do that. Call it first, inside the posting
      * transaction, so the lock lasts until the posting is saved.
      *
      * @param  list<Branch>  $branches
@@ -90,7 +90,7 @@ final class LotAllocator
         Branch::withoutGlobalScopes()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
     }
 
-    /** What is in stock for an office, in hundredths of a gram. */
+    /** What is in stock for a branch, in hundredths of a gram. */
     public static function availableH(Branch $branch): int
     {
         return Money::fromDb(

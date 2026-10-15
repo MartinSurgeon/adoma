@@ -17,7 +17,7 @@ const rows = computed(() => {
     const list = [
         ['Number', props.document.number],
         ['Date', day(props.document.date)],
-        ['Office', props.document.office],
+        ['Branch', props.document.office],
         [partyLabel.value, props.document.party?.name],
     ];
 

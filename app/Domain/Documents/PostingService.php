@@ -33,10 +33,10 @@ use Illuminate\Support\Facades\DB;
  *   Purchase  Dr Gold Stock            Cr the supplier          and a new lot of gold in stock
  *   Sale      Dr the customer          Cr Sales
  *             Dr Cost of Sales         Cr Gold Stock            and gold leaves the oldest lots
- *   Transfer  two documents, one in each office's books, so each office's books balance by themselves.
- *     Sent, in the sending office:       Dr the receiving office's account   Cr Gold Stock   (gold leaves the oldest lots)
- *     Accepted, in the receiving office: Dr Gold Stock   Cr the sending office's account     (the gold becomes new lots)
- *     Nothing changes in the receiving office until it accepts. If it declines, or the sender cancels, the
+ *   Transfer  two documents, one in each branch's books, so each branch's books balance by themselves.
+ *     Sent, in the sending branch:       Dr the receiving branch's account   Cr Gold Stock   (gold leaves the oldest lots)
+ *     Accepted, in the receiving branch: Dr Gold Stock   Cr the sending branch's account     (the gold becomes new lots)
+ *     Nothing changes in the receiving branch until it accepts. If it declines, or the sender cancels, the
  *     sender's document is reversed and the gold goes back. Gold moves at what it cost, so neither office
  *     shows a profit or a loss on it.
  */
@@ -85,7 +85,7 @@ final class PostingService
         });
     }
 
-    /** Gold bought. The supplier is owed the amount, and the office holds a new lot. */
+    /** Gold bought. The supplier is owed the amount, and the branch holds a new lot. */
     public function postPurchase(Branch $branch, string $date, Ledger $party, GoldFigures $figures, ?string $note, ?string $idempotencyKey, User $by): Document
     {
         return $this->once($branch, $idempotencyKey, $by, function () use ($branch, $date, $party, $figures, $note, $idempotencyKey, $by) {
@@ -159,12 +159,12 @@ final class PostingService
     }
 
     /**
-     * Gold sent from one office to another, at what it cost. It leaves the sending office's oldest lots
-     * and is then on its way: the receiving office's books and stock do not change until it accepts
+     * Gold sent from one branch to another, at what it cost. It leaves the sending branch's oldest lots
+     * and is then on its way: the receiving branch's books and stock do not change until it accepts
      * (acceptTransfer). Until then the sender can cancel it, or the receiver can decline it, and the gold
-     * goes back. Returns the sending office's document.
+     * goes back. Returns the sending branch's document.
      *
-     * Once accepted, the two offices owe each other the cost of the gold, through their office accounts,
+     * Once accepted, the two branches owe each other the cost of the gold, through their branch accounts,
      * until that is settled with a receipt or a payment.
      */
     public function postTransfer(Branch $from, Branch $to, string $date, int $weightH, ?string $note, ?string $idempotencyKey, User $by): Document
@@ -172,14 +172,14 @@ final class PostingService
         return $this->once($from, $idempotencyKey, $by, function () use ($from, $to, $date, $weightH, $note, $idempotencyKey, $by) {
             $this->assertTransfer($from, $to, $date, $weightH);
 
-            // The sending office's gold is locked while it is taken out, so two sales or transfers cannot take the same gold.
+            // The sending branch's gold is locked while it is taken out, so two sales or transfers cannot take the same gold.
             $this->lots->lockOffices([$from]);
 
             $taken = $this->lots->allocate($from, $weightH);   // locks the lots until we finish
             $costCents = array_sum(array_column($taken, 'costCents'));
 
             if ($costCents <= 0) {
-                throw new PostingError('This gold has no cost on record, so it cannot be moved between offices.');
+                throw new PostingError('This gold has no cost on record, so it cannot be moved between branches.');
             }
 
             $toAccount = ChartOfAccounts::ensureBranchLedger($to);
@@ -190,7 +190,7 @@ final class PostingService
                 [[$toAccount, $costCents, 0], [$stock, 0, $costCents]],
             );
 
-            // The sending office's side: the gold leaves its oldest lots.
+            // The sending branch's side: the gold leaves its oldest lots.
             foreach ($taken as ['lot' => $lot, 'weightH' => $takenH, 'costCents' => $lotCost]) {
                 $this->writeMovement($lot, $out, $date, -$takenH, -$lotCost);
 
@@ -200,16 +200,16 @@ final class PostingService
                 ])->save();
             }
 
-            // The gold is now on its way. It is in neither office's stock until the receiving office accepts it.
+            // The gold is now on its way. It is in neither branch's stock until the receiving branch accepts it.
             return $out;
         });
     }
 
     /**
-     * The receiving office accepts gold that was sent to it. Only now does the gold arrive: the receiving
-     * office's own document is written, and the gold becomes new lots in its stock. They keep the date the
+     * The receiving branch accepts gold that was sent to it. Only now does the gold arrive: the receiving
+     * branch's own document is written, and the gold becomes new lots in its stock. They keep the date the
      * gold was first bought, so the oldest still sells first, and the weight, karat and cost it left with.
-     * Returns the receiving office's document.
+     * Returns the receiving branch's document.
      */
     public function acceptTransfer(Document $transfer, Branch $receiver, User $by): Document
     {
@@ -227,7 +227,7 @@ final class PostingService
 
             $moves = StockMovement::withoutGlobalScopes()->where('document_id', $out->id)->orderBy('id')->get();
 
-            // Written as the receiving office: its document, its lines and its new lots.
+            // Written as the receiving branch: its document, its lines and its new lots.
             return $this->asOffice($receiver, function () use ($receiver, $date, $fromAccount, $stock, $cents, $out, $by, $moves) {
                 $in = $this->write(
                     DocumentType::TransferIn, $receiver, $date, $fromAccount, null, $cents, $out->note, null, $by,
@@ -264,8 +264,8 @@ final class PostingService
     }
 
     /**
-     * The receiving office turns gold away. The sending office's transfer is reversed, so the gold goes back
-     * into its lots, with the receiving office's reason on the record. Returns the sending office's reversal.
+     * The receiving branch turns gold away. The sending branch's transfer is reversed, so the gold goes back
+     * into its lots, with the receiving branch's reason on the record. Returns the sending branch's reversal.
      */
     public function declineTransfer(Document $transfer, Branch $receiver, string $reason, User $by): Document
     {
@@ -279,7 +279,7 @@ final class PostingService
         }, 3);
     }
 
-    /** A transfer out that is still waiting for this office to answer, locked. Anything else is refused in plain words. */
+    /** A transfer out that is still waiting for this branch to answer, locked. Anything else is refused in plain words. */
     private function lockedWaitingTransfer(Document $transfer, Branch $receiver, string $verb): Document
     {
         $out = Document::withoutGlobalScopes()->whereKey($transfer->id)->lockForUpdate()->firstOrFail();
@@ -288,11 +288,11 @@ final class PostingService
 
         if ($out->type !== DocumentType::Transfer || $out->isReversal()
             || $out->tenant_id !== $receiver->tenant_id || $toAccount?->linked_branch_id !== $receiver->id) {
-            throw new PostingError('This transfer is not addressed to this office.');
+            throw new PostingError('This transfer is not addressed to this branch.');
         }
 
         if ($out->status !== Document::POSTED) {
-            throw new PostingError("{$out->number} was cancelled by the sending office, so it cannot be {$verb}.");
+            throw new PostingError("{$out->number} was cancelled by the sending branch, so it cannot be {$verb}.");
         }
 
         if (Document::withoutGlobalScopes()->where('paired_id', $out->id)->lockForUpdate()->exists()) {
@@ -314,7 +314,7 @@ final class PostingService
             $original = Document::withoutGlobalScopes()->whereKey($document->id)->lockForUpdate()->firstOrFail();
 
             if ($original->type === DocumentType::TransferIn) {
-                throw new PostingError('A transfer is put right by the office that sent it. Reverse the transfer out there.');
+                throw new PostingError('A transfer is put right by the branch that sent it. Reverse the transfer out there.');
             }
 
             if ($original->status !== Document::POSTED || $original->isReversal()) {
@@ -332,7 +332,7 @@ final class PostingService
                 $other = Document::withoutGlobalScopes()->where('paired_id', $original->id)->lockForUpdate()->first();
 
                 if ($other !== null && $other->status !== Document::POSTED) {
-                    throw new PostingError("{$original->number} cannot be reversed, because the receiving office's half is not in order.");
+                    throw new PostingError("{$original->number} cannot be reversed, because the receiving branch's half is not in order.");
                 }
             }
 
@@ -354,9 +354,9 @@ final class PostingService
     }
 
     /**
-     * Write as another office of the same business, then go back to the one in view. A transfer is the one
-     * posting that must write into two offices, and this keeps that deliberate: the guard that stops an
-     * office writing into another's books stays on, and is told which office the work is for.
+     * Write as another branch of the same business, then go back to the one in view. A transfer is the one
+     * posting that must write into two branches, and this keeps that deliberate: the guard that stops an
+     * office writing into another's books stays on, and is told which branch the work is for.
      */
     private function asOffice(Branch $branch, Closure $work): mixed
     {
@@ -480,7 +480,7 @@ final class PostingService
     {
         StockMovement::create([
             'tenant_id' => $document->tenant_id,
-            // The office that holds the lot, which for a transfer is not always the document's own office.
+            // The branch that holds the lot, which for a transfer is not always the document's own branch.
             'branch_id' => $lot->branch_id,
             'lot_id' => $lot->id,
             'document_id' => $document->id,
@@ -506,7 +506,7 @@ final class PostingService
             // Reversing a purchase or a transfer in takes its gold back out of the lot. If some has gone since, the lot is short.
             if ($remainingH < 0 || $remainingCost < 0) {
                 throw new PostingError(sprintf(
-                    'Some of this gold has already been sold or sent to another office, so this %s cannot be reversed. Reverse those first.',
+                    'Some of this gold has already been sold or sent to another branch, so this %s cannot be reversed. Reverse those first.',
                     $original->type->isTransfer() ? 'transfer' : 'purchase',
                 ));
             }
@@ -615,11 +615,11 @@ final class PostingService
     private function assertTransfer(Branch $from, Branch $to, string $date, int $weightH): void
     {
         if ($from->is($to)) {
-            throw new PostingError('Choose a different office to send the gold to.');
+            throw new PostingError('Choose a different branch to send the gold to.');
         }
 
         if ($from->tenant_id !== $to->tenant_id) {
-            throw new PostingError('Gold can only be sent to another office of the same business.');
+            throw new PostingError('Gold can only be sent to another branch of the same business.');
         }
 
         if ($weightH <= 0) {
@@ -646,9 +646,9 @@ final class PostingService
             throw new PostingError("{$ledger->name} is switched off.");
         }
 
-        // An office ledger belongs to its own office only. Shared ledgers are open to all.
+        // A branch ledger belongs to its own branch only. Shared ledgers are open to all.
         if (! $ledger->is_shared && $ledger->branch_id !== $branch->id) {
-            throw new PostingError("{$ledger->name} belongs to another office.");
+            throw new PostingError("{$ledger->name} belongs to another branch.");
         }
     }
 

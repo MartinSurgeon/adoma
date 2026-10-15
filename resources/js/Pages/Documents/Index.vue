@@ -107,7 +107,7 @@ const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm
                             <th scope="col">Number</th>
                             <th scope="col">Date</th>
                             <th scope="col">Who</th>
-                            <th scope="col">Office</th>
+                            <th scope="col">Branch</th>
                             <th scope="col">Status</th>
                             <th scope="col" class="num">Amount (GH₵)</th>
                         </tr>

@@ -18,13 +18,13 @@ class Branch extends Model
 
     protected static function booted(): void
     {
-        // Each office gets an account that other offices use to trade with it.
+        // Each branch gets an account that other branches use to trade with it.
         static::created(function (Branch $branch) {
             ChartOfAccounts::ensureBranchLedger($branch);
             VoucherNumbers::ensureFor($branch);
         });
 
-        // Renaming an office renames its account, so the two never disagree.
+        // Renaming a branch renames its account, so the two never disagree.
         static::updated(function (Branch $branch) {
             if ($branch->wasChanged('name')) {
                 Ledger::withoutGlobalScopes()

@@ -36,7 +36,7 @@ function stLedger(Branch $branch, string $name, LedgerKind $kind, bool $active =
     return $ledger;
 }
 
-/** Post a document for either office, as one of that office's own people. */
+/** Post a document for either office, as one of that branch's own people. */
 function stPost(object $t, Branch $branch, string $type, Ledger $party, Ledger $cash, int $cents, ?string $date = null)
 {
     $context = app(TenantContext::class);
@@ -70,7 +70,7 @@ it('finds ledgers by name, with their balance, for the type-ahead', function () 
         ->and($found[0]['balance'])->toBe('GH₵ 1,200.00 · owes you');
 });
 
-it('only offers this office\'s ledgers and the shared ones', function () {
+it('only offers this branch\'s ledgers and the shared ones', function () {
     $names = collect($this->actingAs($this->w->kumasiClerk)->getJson(route('ledgers.search'))->json())->pluck('name');
 
     expect($names)->toContain('Passion Gold', 'Black', 'Cash Kumasi', 'Sales')->not->toContain('Central Customer', 'Cash HQ');
@@ -210,7 +210,7 @@ it('shows an empty ledger as empty', function () {
     expect($props['rows'])->toBe([])->and($props['closing'])->toBe('0.00')->and($props['truncated'])->toBeFalse();
 });
 
-it('keeps another office\'s ledger and entries out of reach', function () {
+it('keeps another branch\'s ledger and entries out of reach', function () {
     stPost($this, $this->w->central, 'payment', $this->centralCustomer, $this->centralCash, 100000);
 
     $this->actingAs($this->w->kumasiClerk)->get(route('ledgers.statement', $this->centralCustomer))->assertNotFound();
@@ -224,7 +224,7 @@ it('lets viewers read a statement', function () {
     $this->actingAs($this->w->kumasiViewer)->get(route('ledgers.statement', $this->customer))->assertOk();
 });
 
-it('shows an office only its own entries on a shared ledger', function () {
+it('shows a branch only its own entries on a shared ledger', function () {
     $shared = Ledger::create([
         'tenant_id' => $this->w->adoma->id, 'is_shared' => true,
         'group_id' => ChartOfAccounts::groupFor($this->w->adoma->id, LedgerKind::Bank)->id, 'kind' => LedgerKind::Bank, 'name' => 'Group Bank',
@@ -239,7 +239,7 @@ it('shows an office only its own entries on a shared ledger', function () {
     expect($kumasi['closing'])->toBe('1,000.00 Dr')
         ->and($central['closing'])->toBe('400.00 Dr')
         ->and($everything['closing'])->toBe('1,400.00 Dr')
-        ->and($everything['covers'])->toBe('All offices');
+        ->and($everything['covers'])->toBe('All branches');
 });
 
 it('caps a very long statement and says so', function () {
@@ -273,7 +273,7 @@ it('shows the record buttons to people who can record', function (string $who, b
     ['kumasiViewer', false],
 ]);
 
-it('tells the navigation whether the person can record in this office', function () {
+it('tells the navigation whether the person can record in this branch', function () {
     $tenancy = fn ($user, $session = []) => stProps($this->actingAs($user)->withSession($session)->get(route('dashboard')))['tenancy'];
 
     expect($tenancy($this->w->kumasiClerk)['can_record'])->toBeTrue()

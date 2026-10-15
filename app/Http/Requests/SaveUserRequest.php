@@ -26,7 +26,7 @@ class SaveUserRequest extends FormRequest
                 'required', 'string', 'lowercase', 'email', 'max:255',
                 Rule::unique('users', 'email')->ignore($editing),
             ],
-            // Null means an ordinary user who works in the offices listed below.
+            // Null means an ordinary user who works in the branches listed below.
             // Making someone an owner or admin is an owner-only decision.
             'tenant_role' => [
                 'nullable',
@@ -47,9 +47,9 @@ class SaveUserRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                // An ordinary user with no office could sign in and see nothing.
+                // An ordinary user with no branch could sign in and see nothing.
                 if ($this->input('tenant_role') === null && count($this->input('offices', [])) === 0) {
-                    $validator->errors()->add('offices', 'Choose at least one office for this person.');
+                    $validator->errors()->add('offices', 'Choose at least one branch for this person.');
                 }
             },
         ];
@@ -60,7 +60,7 @@ class SaveUserRequest extends FormRequest
         return [
             'tenant_role.prohibited' => 'Only an owner can make someone an owner or an admin.',
             'email.unique' => 'Someone already uses this email address.',
-            'offices.*.branch_id.exists' => 'That office does not belong to your business.',
+            'offices.*.branch_id.exists' => 'That branch does not belong to your business.',
         ];
     }
 

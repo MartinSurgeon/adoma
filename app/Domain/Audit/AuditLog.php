@@ -23,7 +23,7 @@ class AuditLog extends Model
     ];
 
     /** Friendly names for the kinds of record, used in sentences. */
-    private const SUBJECTS = ['Ledger' => 'ledger', 'User' => 'user', 'Branch' => 'office', 'Tenant' => 'business', 'Document' => 'document'];
+    private const SUBJECTS = ['Ledger' => 'ledger', 'User' => 'user', 'Branch' => 'branch', 'Tenant' => 'business', 'Document' => 'document'];
 
     private const FIELDS = [
         'name' => 'name', 'phone' => 'phone', 'email' => 'email',
@@ -60,7 +60,7 @@ class AuditLog extends Model
             'created' => "added $thing",
             'deleted' => "removed $thing",
             'updated' => $this->describeChange($thing),
-            'access_changed' => "changed which offices and roles $label has",
+            'access_changed' => "changed which branches and roles $label has",
             'login' => 'signed in',
             'logout' => 'signed out',
             'login_failed' => 'failed to sign in',

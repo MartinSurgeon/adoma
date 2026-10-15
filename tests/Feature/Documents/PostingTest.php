@@ -214,15 +214,15 @@ it('refuses a switched-off ledger', function () {
     expect(fn () => receipt($this))->toThrow(PostingError::class, 'switched off');
 });
 
-it('refuses another office\'s ledger', function () {
-    expect(fn () => receipt($this, party: $this->centralCustomer))->toThrow(PostingError::class, 'another office');
+it('refuses another branch\'s ledger', function () {
+    expect(fn () => receipt($this, party: $this->centralCustomer))->toThrow(PostingError::class, 'another branch');
 });
 
 it('refuses another business\'s ledger', function () {
     expect(fn () => receipt($this, party: $this->otherCustomer))->toThrow(PostingError::class, 'does not belong');
 });
 
-it('lets an office use a shared ledger', function () {
+it('lets a branch use a shared ledger', function () {
     $shared = Ledger::create([
         'tenant_id' => $this->w->adoma->id, 'is_shared' => true,
         'group_id' => ChartOfAccounts::groupFor($this->w->adoma->id, LedgerKind::Bank)->id, 'kind' => LedgerKind::Bank, 'name' => 'Group Bank',
@@ -233,10 +233,10 @@ it('lets an office use a shared ledger', function () {
     expect(balanceOf($shared))->toBe(70000);
 });
 
-it('refuses to post for an office the person is not working in', function () {
+it('refuses to post for a branch the person is not working in', function () {
     expect(fn () => $this->posting->postCash(
         DocumentType::Receipt, $this->w->central, now()->toDateString(), $this->centralCustomer, $this->cash, 1000, null, null, $this->clerk,
-    ))->toThrow(PostingError::class, 'another office');
+    ))->toThrow(PostingError::class, 'another branch');
 
     expect(Document::withoutGlobalScopes()->count())->toBe(0);
 });
@@ -386,7 +386,7 @@ it('leaves nothing half-done when a reversal fails', function () {
 
 // --------------------------------------------------------------- scoping
 
-it('shows an office only its own documents and lines', function () {
+it('shows a branch only its own documents and lines', function () {
     receipt($this);
     $this->ctx->set($this->w->adoma, $this->w->central);
 
@@ -400,7 +400,7 @@ it('shows nothing when no business is in context', function () {
     expect(Document::count())->toBe(0)->and(JournalLine::count())->toBe(0);
 });
 
-it('lets all-offices view see every office of the business, never another business', function () {
+it('lets all-offices view see every branch of the business, never another business', function () {
     receipt($this);
     $this->ctx->set($this->w->adoma, null, allBranches: true);
 
@@ -414,7 +414,7 @@ it('lets all-offices view see every office of the business, never another busine
     expect(Document::count())->toBe(1);
 });
 
-it('gives each office its own view of a shared ledger', function () {
+it('gives each branch its own view of a shared ledger', function () {
     $shared = Ledger::create([
         'tenant_id' => $this->w->adoma->id, 'is_shared' => true,
         'group_id' => ChartOfAccounts::groupFor($this->w->adoma->id, LedgerKind::Bank)->id, 'kind' => LedgerKind::Bank, 'name' => 'Group Bank',

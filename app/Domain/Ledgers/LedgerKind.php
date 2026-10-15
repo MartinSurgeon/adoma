@@ -11,7 +11,7 @@ enum LedgerKind: string
     case Bank = 'bank';
     case Cash = 'cash';
     case Expense = 'expense';
-    case Branch = 'branch';   // created automatically, one per office
+    case Branch = 'branch';   // created automatically, one per branch
     case Account = 'account'; // system accounts such as Sales and Gold Stock
 
     public function label(): string
@@ -33,9 +33,9 @@ enum LedgerKind: string
             self::Customer => 'Someone you sell to. They owe you after a sale.',
             self::Supplier => 'Someone you buy from. You owe them after a purchase.',
             self::Bank => 'A bank account the business holds.',
-            self::Cash => 'Cash kept in the office.',
+            self::Cash => 'Cash kept in the branch.',
             self::Expense => 'A cost such as rent, transport or salaries.',
-            self::Branch => 'Stands for another office, used when goods are sold between offices.',
+            self::Branch => 'Stands for another branch, used when goods are sold between branches.',
             self::Account => 'Used by the system when it posts transactions.',
         };
     }
@@ -59,7 +59,7 @@ enum LedgerKind: string
         return in_array($this, [self::Customer, self::Supplier, self::Bank, self::Cash, self::Expense], true);
     }
 
-    /** The least role that may add or edit this kind in an office. */
+    /** The least role that may add or edit this kind in a branch. */
     public function minimumRole(): Role
     {
         return match ($this) {

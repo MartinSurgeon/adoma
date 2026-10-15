@@ -31,7 +31,7 @@ class GoldDocumentController extends Controller
         $context = app(TenantContext::class);
         $words = self::WORDS[$type];
 
-        // Recording belongs to one office. An owner or admin viewing all offices chooses one first.
+        // Recording belongs to one branch. An owner or admin viewing all branches chooses one first.
         if ($context->viewingAllBranches() && $request->user()->isTenantAdmin()) {
             return Inertia::render('Documents/CreateGold', ['type' => $type, 'words' => $words, 'needsOffice' => true]);
         }

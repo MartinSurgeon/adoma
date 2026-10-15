@@ -12,13 +12,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A parcel of gold an office holds, from one purchase, or from a transfer of part of another office's
+ * A parcel of gold a branch holds, from one purchase, or from a transfer of part of another branch's
  * lot (then source_lot_id says which, and it keeps the date the gold was first bought, so the oldest
  * gold still goes first). It keeps its own weight, karat and cost, so a sale can say exactly what the
  * gold it took had cost.
  *
  * Only the weight and cost that remain can change, and only through StockMovement lines.
- * Seen only by its own office.
+ * Seen only by its own branch.
  */
 class StockLot extends Model
 {

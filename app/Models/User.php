@@ -82,7 +82,7 @@ class User extends Authenticatable
         return $this->belongsToMany(Branch::class)->withPivot('role')->withTimestamps();
     }
 
-    /** Owners and admins work across every office of their business. */
+    /** Owners and admins work across every branch of their business. */
     public function isTenantAdmin(): bool
     {
         return in_array($this->tenant_role, [Role::Owner->value, Role::Admin->value], true);
@@ -109,7 +109,7 @@ class User extends Authenticatable
         return $query->orderByDesc('is_head_office')->orderBy('name')->get();
     }
 
-    /** The user's role in one office, or null when they have no access to it. */
+    /** The user's role in one branch, or null when they have no access to it. */
     public function roleIn(Branch|int|null $branch): ?Role
     {
         if ($branch === null) {
@@ -120,7 +120,7 @@ class User extends Authenticatable
     }
 
     /**
-     * The user's role in every office they can use, as [branch id => Role].
+     * The user's role in every branch they can use, as [branch id => Role].
      * Built once per user object, so listing 25 ledgers does not run 25 queries.
      *
      * @return array<int, Role>

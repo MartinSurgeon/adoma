@@ -13,14 +13,14 @@ class BranchSwitchController extends Controller
         $user = $request->user();
 
         if ($data['branch'] === 'all') {
-            abort_unless($user->isTenantAdmin(), 403, 'Only admins can view all offices.');
+            abort_unless($user->isTenantAdmin(), 403, 'Only admins can view all branches.');
             $request->session()->put('active_branch_id', 'all');
 
             return back();
         }
 
         $branch = $user->accessibleBranches()->firstWhere('id', (int) $data['branch']);
-        abort_unless($branch, 403, 'You do not have access to this office.');
+        abort_unless($branch, 403, 'You do not have access to this branch.');
 
         $request->session()->put('active_branch_id', $branch->id);
 

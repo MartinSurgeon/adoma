@@ -131,7 +131,7 @@ const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm
                     <thead>
                         <tr>
                             <th scope="col">Name</th>
-                            <th scope="col" class="hidden sm:table-cell">Office</th>
+                            <th scope="col" class="hidden sm:table-cell">Branch</th>
                             <th scope="col" class="num">Balance</th>
                             <th scope="col"><span class="sr-only">Actions</span></th>
                         </tr>

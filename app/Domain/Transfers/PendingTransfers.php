@@ -13,16 +13,16 @@ use Illuminate\Support\Collection;
 
 /**
  * Transfers that have been sent and not yet answered: not accepted, not declined, not cancelled.
- * The gold is on its way, in neither office's stock.
+ * The gold is on its way, in neither branch's stock.
  *
- * A transfer out lives in the sending office's books, which the receiving office cannot normally read.
- * These queries step outside that, on purpose and only for this one purpose, so the receiving office
- * can see what is waiting for it. Each is tied to one business and one office, and callers show only
- * what the office needs to decide.
+ * A transfer out lives in the sending branch's books, which the receiving branch cannot normally read.
+ * These queries step outside that, on purpose and only for this one purpose, so the receiving branch
+ * can see what is waiting for it. Each is tied to one business and one branch, and callers show only
+ * what the branch needs to decide.
  */
 final class PendingTransfers
 {
-    /** Every transfer out, in any office of the business, still waiting for an answer. */
+    /** Every transfer out, in any branch of the business, still waiting for an answer. */
     private static function waiting(int $tenantId): Builder
     {
         return Document::withoutGlobalScopes()
@@ -33,21 +33,21 @@ final class PendingTransfers
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('documents as accepted')->whereColumn('accepted.paired_id', 'documents.id'));
     }
 
-    /** Waiting for this office to accept or decline. */
+    /** Waiting for this branch to accept or decline. */
     public static function addressedTo(Branch $office): Builder
     {
         return self::waiting($office->tenant_id)
             ->whereIn('documents.ledger_id', Ledger::withoutGlobalScopes()->where('linked_branch_id', $office->id)->select('id'));
     }
 
-    /** Sent by this office and waiting for the other office to answer. */
+    /** Sent by this branch and waiting for the other branch to answer. */
     public static function sentBy(Branch $office): Builder
     {
         return self::waiting($office->tenant_id)->where('documents.branch_id', $office->id);
     }
 
     /**
-     * Weight and cost of each transfer, from the gold that left the sending office.
+     * Weight and cost of each transfer, from the gold that left the sending branch.
      *
      * @param  Collection<int, Document>|list<int>  $documents
      * @return array<int, array{weightH: int, costCents: int, lots: int}>  by document id

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * A small two-business world used by the tenancy tests.
  *
  *  Adoma   : Central (head office) and Kumasi, an owner, a Kumasi clerk, a Central manager
- *  Other Co: one office and one admin, who must never see anything of Adoma's
+ *  Other Co: one branch and one admin, who must never see anything of Adoma's
  */
 final class World
 {

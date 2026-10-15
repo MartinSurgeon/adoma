@@ -75,14 +75,14 @@ it('says in plain words when a ledger is switched off and on', function () {
     expect(entries($this->w->adoma->id, 'updated')->last()->describe())->toBe('switched on ledger “Passion Gold”');
 });
 
-it('records an office being renamed', function () {
+it('records a branch being renamed', function () {
     $this->w->kumasi->update(['name' => 'Kumasi Market']);
 
     $log = entries($this->w->adoma->id, 'updated')->last();
 
     expect($log->auditable_id)->toBe($this->w->kumasi->id)
         ->and($log->old_values)->toBe(['name' => 'Kumasi'])
-        ->and($log->describe())->toBe('changed the name of office “Kumasi Market”');
+        ->and($log->describe())->toBe('changed the name of branch “Kumasi Market”');
 });
 
 it('records a deletion with what was deleted', function () {
@@ -183,7 +183,7 @@ it('records a switched-off account trying to sign in', function () {
 
 // ------------------------------------------------------------------ access changes
 
-it('records who is given which offices and roles', function () {
+it('records who is given which branches and roles', function () {
     $this->actingAs($this->w->owner)->post(route('users.store'), [
         'name' => 'New Person', 'email' => 'new.person@adoma.test', 'tenant_role' => null,
         'offices' => [['branch_id' => $this->w->kumasi->id, 'role' => 'clerk']],
@@ -194,10 +194,10 @@ it('records who is given which offices and roles', function () {
     expect($log->label)->toBe('New Person')
         ->and($log->actor_name)->toBe($this->w->owner->name)
         ->and($log->new_values)->toBe(['offices' => ['Kumasi' => 'clerk']])
-        ->and($log->describe())->toBe('changed which offices and roles “New Person” has');
+        ->and($log->describe())->toBe('changed which branches and roles “New Person” has');
 });
 
-it('records an office or role change with before and after, and nothing when it did not change', function () {
+it('records a branch or role change with before and after, and nothing when it did not change', function () {
     $clerk = $this->w->kumasiClerk;
     $payload = fn (array $offices) => ['name' => $clerk->name, 'email' => $clerk->email, 'tenant_role' => null, 'offices' => $offices];
     $this->actingAs($this->w->admin);
@@ -313,7 +313,7 @@ it('filters the activity by what it is about', function () {
     expect($descriptions('signin')->all())->toBe(['signed out', 'signed in'])
         ->and($descriptions('ledger')->every(fn ($d) => str_contains($d, 'ledger')))->toBeTrue()
         ->and($descriptions('user')->contains('signed in'))->toBeFalse()
-        ->and($descriptions('office')->every(fn ($d) => str_contains($d, 'office')))->toBeTrue();
+        ->and($descriptions('branch')->every(fn ($d) => str_contains($d, 'branch')))->toBeTrue();
 });
 
 it('pages the activity 25 at a time', function () {

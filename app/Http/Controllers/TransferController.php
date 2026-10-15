@@ -19,14 +19,14 @@ use InvalidArgumentException;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/** Sending gold from the office in view to another office. Managers and above only. */
+/** Sending gold from the branch in view to another branch. Managers and above only. */
 class TransferController extends Controller
 {
     public function create(Request $request): Response
     {
         $context = app(TenantContext::class);
 
-        // Sending belongs to one office. An owner or admin viewing all offices chooses one first.
+        // Sending belongs to one branch. An owner or admin viewing all branches chooses one first.
         if ($context->viewingAllBranches() && $request->user()->isTenantAdmin()) {
             return Inertia::render('Transfers/Create', ['needsOffice' => true]);
         }
@@ -100,7 +100,7 @@ class TransferController extends Controller
             ->with('success', sprintf('%s was sent. %s g is waiting for %s to accept it.', $document->number, Money::format($request->weightH), $request->toBranch->name));
     }
 
-    /** Gold sent to this office and waiting for it to accept or decline. */
+    /** Gold sent to this branch and waiting for it to accept or decline. */
     public function incoming(Request $request): Response
     {
         $this->authorize('receiveTransfer', Document::class);
@@ -132,7 +132,7 @@ class TransferController extends Controller
         $office = app(TenantContext::class)->branch();
         $document = PendingTransfers::addressedTo($office)->whereKey($transfer)->first();
 
-        // Another office's transfer, or one already answered, is simply not there for this office.
+        // Another branch's transfer, or one already answered, is simply not there for this branch.
         abort_if($document === null, 404);
 
         try {
@@ -152,8 +152,8 @@ class TransferController extends Controller
         $this->authorize('receiveTransfer', Document::class);
 
         $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:200']], [
-            'reason.required' => 'Say why you are declining it, so the sending office knows.',
-            'reason.min' => 'Say why you are declining it, so the sending office knows.',
+            'reason.required' => 'Say why you are declining it, so the sending branch knows.',
+            'reason.min' => 'Say why you are declining it, so the sending branch knows.',
         ]);
 
         $office = app(TenantContext::class)->branch();
@@ -168,6 +168,6 @@ class TransferController extends Controller
         }
 
         return redirect()->route('transfers.incoming')
-            ->with('success', "{$document->number} was declined. The gold goes back to the sending office.");
+            ->with('success', "{$document->number} was declined. The gold goes back to the sending branch.");
     }
 }

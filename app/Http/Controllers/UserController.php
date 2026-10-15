@@ -108,7 +108,7 @@ class UserController extends Controller
 
         $this->syncOffices($target, $request);
 
-        // Which offices someone can use, and in what role, is the most sensitive thing on this screen.
+        // Which branches someone can use, and in what role, is the most sensitive thing on this screen.
         $officesAfter = $this->officeMap($target);
         if ($officesBefore !== $officesAfter) {
             Audit::record('access_changed', $target, ['offices' => $officesBefore], ['offices' => $officesAfter]);
@@ -158,7 +158,7 @@ class UserController extends Controller
 
     private function syncOffices(User $user, SaveUserRequest $request): void
     {
-        // Owners and admins reach every office without rows of their own.
+        // Owners and admins reach every branch without rows of their own.
         $offices = $user->isTenantAdmin() ? [] : collect($request->validated('offices', []))
             ->mapWithKeys(fn ($o) => [(int) $o['branch_id'] => ['role' => $o['role']]])
             ->all();

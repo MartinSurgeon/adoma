@@ -18,7 +18,7 @@ final class TenantContext
     public function set(Tenant $tenant, ?Branch $branch = null, bool $allBranches = false): void
     {
         if ($branch !== null && $branch->tenant_id !== $tenant->id) {
-            throw new TenancyViolation('The office does not belong to this business.');
+            throw new TenancyViolation('The branch does not belong to this business.');
         }
 
         $this->tenant = $tenant;

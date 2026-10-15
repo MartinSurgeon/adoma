@@ -15,7 +15,7 @@ use Throwable;
 
 /**
  * A ledger's statement: every entry, with a running balance, for a chosen period.
- * It covers the offices in context, so an office sees its own dealings with a ledger.
+ * It covers the branches in context, so a branch sees its own dealings with a ledger.
  */
 class LedgerStatementController extends Controller
 {
@@ -77,9 +77,9 @@ class LedgerStatementController extends Controller
                 'id' => $ledger->id,
                 'name' => $ledger->name,
                 'kind_label' => $ledger->kind->label(),
-                'office' => $ledger->is_shared ? 'All offices' : $ledger->branch?->name,
+                'office' => $ledger->is_shared ? 'All branches' : $ledger->branch?->name,
             ],
-            'covers' => $context->viewingAllBranches() ? 'All offices' : $context->branch()?->name,
+            'covers' => $context->viewingAllBranches() ? 'All branches' : $context->branch()?->name,
             'filters' => ['from' => $from, 'to' => $to],
             'opening' => Money::drCr($opening),
             'rows' => $rows,

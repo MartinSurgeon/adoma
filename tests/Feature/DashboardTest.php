@@ -42,7 +42,7 @@ it('sends people who are not signed in to the login page', function () {
     $this->get(route('dashboard'))->assertRedirect(route('login'));
 });
 
-it('shows an office the number of ledgers it has, active ones only', function () {
+it('shows a branch the number of ledgers it has, active ones only', function () {
     dashLedger($this->w->kumasi, 'Passion Gold');
     dashLedger($this->w->kumasi, 'Gold Mart');
     dashLedger($this->w->kumasi, 'Old Customer', active: false);
@@ -53,7 +53,7 @@ it('shows an office the number of ledgers it has, active ones only', function ()
     expect($stats)->toBe(['Customers' => 2, 'Suppliers' => 1, 'Banks' => 0, 'Cash accounts' => 0]);
 });
 
-it('keeps another office\'s figures out of the count', function () {
+it('keeps another branch\'s figures out of the count', function () {
     dashLedger($this->w->kumasi, 'Passion Gold');
     dashLedger($this->w->central, 'Central One');
     dashLedger($this->w->central, 'Central Two');
@@ -63,7 +63,7 @@ it('keeps another office\'s figures out of the count', function () {
         ->and(dashStats(dashProps($this->actingAs($this->w->centralManager)->get(route('dashboard'))))['Customers'])->toBe(2);
 });
 
-it('counts shared ledgers for every office', function () {
+it('counts shared ledgers for every branch', function () {
     Ledger::create([
         'tenant_id' => $this->w->adoma->id, 'is_shared' => true,
         'group_id' => ChartOfAccounts::groupFor($this->w->adoma->id, LedgerKind::Bank)->id, 'kind' => LedgerKind::Bank, 'name' => 'Group Bank',
@@ -73,17 +73,17 @@ it('counts shared ledgers for every office', function () {
         ->and(dashStats(dashProps($this->actingAs($this->w->centralManager)->get(route('dashboard'))))['Banks'])->toBe(1);
 });
 
-it('adds up every office for an owner viewing all offices, but never another business', function () {
+it('adds up every branch for an owner viewing all branches, but never another business', function () {
     dashLedger($this->w->kumasi, 'Passion Gold');
     dashLedger($this->w->central, 'Central One');
     dashLedger($this->w->otherBranch, 'Other Co Customer');
 
     $props = dashProps($this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])->get(route('dashboard')));
 
-    expect(dashStats($props)['Customers'])->toBe(2)->and($props['where'])->toBe('All offices');
+    expect(dashStats($props)['Customers'])->toBe(2)->and($props['where'])->toBe('All branches');
 });
 
-it('names the office being looked at', function () {
+it('names the branch being looked at', function () {
     expect(dashProps($this->actingAs($this->w->kumasiClerk)->get(route('dashboard')))['where'])->toBe('Kumasi')
         ->and(dashProps($this->actingAs($this->w->centralManager)->get(route('dashboard')))['where'])->toBe('Central');
 });
@@ -113,7 +113,7 @@ function dashPost(object $t, Branch $branch, string $partyName, int $cents, stri
     }
 }
 
-it('lists the five latest transactions, newest first, from the office in view only', function () {
+it('lists the five latest transactions, newest first, from the branch in view only', function () {
     foreach (range(1, 7) as $i) {
         dashPost($this, $this->w->kumasi, "Customer $i", $i * 100, "2026-03-0$i");
     }

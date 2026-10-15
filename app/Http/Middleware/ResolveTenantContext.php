@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Works out which business and office this request is for, and checks the
  * signed-in user may work there. The business always comes from the user,
- * never from the request. The office comes from the X-Branch-Id header or
+ * never from the request. The branch comes from the X-Branch-Id header or
  * the session, and is always checked against what the user may access.
  */
 class ResolveTenantContext
@@ -38,7 +38,7 @@ class ResolveTenantContext
         $requested = $header ?? ($request->hasSession() ? $request->session()->get('active_branch_id') : null);
 
         if ($requested === 'all') {
-            abort_unless($user->isTenantAdmin(), 403, 'Only admins can view all offices.');
+            abort_unless($user->isTenantAdmin(), 403, 'Only admins can view all branches.');
             $this->context->set($tenant, null, true);
 
             return $next($request);
@@ -47,9 +47,9 @@ class ResolveTenantContext
         if ($requested !== null) {
             $branch = $branches->firstWhere('id', (int) $requested);
 
-            // A header naming an office the user cannot use is an error.
+            // A header naming a branch the user cannot use is an error.
             // A stale session value just falls back to the default office.
-            abort_if($branch === null && $header !== null, 403, 'You do not have access to this office.');
+            abort_if($branch === null && $header !== null, 403, 'You do not have access to this branch.');
         }
 
         $this->context->set($tenant, $branch ?? $branches->first());

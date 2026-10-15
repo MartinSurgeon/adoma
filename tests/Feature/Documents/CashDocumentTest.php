@@ -79,7 +79,7 @@ function pageProps($response): array
 
 // ------------------------------------------------------------- the form
 
-it('shows the receipt form with only the cash and bank accounts this office can use', function () {
+it('shows the receipt form with only the cash and bank accounts this branch can use', function () {
     httpLedger($this->w->kumasi, 'Old Cash', LedgerKind::Cash, active: false);
 
     $props = pageProps($this->actingAs($this->w->kumasiClerk)->get(route('receipts.create'))->assertOk());
@@ -115,7 +115,7 @@ it('keeps viewers off the forms', function () {
     expect(Document::withoutGlobalScopes()->count())->toBe(0);
 });
 
-it('asks an admin viewing all offices to choose one first', function () {
+it('asks an admin viewing all branches to choose one first', function () {
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all']);
 
     $this->get(route('receipts.create'))->assertOk()
@@ -125,7 +125,7 @@ it('asks an admin viewing all offices to choose one first', function () {
     expect(Document::withoutGlobalScopes()->count())->toBe(0);
 });
 
-it('lets an owner record in the office they have chosen', function () {
+it('lets an owner record in the branch they have chosen', function () {
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => $this->w->kumasi->id])
         ->post(route('receipts.store'), cashForm($this))->assertSessionHasNoErrors();
 
@@ -202,7 +202,7 @@ it('keeps a note to 500 characters', function () {
     $this->actingAs($this->w->kumasiClerk)->post(route('receipts.store'), cashForm($this, ['note' => str_repeat('a', 501)]))->assertSessionHasErrors('note');
 });
 
-it('refuses ledgers this office cannot use', function (string $which, string $field) {
+it('refuses ledgers this branch cannot use', function (string $which, string $field) {
     $ids = [
         'central customer' => $this->centralCustomer->id,
         'other business customer' => $this->otherCustomer->id,
@@ -308,7 +308,7 @@ it('shows the entries as debit and credit', function () {
         ->and($lines->firstWhere('ledger', 'Passion Gold')['credit'])->toBe('1,000.00');
 });
 
-it('hides another office\'s documents completely', function () {
+it('hides another branch\'s documents completely', function () {
     $document = postedReceipt($this);
     $this->actingAs($this->w->centralManager);
 
@@ -323,7 +323,7 @@ it('hides another business\'s documents completely', function () {
     $this->actingAs($this->w->otherAdmin)->withSession(['active_branch_id' => 'all'])->get(route('documents.show', $document))->assertNotFound();
 });
 
-it('lets an owner viewing all offices read any office\'s document', function () {
+it('lets an owner viewing all branches read any branch\'s document', function () {
     $document = postedReceipt($this);
 
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])->get(route('documents.show', $document))->assertOk();
@@ -428,7 +428,7 @@ it('lets viewers print what they can read', function () {
 
 // ------------------------------------------------------------------ finding
 
-it('lists an office\'s transactions, newest first, and nobody else\'s', function () {
+it('lists a branch\'s transactions, newest first, and nobody else\'s', function () {
     $first = postedReceipt($this, 1000);
     $second = postedReceipt($this, 2000);
     DB::table('documents')->insert([

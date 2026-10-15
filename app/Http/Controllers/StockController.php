@@ -13,7 +13,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The gold an office holds, lot by lot, oldest first: what each parcel is, where it came from and
+ * The gold a branch holds, lot by lot, oldest first: what each parcel is, where it came from and
  * how much is left. This is the list a sale draws from. What the gold cost is shown to managers and
  * above only, because cost reveals the margin.
  */
@@ -35,7 +35,7 @@ class StockController extends Controller
             ->orderBy('date')->orderBy('id')
             ->paginate(25)
             ->through(function (StockLot $lot) {
-                // A lot comes from a purchase, or from another office's transfer.
+                // A lot comes from a purchase, or from another branch's transfer.
                 $origin = $lot->document ?? $lot->goldLine?->document;
 
                 return [
@@ -57,7 +57,7 @@ class StockController extends Controller
         $canSeeCost = $user->isTenantAdmin()
             || ($context->branchId() !== null && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false));
 
-        // Gold sent and not yet accepted is in neither office's stock. Show it, so it is never "lost" on screen.
+        // Gold sent and not yet accepted is in neither branch's stock. Show it, so it is never "lost" on screen.
         $office = $context->viewingAllBranches() ? null : $context->branch();
         $sent = $office ? PendingTransfers::summary(PendingTransfers::sentBy($office)) : null;
         $incoming = $office && $canSeeCost ? PendingTransfers::summary(PendingTransfers::addressedTo($office)) : null;
@@ -67,7 +67,7 @@ class StockController extends Controller
                 'sent' => $sent && $sent['count'] ? ['count' => $sent['count'], 'grams' => Money::format($sent['weightH'])] : null,
                 'incoming' => $incoming && $incoming['count'] ? ['count' => $incoming['count'], 'grams' => Money::format($incoming['weightH'])] : null,
             ],
-            'where' => $context->viewingAllBranches() ? 'All offices' : $context->branch()?->name,
+            'where' => $context->viewingAllBranches() ? 'All branches' : $context->branch()?->name,
             'showOffice' => $context->viewingAllBranches(),
             'lots' => $lots->through(function (array $row) use ($canSeeCost) {
                 return $canSeeCost ? $row : array_merge($row, ['cost' => null]);

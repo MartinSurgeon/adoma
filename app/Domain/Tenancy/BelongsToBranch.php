@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Scopes a model to the active office and stamps branch_id on create.
- * Use it together with BelongsToTenant. Owners and admins viewing all offices
- * see every office of their own business, never another business.
- * Fails closed: with no office in context, queries match no rows.
+ * Scopes a model to the active branch and stamps branch_id on create.
+ * Use it together with BelongsToTenant. Owners and admins viewing all branches
+ * see every branch of their own business, never another business.
+ * Fails closed: with no branch in context, queries match no rows.
  */
 trait BelongsToBranch
 {
@@ -36,7 +36,7 @@ trait BelongsToBranch
             if ($model->branch_id === null) {
                 if ($context->branchId() === null) {
                     throw new TenancyViolation(
-                        class_basename($model).' needs an office. Choose one before saving.'
+                        class_basename($model).' needs a branch. Choose one before saving.'
                     );
                 }
 
@@ -45,23 +45,23 @@ trait BelongsToBranch
                 return;
             }
 
-            // Someone working in one office cannot write into another.
+            // Someone working in one branch cannot write into another.
             if (! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && (int) $model->branch_id !== $context->branchId()) {
                 throw new TenancyViolation(
-                    class_basename($model).' cannot be created for a different office.'
+                    class_basename($model).' cannot be created for a different branch.'
                 );
             }
 
-            // The office must belong to the same business as the record.
+            // The branch must belong to the same business as the record.
             $sameBusiness = Branch::withoutGlobalScopes()
                 ->whereKey($model->branch_id)
                 ->where('tenant_id', $model->tenant_id ?? $context->tenantId())
                 ->exists();
 
             if (! $sameBusiness) {
-                throw new TenancyViolation('The office does not belong to this business.');
+                throw new TenancyViolation('The branch does not belong to this business.');
             }
         });
     }

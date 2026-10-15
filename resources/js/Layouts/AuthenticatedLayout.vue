@@ -52,7 +52,7 @@ const sections = computed(() =>
                 { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Stock', href: route('stock.index'), active: route().current('stock.*'), icon: 'stock', show: Boolean(tenancy.value), mobile: false },
-                // Gold other offices have sent, waiting for a manager here to accept it. The badge counts what is waiting.
+                // Gold other branches have sent, waiting for a manager here to accept it. The badge counts what is waiting.
                 { label: 'Incoming gold', href: route('transfers.incoming'), active: route().current('transfers.incoming'), icon: 'inbox', show: canTransfer.value, mobile: false, badge: incoming.value },
             ],
         },

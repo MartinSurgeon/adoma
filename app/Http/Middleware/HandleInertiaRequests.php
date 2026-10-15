@@ -49,7 +49,7 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
-    /** What the top bar needs: the business, the active office and the offices to switch to. */
+    /** What the top bar needs: the business, the active branch and the branches to switch to. */
     private function tenancy(Request $request): ?array
     {
         $user = $request->user();
@@ -65,15 +65,15 @@ class HandleInertiaRequests extends Middleware
             'branch' => $context->branch()?->only(['id', 'code', 'name']),
             'all_branches' => $context->viewingAllBranches(),
             'can_view_all' => $user->isTenantAdmin(),
-            // Recording a transaction needs one office and at least a clerk's role in it.
+            // Recording a transaction needs one branch and at least a clerk's role in it.
             'can_record' => ! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && ($user->roleIn($context->branchId())?->atLeast(Role::Clerk) ?? false),
-            // Sending gold to another office needs one office and at least a manager's role in it.
+            // Sending gold to another branch needs one branch and at least a manager's role in it.
             'can_transfer' => ! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false),
-            // How many transfers are waiting for this office to accept, for managers who can answer them.
+            // How many transfers are waiting for this branch to accept, for managers who can answer them.
             'incoming_transfers' => (! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false))

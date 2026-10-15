@@ -50,7 +50,7 @@ class DocumentController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        // A transfer out is "waiting" until the receiving office accepts it, which writes its other half.
+        // A transfer out is "waiting" until the receiving branch accepts it, which writes its other half.
         $sent = $page->getCollection()
             ->filter(fn (Document $d) => $d->type === DocumentType::Transfer && $d->status === Document::POSTED && ! $d->isReversal())
             ->pluck('id')->all();
@@ -174,8 +174,8 @@ class DocumentController extends Controller
     }
 
     /**
-     * What moved on a transfer, and the other half of it in the other office's books. The other half is
-     * linked only when this person may open it, so reading one office's transfer never opens another's books.
+     * What moved on a transfer, and the other half of it in the other branch's books. The other half is
+     * linked only when this person may open it, so reading one branch's transfer never opens another's books.
      */
     private function transfer(Document $document, ?User $viewer): ?array
     {
@@ -189,7 +189,7 @@ class DocumentController extends Controller
         $other = $document->otherHalf();
         $mayOpen = $other !== null && $viewer !== null && $viewer->can('view', $other);
 
-        // Where it stands. A transfer out is waiting until the receiving office accepts it, which writes its other half.
+        // Where it stands. A transfer out is waiting until the receiving branch accepts it, which writes its other half.
         $state = match (true) {
             $document->isReversal() => 'reversal',
             $document->status === Document::REVERSED => 'cancelled',
@@ -201,7 +201,7 @@ class DocumentController extends Controller
             'direction' => $document->type === DocumentType::Transfer ? 'out' : 'in',
             'state' => $state,
             'weight' => Money::format($weightH),
-            // The party on a transfer is the other office's account, which is named after the office.
+            // The party on a transfer is the other branch's account, which is named after the branch.
             'other_office' => $document->ledger?->name,
             'other_id' => $mayOpen ? $other->id : null,
             'other_number' => $other?->number,
@@ -234,7 +234,7 @@ class DocumentController extends Controller
 
     /**
      * What a sale earned: the amount less what its gold had cost. A margin is sensitive,
-     * so only managers, admins and owners of the office see it.
+     * so only managers, admins and owners of the branch see it.
      */
     private function profit(Document $document, ?User $viewer): ?array
     {

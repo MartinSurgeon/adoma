@@ -137,7 +137,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <dd class="mt-1 font-medium text-gray-900">{{ day(document.date) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-gray-700">Office</dt>
+                        <dt class="text-gray-700">Branch</dt>
                         <dd class="mt-1 font-medium text-gray-900">{{ document.office }}</dd>
                     </div>
                     <div v-if="document.note" class="sm:col-span-2">
@@ -151,7 +151,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 </dl>
             </section>
 
-            <!-- A transfer: what moved, and the other half in the other office's books. -->
+            <!-- A transfer: what moved, and the other half in the other branch's books. -->
             <section v-if="transfer" aria-labelledby="transfer-heading" class="card p-6">
                 <h2 id="transfer-heading" class="text-lg font-semibold text-gray-900">The gold</h2>
                 <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 text-base">
@@ -175,8 +175,8 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     </p>
                 </Banner>
                 <p v-else class="mt-4 text-base text-gray-700">
-                    The gold moved at what it cost, so neither office shows a profit or a loss on it.
-                    <template v-if="transfer.direction === 'in'">To put this right, the sending office reverses its transfer, which undoes both halves.</template>
+                    The gold moved at what it cost, so neither branch shows a profit or a loss on it.
+                    <template v-if="transfer.direction === 'in'">To put this right, the sending branch reverses its transfer, which undoes both halves.</template>
                 </p>
             </section>
 

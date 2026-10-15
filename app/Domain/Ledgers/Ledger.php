@@ -12,13 +12,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * An account: a customer, supplier, bank, cash account, expense, another office,
+ * An account: a customer, supplier, bank, cash account, expense, another branch,
  * or a system account such as Sales.
  *
  * Who can see it:
- *   - an office ledger is seen by its own office
- *   - a shared ledger (is_shared, no office) is seen by every office of the business
- *   - owners and admins viewing all offices see everything in their business
+ *   - a branch ledger is seen by its own branch
+ *   - a shared ledger (is_shared, no branch) is seen by every branch of the business
+ *   - owners and admins viewing all branches see everything in their business
  * With no business or office in context nothing is visible.
  */
 class Ledger extends Model
@@ -82,14 +82,14 @@ class Ledger extends Model
         static::creating(function (Ledger $ledger) {
             if ($ledger->is_shared) {
                 if ($ledger->branch_id !== null) {
-                    throw new TenancyViolation('A shared ledger cannot belong to one office.');
+                    throw new TenancyViolation('A shared ledger cannot belong to one branch.');
                 }
 
                 return;
             }
 
             if ($ledger->branch_id === null) {
-                throw new TenancyViolation('A ledger needs an office, or must be marked as shared.');
+                throw new TenancyViolation('A ledger needs a branch, or must be marked as shared.');
             }
 
             $context = app(TenantContext::class);
@@ -97,7 +97,7 @@ class Ledger extends Model
             if (! $context->viewingAllBranches()
                 && $context->branchId() !== null
                 && (int) $ledger->branch_id !== $context->branchId()) {
-                throw new TenancyViolation('A ledger cannot be created for a different office.');
+                throw new TenancyViolation('A ledger cannot be created for a different branch.');
             }
 
             $sameBusiness = Branch::withoutGlobalScopes()
@@ -106,7 +106,7 @@ class Ledger extends Model
                 ->exists();
 
             if (! $sameBusiness) {
-                throw new TenancyViolation('The office does not belong to this business.');
+                throw new TenancyViolation('The branch does not belong to this business.');
             }
         });
 

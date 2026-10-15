@@ -70,7 +70,7 @@ const submit = () => form.post(route('transfers.store'));
 
 <template>
     <TransactionLayout
-        title="Send gold to another office"
+        title="Send gold to another branch"
         submit-label="Send gold"
         :processing="form.processing"
         :blocked="blocked"
@@ -91,7 +91,7 @@ const submit = () => form.post(route('transfers.store'));
                         v-model="form.to_branch_id"
                         class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
                     >
-                        <option value="" disabled>Choose an office</option>
+                        <option value="" disabled>Choose a branch</option>
                         <option v-for="o in offices" :key="o.id" :value="o.id">{{ o.name }}</option>
                     </select>
                     <InputError class="mt-2" :message="form.errors.to_branch_id" />
@@ -147,10 +147,10 @@ const submit = () => form.post(route('transfers.store'));
 
                 <p v-if="quote?.ok && destination" class="mt-4 text-base text-gray-900">
                     {{ quote.weight }} g leaves {{ office }}'s stock and arrives at {{ destination }}, at what it cost, {{ quote.cost }}.
-                    Neither office shows a profit or a loss on it.
+                    Neither branch shows a profit or a loss on it.
                 </p>
                 <p v-else class="mt-4 text-base text-gray-700">
-                    Choose the office and enter the weight to see how this will be recorded.
+                    Choose the branch and enter the weight to see how this will be recorded.
                 </p>
 
                 <p v-if="quote?.ok && destination" class="mt-4 text-base text-gray-900">

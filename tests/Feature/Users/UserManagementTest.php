@@ -85,7 +85,7 @@ it('never reveals or touches a user of another business', function () {
 
 // ---------------------------------------------------------------- creating users
 
-it('creates an ordinary user with a temporary password and an office role', function () {
+it('creates an ordinary user with a temporary password and a branch role', function () {
     $credentials = createAs($this->w->owner, newUser($this->w));
 
     $user = User::where('email', 'new.person@adoma.test')->firstOrFail();
@@ -145,19 +145,19 @@ it('lets an admin create ordinary users', function () {
     expect(User::where('email', 'new.person@adoma.test')->value('tenant_id'))->toBe($this->w->adoma->id);
 });
 
-it('cannot give someone an office from another business', function () {
+it('cannot give someone a branch from another business', function () {
     $this->actingAs($this->w->owner)
         ->post(route('users.store'), newUser($this->w, ['offices' => [['branch_id' => $this->w->otherBranch->id, 'role' => 'clerk']]]))
         ->assertSessionHasErrors('offices.0.branch_id');
 });
 
-it('needs at least one office for an ordinary user', function () {
+it('needs at least one branch for an ordinary user', function () {
     $this->actingAs($this->w->owner)
         ->post(route('users.store'), newUser($this->w, ['offices' => []]))
         ->assertSessionHasErrors('offices');
 });
 
-it('only accepts manager, clerk or viewer as an office role', function () {
+it('only accepts manager, clerk or viewer as a branch role', function () {
     $this->actingAs($this->w->owner)
         ->post(route('users.store'), newUser($this->w, ['offices' => [['branch_id' => $this->w->kumasi->id, 'role' => 'owner']]]))
         ->assertSessionHasErrors('offices.0.role');

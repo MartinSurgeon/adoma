@@ -30,7 +30,7 @@ class CashDocumentController extends Controller
         $context = app(TenantContext::class);
         $words = self::WORDS[$type];
 
-        // Recording happens in one office. An owner or admin viewing all offices chooses one first.
+        // Recording happens in one branch. An owner or admin viewing all branches chooses one first.
         if ($context->viewingAllBranches() && $request->user()->isTenantAdmin()) {
             return Inertia::render('Documents/Create', ['type' => $type, 'words' => $words, 'needsOffice' => true]);
         }

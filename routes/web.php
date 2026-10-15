@@ -45,10 +45,10 @@ Route::middleware('auth')->group(function () {
         Route::post("/$path", [CashDocumentController::class, 'store'])->defaults('type', $type)->name("$path.store");
     }
 
-    // Sending gold to another office, and the gold each office holds.
+    // Sending gold to another branch, and the gold each branch holds.
     Route::get('/transfers/create', [TransferController::class, 'create'])->name('transfers.create');
     Route::post('/transfers/quote', [TransferController::class, 'quote'])->name('transfers.quote');
-    // The receiving office answers: accept the gold into its stock, or decline it.
+    // The receiving branch answers: accept the gold into its stock, or decline it.
     Route::get('/transfers/incoming', [TransferController::class, 'incoming'])->name('transfers.incoming');
     Route::post('/transfers/{transfer}/accept', [TransferController::class, 'accept'])->whereNumber('transfer')->name('transfers.accept');
     Route::post('/transfers/{transfer}/decline', [TransferController::class, 'decline'])->whereNumber('transfer')->name('transfers.decline');

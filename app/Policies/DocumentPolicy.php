@@ -11,9 +11,9 @@ use App\Models\User;
 /**
  * Who may record, read and reverse transactions.
  *
- *  - Anyone with access to an office can read its transactions, and nobody else's.
- *  - A clerk, manager, admin or owner can record one, in the one office they are working in.
- *    Recording needs a single office: someone viewing all offices must choose one first.
+ *  - Anyone with access to a branch can read its transactions, and nobody else's.
+ *  - A clerk, manager, admin or owner can record one, in the one branch they are working in.
+ *    Recording needs a single branch: someone viewing all branches must choose one first.
  *  - Reversing needs a manager (or an admin or owner) in the document's office. A document can be
  *    reversed once, and a reversal cannot itself be reversed.
  */
@@ -49,15 +49,15 @@ class DocumentPolicy
             return false;
         }
 
-        // Moving gold to another office is a manager's decision. Everything else a clerk may record.
+        // Moving gold to another branch is a manager's decision. Everything else a clerk may record.
         $minimum = $documentType === DocumentType::Transfer ? Role::Manager : Role::Clerk;
 
         return $user->roleIn($context->branchId())?->atLeast($minimum) ?? false;
     }
 
     /**
-     * May this person accept or decline gold sent to the office they are working in? A manager, like
-     * sending it. It needs one office: someone viewing all offices must choose which office is receiving.
+     * May this person accept or decline gold sent to the branch they are working in? A manager, like
+     * sending it. It needs one branch: someone viewing all branches must choose which branch is receiving.
      */
     public function receiveTransfer(User $user): bool
     {
@@ -76,7 +76,7 @@ class DocumentPolicy
             return false;
         }
 
-        // A transfer is put right by the office that sent it, which undoes both halves together.
+        // A transfer is put right by the branch that sent it, which undoes both halves together.
         if ($document->type === DocumentType::TransferIn) {
             return false;
         }

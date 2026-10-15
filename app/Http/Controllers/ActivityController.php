@@ -24,7 +24,7 @@ class ActivityController extends Controller
         $logs = AuditLog::query()
             ->when($type === 'ledger', fn ($q) => $q->where('auditable_type', Ledger::class))
             ->when($type === 'user', fn ($q) => $q->where('auditable_type', User::class)->whereNotIn('event', self::SIGN_IN_EVENTS))
-            ->when($type === 'office', fn ($q) => $q->where('auditable_type', Branch::class))
+            ->when($type === 'branch', fn ($q) => $q->where('auditable_type', Branch::class))
             ->when($type === 'signin', fn ($q) => $q->whereIn('event', self::SIGN_IN_EVENTS))
             ->orderByDesc('id')
             ->paginate(25)
@@ -49,7 +49,7 @@ class ActivityController extends Controller
             'types' => [
                 ['value' => 'ledger', 'label' => 'Ledgers'],
                 ['value' => 'user', 'label' => 'Users'],
-                ['value' => 'office', 'label' => 'Offices'],
+                ['value' => 'branch', 'label' => 'Branches'],
                 ['value' => 'signin', 'label' => 'Sign-ins'],
             ],
         ]);

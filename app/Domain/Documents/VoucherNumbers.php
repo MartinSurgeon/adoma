@@ -8,10 +8,10 @@ use App\Domain\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Voucher numbers such as PCH-KUM-000042: letters for the document type, the office
- * code, then a running number for that office and type.
+ * Voucher numbers such as PCH-KUM-000042: letters for the document type, the branch
+ * code, then a running number for that branch and type.
  *
- * Numbers never repeat, and they never skip. next() takes the office's counter row
+ * Numbers never repeat, and they never skip. next() takes the branch's counter row
  * with a database lock and adds one. It runs inside a transaction, so when it is called
  * from a posting that later fails, the whole posting rolls back and the number goes back
  * with it. Two clerks saving at the same moment queue up on the lock, one after the other.
@@ -33,7 +33,7 @@ final class VoucherNumbers
         }, 3);
     }
 
-    /** Make sure an office has a counter for every document type. Safe to run again. */
+    /** Make sure a branch has a counter for every document type. Safe to run again. */
     public static function ensureFor(Branch $branch): void
     {
         foreach (DocumentType::cases() as $type) {
@@ -72,15 +72,15 @@ final class VoucherNumbers
     }
 
     /**
-     * A document may be numbered for any office of the business (a transfer is numbered in
-     * both offices), but never for another business.
+     * A document may be numbered for any branch of the business (a transfer is numbered in
+     * both branches), but never for another business.
      */
     private static function assertSameBusiness(Branch $branch): void
     {
         $tenantId = app(TenantContext::class)->tenantId();
 
         if ($tenantId !== null && $branch->tenant_id !== $tenantId) {
-            throw new TenancyViolation('Cannot number a document for an office of another business.');
+            throw new TenancyViolation('Cannot number a document for a branch of another business.');
         }
     }
 }

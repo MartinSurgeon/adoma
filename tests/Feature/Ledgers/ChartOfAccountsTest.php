@@ -48,7 +48,7 @@ it('adds the system accounts that posting will use', function () {
     }
 });
 
-it('creates an account for each office', function () {
+it('creates an account for each branch', function () {
     app(TenantContext::class)->set($this->w->adoma, null, allBranches: true);
     $ledgers = Ledger::where('kind', 'branch')->get();
 
@@ -58,7 +58,7 @@ it('creates an account for each office', function () {
         ->and($ledgers->first()->group->key)->toBe('inter_office');
 });
 
-it('creates an account for an office added later', function () {
+it('creates an account for a branch added later', function () {
     $branch = Branch::create(['tenant_id' => $this->w->adoma->id, 'code' => 'TAM', 'name' => 'Tamale']);
 
     $ledger = Ledger::withoutGlobalScopes()->where('linked_branch_id', $branch->id)->firstOrFail();
@@ -66,7 +66,7 @@ it('creates an account for an office added later', function () {
     expect($ledger->name)->toBe('Tamale')->and($ledger->tenant_id)->toBe($this->w->adoma->id);
 });
 
-it('renames the office account when the office is renamed', function () {
+it('renames the branch account when the branch is renamed', function () {
     $this->w->kumasi->update(['name' => 'Kumasi Central Market']);
 
     expect(Ledger::withoutGlobalScopes()->where('linked_branch_id', $this->w->kumasi->id)->value('name'))->toBe('Kumasi Central Market');

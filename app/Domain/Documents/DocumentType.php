@@ -8,9 +8,9 @@ enum DocumentType: string
     case Sale = 'sale';
     case Receipt = 'receipt';
     case Payment = 'payment';
-    /** Gold sent to another office: the sending office's half of a transfer. */
+    /** Gold sent to another branch: the sending branch's half of a transfer. */
     case Transfer = 'transfer';
-    /** Gold arriving from another office: the receiving office's half of the same transfer. */
+    /** Gold arriving from another branch: the receiving branch's half of the same transfer. */
     case TransferIn = 'transfer_in';
     case Journal = 'journal';
 
@@ -53,7 +53,7 @@ enum DocumentType: string
         return $this === self::Purchase || $this === self::Sale;
     }
 
-    /** Gold moving between two offices, at what it cost. */
+    /** Gold moving between two branches, at what it cost. */
     public function isTransfer(): bool
     {
         return $this === self::Transfer || $this === self::TransferIn;
@@ -65,7 +65,7 @@ enum DocumentType: string
         return $this->isGold() || $this->isTransfer();
     }
 
-    /** The types a person can record on a screen. A transfer in is made by the sending office, never typed in. */
+    /** The types a person can record on a screen. A transfer in is made by the sending branch, never typed in. */
     public function isRecordable(): bool
     {
         return $this->isCash() || $this->isGold() || $this === self::Transfer;

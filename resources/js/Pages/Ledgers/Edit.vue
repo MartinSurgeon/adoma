@@ -23,7 +23,7 @@ defineProps({ ledger: Object });
                 submit-label="Save changes"
             />
             <p class="mt-4 text-base text-gray-700">
-                The type and office cannot be changed after a ledger is created, so past transactions stay correct.
+                The type and branch cannot be changed after a ledger is created, so past transactions stay correct.
             </p>
         </div>
     </AuthenticatedLayout>

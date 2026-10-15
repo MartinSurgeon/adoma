@@ -26,7 +26,7 @@ enum Role: string
         return $this->rank() >= $minimum->rank();
     }
 
-    /** Roles that may be stored per office in branch_user. */
+    /** Roles that may be stored per branch in branch_user. */
     public static function branchRoles(): array
     {
         return [self::Manager, self::Clerk, self::Viewer];

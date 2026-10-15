@@ -85,7 +85,7 @@ it('shows the purchase form with the base karat the price is quoted at', functio
         ->and(Str::isUuid($props['idempotencyKey']))->toBeTrue();
 });
 
-it('shows the sale form with how much gold the office has', function () {
+it('shows the sale form with how much gold the branch has', function () {
     gdhBuy($this);
 
     $props = gdhProps($this->actingAs($this->w->kumasiClerk)->get(route('sales.create'))->assertOk());
@@ -103,7 +103,7 @@ it('keeps viewers off the forms and the calculation', function () {
     expect(Document::withoutGlobalScopes()->count())->toBe(0);
 });
 
-it('asks an admin viewing all offices to choose one first', function () {
+it('asks an admin viewing all branches to choose one first', function () {
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all']);
 
     $this->get(route('purchases.create'))->assertOk()->assertInertia(fn ($page) => $page->where('needsOffice', true));
@@ -237,17 +237,17 @@ it('refuses a refined karat above 24', function () {
         ->assertSessionHasErrors('karat');
 });
 
-it('refuses people who are not a customer or supplier, or that this office cannot use', function (string $which) {
+it('refuses people who are not a customer or supplier, or that this branch cannot use', function (string $which) {
     $ids = [
         'a bank' => $this->bank->id,
-        'another office\'s supplier' => $this->centralSupplier->id,
+        'another branch\'s supplier' => $this->centralSupplier->id,
         'another business\'s supplier' => $this->otherSupplier->id,
         'a system account' => Ledger::withoutGlobalScopes()->where('tenant_id', $this->w->adoma->id)->where('system_key', 'gold_stock')->value('id'),
         'a ledger that does not exist' => 999999,
     ];
 
     $this->actingAs($this->w->kumasiClerk)->post(route('purchases.store'), purchaseForm($this, ['ledger_id' => $ids[$which]]))->assertSessionHasErrors('ledger_id');
-})->with(['a bank', 'another office\'s supplier', 'another business\'s supplier', 'a system account', 'a ledger that does not exist']);
+})->with(['a bank', 'another branch\'s supplier', 'another business\'s supplier', 'a system account', 'a ledger that does not exist']);
 
 it('refuses a switched-off supplier', function () {
     $off = gdhLedger($this->w->kumasi, 'Closed Supplier', LedgerKind::Supplier, active: false);
@@ -291,7 +291,7 @@ it('records a sale and takes the gold out of stock', function () {
         ->and(JournalLine::withoutGlobalScopes()->where('document_id', $sale->id)->count())->toBe(4);
 });
 
-it('refuses a sale for more gold than the office has, with a clear message', function () {
+it('refuses a sale for more gold than the branch has, with a clear message', function () {
     gdhBuy($this, ['weight' => '1000.00', 'water_weight' => '54.70']);
 
     $this->actingAs($this->w->kumasiClerk)->post(route('sales.store'), saleForm($this, ['weight' => '1000.01']))
@@ -300,11 +300,11 @@ it('refuses a sale for more gold than the office has, with a clear message', fun
     expect(Document::withoutGlobalScopes()->where('type', 'sale')->count())->toBe(0);
 });
 
-it('refuses a sale when the office has no gold', function () {
+it('refuses a sale when the branch has no gold', function () {
     $this->actingAs($this->w->kumasiClerk)->post(route('sales.store'), saleForm($this))->assertSessionHasErrors('weight');
 });
 
-it('cannot sell gold another office holds', function () {
+it('cannot sell gold another branch holds', function () {
     $this->actingAs($this->w->centralManager)->post(route('purchases.store'), purchaseForm($this, ['ledger_id' => $this->centralSupplier->id]))->assertSessionHasNoErrors();
 
     $this->actingAs($this->w->kumasiClerk)->post(route('sales.store'), saleForm($this))->assertSessionHasErrors('weight');
@@ -425,7 +425,7 @@ it('tells the manager why a purchase cannot be reversed once some gold is sold',
     $this->actingAs($this->w->kumasiClerk)->post(route('sales.store'), saleForm($this));
 
     $this->actingAs($this->w->kumasiManager)->post(route('documents.reverse', $purchase), ['reason' => 'Mistake'])
-        ->assertSessionHasErrors(['reason' => 'Some of this gold has already been sold or sent to another office, so this purchase cannot be reversed. Reverse those first.']);
+        ->assertSessionHasErrors(['reason' => 'Some of this gold has already been sold or sent to another branch, so this purchase cannot be reversed. Reverse those first.']);
 
     expect($purchase->fresh()->status)->toBe(Document::POSTED);
 });
@@ -442,7 +442,7 @@ it('puts the gold back when a sale is reversed', function () {
 
 // ------------------------------------------------------------------- scoping
 
-it('hides another office\'s gold documents completely', function () {
+it('hides another branch\'s gold documents completely', function () {
     $purchase = gdhBuy($this);
 
     $this->actingAs($this->w->centralManager);
@@ -450,7 +450,7 @@ it('hides another office\'s gold documents completely', function () {
     $this->get(route('documents.print', $purchase))->assertNotFound();
 });
 
-it('shows the gold in stock on the dashboard, for the office only', function () {
+it('shows the gold in stock on the dashboard, for the branch only', function () {
     gdhBuy($this);
     $this->actingAs($this->w->centralManager)->post(route('purchases.store'), purchaseForm($this, ['ledger_id' => $this->centralSupplier->id, 'weight' => '1000.00', 'water_weight' => '54.70']));
 

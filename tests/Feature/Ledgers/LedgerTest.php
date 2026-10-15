@@ -14,7 +14,7 @@ beforeEach(function () {
     $this->ctx = app(TenantContext::class);
 });
 
-/** An office ledger, written without any scope in the way. */
+/** A branch ledger, written without any scope in the way. */
 function ledger(World $w, Branch $branch, string $name, LedgerKind $kind = LedgerKind::Customer, bool $active = true): Ledger
 {
     $ledger = Ledger::create([
@@ -62,7 +62,7 @@ it('shows nothing when no business is in context', function () {
     expect(Ledger::count())->toBe(0);
 });
 
-it('shows an office its own ledgers and the shared ones, never another office\'s', function () {
+it('shows a branch its own ledgers and the shared ones, never another branch\'s', function () {
     ledger($this->w, $this->w->kumasi, 'Kumasi Customer');
     ledger($this->w, $this->w->central, 'Central Customer');
     sharedLedger($this->w);
@@ -73,7 +73,7 @@ it('shows an office its own ledgers and the shared ones, never another office\'s
         ->not->toContain('Central Customer');
 });
 
-it('shows owners and admins everything in their own business when viewing all offices', function () {
+it('shows owners and admins everything in their own business when viewing all branches', function () {
     ledger($this->w, $this->w->kumasi, 'Kumasi Customer');
     ledger($this->w, $this->w->central, 'Central Customer');
     ledger($this->w, $this->w->otherBranch, 'Other Co Customer');
@@ -93,7 +93,7 @@ it('never shows another business\'s ledgers, even by id', function () {
 
 // ---------------------------------------------------------- rules when saving
 
-it('refuses an office ledger with no office, and a shared ledger with one', function () {
+it('refuses a branch ledger with no branch, and a shared ledger with one', function () {
     $group = ChartOfAccounts::groupFor($this->w->adoma->id, LedgerKind::Customer)->id;
 
     expect(fn () => Ledger::create(['tenant_id' => $this->w->adoma->id, 'is_shared' => false, 'group_id' => $group, 'kind' => 'customer', 'name' => 'x']))
@@ -103,13 +103,13 @@ it('refuses an office ledger with no office, and a shared ledger with one', func
         ->toThrow(TenancyViolation::class);
 });
 
-it('refuses an office from another business', function () {
+it('refuses a branch from another business', function () {
     $group = ChartOfAccounts::groupFor($this->w->adoma->id, LedgerKind::Customer)->id;
 
     Ledger::create(['tenant_id' => $this->w->adoma->id, 'branch_id' => $this->w->otherBranch->id, 'is_shared' => false, 'group_id' => $group, 'kind' => 'customer', 'name' => 'x']);
 })->throws(TenancyViolation::class);
 
-it('refuses to write into another office of the same business', function () {
+it('refuses to write into another branch of the same business', function () {
     $this->ctx->set($this->w->adoma, $this->w->kumasi);
 
     ledger($this->w, $this->w->central, 'x');
@@ -131,7 +131,7 @@ it('never lets a ledger change kind, office, group or business', function (strin
 
 // ------------------------------------------------------------- who can look
 
-it('lets everyone with access to the office open the list', function (string $who) {
+it('lets everyone with access to the branch open the list', function (string $who) {
     $this->actingAs($this->w->{$who})->get(route('ledgers.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('Ledgers/Index'));
@@ -143,7 +143,7 @@ it('keeps people with no business out', function () {
     $this->actingAs($stray)->get(route('ledgers.index'))->assertForbidden();
 });
 
-it('lists an office\'s ledgers and the shared ones only', function () {
+it('lists a branch\'s ledgers and the shared ones only', function () {
     ledger($this->w, $this->w->kumasi, 'Kumasi Customer');
     ledger($this->w, $this->w->central, 'Central Customer');
 
@@ -155,14 +155,14 @@ it('lists an office\'s ledgers and the shared ones only', function () {
         }));
 });
 
-it('lets an owner see every office when viewing all offices', function () {
+it('lets an owner see every branch when viewing all branches', function () {
     ledger($this->w, $this->w->central, 'Central Customer');
 
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])->get(route('ledgers.index'))
         ->assertInertia(fn ($page) => $page->where('ledgers.data', fn ($rows) => collect($rows)->pluck('name')->contains('Central Customer')));
 });
 
-it('shows which office or group each ledger belongs to', function () {
+it('shows which branch or group each ledger belongs to', function () {
     ledger($this->w, $this->w->kumasi, 'Kumasi Customer');
 
     $this->actingAs($this->w->kumasiClerk)->get(route('ledgers.index', ['q' => 'Kumasi Customer']))
@@ -216,7 +216,7 @@ it('does not run a query for every row', function () {
 
 // ------------------------------------------------------------------- creating
 
-it('lets a clerk add a customer or supplier to their own office', function (string $kind, string $groupKey) {
+it('lets a clerk add a customer or supplier to their own branch', function (string $kind, string $groupKey) {
     $this->actingAs($this->w->kumasiClerk)->post(route('ledgers.store'), newLedger(['kind' => $kind]))
         ->assertSessionHasNoErrors()->assertRedirect(route('ledgers.index'));
 
@@ -231,7 +231,7 @@ it('lets a clerk add a customer or supplier to their own office', function (stri
         ->and($ledger->phone)->toBe('0244000000');
 })->with([['customer', 'debtors'], ['supplier', 'creditors']]);
 
-it('keeps a clerk\'s ledger in their own office whatever they send', function () {
+it('keeps a clerk\'s ledger in their own branch whatever they send', function () {
     $this->actingAs($this->w->kumasiClerk)
         ->post(route('ledgers.store'), newLedger(['branch_id' => $this->w->central->id, 'tenant_id' => $this->w->other->id, 'is_system' => true, 'system_key' => 'sales']))
         ->assertSessionHasNoErrors();
@@ -269,11 +269,11 @@ it('never lets anyone add a system or office account by hand', function (string 
         ->post(route('ledgers.store'), newLedger(['kind' => $kind]))->assertForbidden();
 })->with(['account', 'branch', 'nonsense']);
 
-it('keeps clerks and managers from sharing a ledger with every office', function (string $who) {
+it('keeps clerks and managers from sharing a ledger with every branch', function (string $who) {
     $this->actingAs($this->w->{$who})->post(route('ledgers.store'), newLedger(['is_shared' => true]))->assertForbidden();
 })->with(['kumasiClerk', 'kumasiManager', 'centralManager']);
 
-it('lets an admin add a shared ledger that every office can see', function () {
+it('lets an admin add a shared ledger that every branch can see', function () {
     $this->actingAs($this->w->admin)->post(route('ledgers.store'), newLedger(['kind' => 'bank', 'name' => 'Group Bank', 'is_shared' => true]))
         ->assertSessionHasNoErrors();
 
@@ -284,7 +284,7 @@ it('lets an admin add a shared ledger that every office can see', function () {
     expect(ledgerNames())->toContain('Group Bank');
 });
 
-it('makes an admin viewing all offices say which office the ledger is for', function () {
+it('makes an admin viewing all branches say which branch the ledger is for', function () {
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all']);
 
     $this->post(route('ledgers.store'), newLedger())->assertSessionHasErrors('branch_id');
@@ -293,7 +293,7 @@ it('makes an admin viewing all offices say which office the ledger is for', func
     expect(Ledger::withoutGlobalScopes()->where('name', 'Ama Gold Traders')->value('branch_id'))->toBe($this->w->central->id);
 });
 
-it('does not accept an office from another business', function () {
+it('does not accept a branch from another business', function () {
     $this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])
         ->post(route('ledgers.store'), newLedger(['branch_id' => $this->w->otherBranch->id]))
         ->assertSessionHasErrors('branch_id');
@@ -307,7 +307,7 @@ it('needs a name and a known type', function () {
     $this->post(route('ledgers.store'), newLedger(['kind' => '']))->assertForbidden();
 });
 
-it('does not allow two ledgers with the same name in one office, but does across offices', function () {
+it('does not allow two ledgers with the same name in one branch, but does across offices', function () {
     ledger($this->w, $this->w->kumasi, 'Passion Gold');
     ledger($this->w, $this->w->central, 'Black');
 
@@ -378,7 +378,7 @@ it('keeps viewers from editing', function () {
     $this->actingAs($this->w->kumasiViewer)->put(route('ledgers.update', $ledger->id), ['name' => 'x'])->assertForbidden();
 });
 
-it('hides another office\'s ledgers completely', function () {
+it('hides another branch\'s ledgers completely', function () {
     $central = ledger($this->w, $this->w->central, 'Central Customer');
     $this->actingAs($this->w->kumasiManager);
 

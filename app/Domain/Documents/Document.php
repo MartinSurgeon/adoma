@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *
  * A posted document is never edited and never deleted. The one change allowed is its
  * status moving from posted to reversed, when a reversing document is posted against it.
- * Seen only by its own office, or by admins viewing all offices of their business.
+ * Seen only by its own branch, or by admins viewing all branches of their business.
  */
 class Document extends Model
 {
@@ -104,8 +104,8 @@ class Document extends Model
     }
 
     /**
-     * The other half of a transfer, in the other office's books: for a transfer out, the transfer in, and the
-     * other way round. Read without the office scope on purpose, because the other half belongs to another office.
+     * The other half of a transfer, in the other branch's books: for a transfer out, the transfer in, and the
+     * other way round. Read without the branch scope on purpose, because the other half belongs to another branch.
      * Callers decide what they may show of it.
      */
     public function otherHalf(): ?self

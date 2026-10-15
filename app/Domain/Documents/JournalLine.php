@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One side of a double entry: an amount debited or credited to a ledger, in one office's books.
+ * One side of a double entry: an amount debited or credited to a ledger, in one branch's books.
  * Written once with its document. Never changed, never deleted.
  */
 class JournalLine extends Model

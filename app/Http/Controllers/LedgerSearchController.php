@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 /**
  * The type-ahead behind "Received from" and "Paid to": the first 20 active ledgers that match
  * what was typed, each with its balance so the person sees where they stand before saving.
- * It reads through the same scopes as everything else, so it finds only this office's ledgers
+ * It reads through the same scopes as everything else, so it finds only this branch's ledgers
  * and the shared ones.
  */
 class LedgerSearchController extends Controller

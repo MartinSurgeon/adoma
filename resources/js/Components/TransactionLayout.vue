@@ -92,9 +92,9 @@ watch(
 
         <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
             <Banner v-if="needsOffice" variant="warning">
-                <p class="font-semibold">Choose an office first</p>
+                <p class="font-semibold">Choose a branch first</p>
                 <p class="mt-1">
-                    You are looking at all offices. A {{ noun }} belongs to one office, so pick it from the office menu at the top of the page, then come back.
+                    You are looking at all branches. A {{ noun }} belongs to one branch, so pick it from the branch menu at the top of the page, then come back.
                 </p>
             </Banner>
 

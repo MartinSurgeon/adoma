@@ -14,8 +14,8 @@ use Inertia\Response;
 
 /**
  * The home page. Shows what the signed-in person's office has, and the one thing
- * they are most likely to do next. Every number respects the same office scoping
- * as the rest of the app, so an office never sees another office's figures.
+ * they are most likely to do next. Every number respects the same branch scoping
+ * as the rest of the app, so a branch never sees another branch's figures.
  */
 class DashboardController extends Controller
 {
@@ -37,7 +37,7 @@ class DashboardController extends Controller
             ->groupBy('kind')
             ->pluck('total', 'kind');
 
-        // The latest transactions the signed-in person may read, newest first, for the office in context.
+        // The latest transactions the signed-in person may read, newest first, for the branch in context.
         $recent = $user->can('viewAny', Document::class)
             ? Document::query()
                 ->with(['ledger', 'branch'])
@@ -58,10 +58,10 @@ class DashboardController extends Controller
                 ])->values()
             : collect();
 
-        // Gold in stock, for the offices in context: the number an owner looks for first.
+        // Gold in stock, for the branches in context: the number an owner looks for first.
         $goldInStock = StockLot::query()->where('remaining_g', '>', 0)->sum('remaining_g');
 
-        // For an owner or admin looking at every office: how much gold each one holds.
+        // For an owner or admin looking at every branch: how much gold each one holds.
         $stockByOffice = null;
 
         if ($context->viewingAllBranches() && $user->isTenantAdmin()) {
@@ -76,7 +76,7 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'stockByOffice' => $stockByOffice,
             'canTransfer' => $user->can('create', [Document::class, 'transfer']),
-            'where' => $context->viewingAllBranches() ? 'All offices' : $context->branch()?->name,
+            'where' => $context->viewingAllBranches() ? 'All branches' : $context->branch()?->name,
             'goldInStock' => Money::format(Money::fromDb($goldInStock)),
             'stats' => collect(self::STATS)->map(fn (array $stat) => [
                 'label' => $stat['label'],

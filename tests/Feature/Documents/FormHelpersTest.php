@@ -78,7 +78,7 @@ it('explains a refused ledger in words, and does not add it', function () {
     $this->actingAs($this->w->kumasiClerk)
         ->postJson(route('ledgers.store'), ['kind' => 'customer', 'name' => 'Passion Gold'])
         ->assertUnprocessable()
-        ->assertJsonPath('errors.name.0', 'This office already has a ledger with that name.');
+        ->assertJsonPath('errors.name.0', 'This branch already has a ledger with that name.');
 
     expect(Ledger::where('name', 'Passion Gold')->count())->toBe(1);
 });
@@ -134,7 +134,7 @@ it('starts blank without a "like", or with a nonsense one', function (mixed $lik
     expect(fhProps($this->actingAs($this->w->kumasiClerk)->get(route('receipts.create', $query))->assertOk())['prefill'])->toBeNull();
 })->with([null, 'abc', '0', '999999', '1; drop table documents']);
 
-it('never copies from another office or another kind of transaction', function () {
+it('never copies from another branch or another kind of transaction', function () {
     $central = fhReceipt($this, $this->w->centralManager, $this->centralCustomer, $this->centralCash);
     $receipt = fhReceipt($this, $this->w->kumasiClerk, $this->customer, $this->cash);
 

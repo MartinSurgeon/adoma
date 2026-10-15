@@ -79,19 +79,19 @@ function submit() {
             </div>
         </FormSection>
 
-        <FormSection v-if="!editing" title="3. Which office?">
+        <FormSection v-if="!editing" title="3. Which branch?">
             <p v-if="!chooseOffice && !form.is_shared" class="text-base text-gray-800">
-                This ledger will belong to <strong>{{ activeOffice }}</strong>. Only that office sees it.
+                This ledger will belong to <strong>{{ activeOffice }}</strong>. Only that branch sees it.
             </p>
 
             <div v-if="chooseOffice && !form.is_shared">
-                <InputLabel for="branch_id" value="Office" />
+                <InputLabel for="branch_id" value="Branch" />
                 <select
                     id="branch_id"
                     v-model="form.branch_id"
                     class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:max-w-md"
                 >
-                    <option value="" disabled>Choose an office</option>
+                    <option value="" disabled>Choose a branch</option>
                     <option v-for="office in branches" :key="office.id" :value="office.id">{{ office.name }}</option>
                 </select>
                 <InputError class="mt-2" :message="form.errors.branch_id" />
@@ -100,7 +100,7 @@ function submit() {
             <label v-if="canShare" class="mt-4 flex min-h-12 cursor-pointer items-start gap-3">
                 <input type="checkbox" v-model="form.is_shared" class="mt-1 h-5 w-5 rounded text-teal-700 focus:ring-teal-600" />
                 <span>
-                    <span class="block text-base font-medium text-gray-900">Let every office use this ledger</span>
+                    <span class="block text-base font-medium text-gray-900">Let every branch use this ledger</span>
                     <span class="block text-base text-gray-700">Only owners and admins can do this.</span>
                 </span>
             </label>

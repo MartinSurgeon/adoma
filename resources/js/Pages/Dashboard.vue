@@ -16,10 +16,10 @@ const props = defineProps({
     canCreate: Boolean,
     canRecord: Boolean,
     canTransfer: Boolean,
-    stockByOffice: { type: Array, default: null }, // owners and admins looking at every office
+    stockByOffice: { type: Array, default: null }, // owners and admins looking at every branch
 });
 
-// Gold other offices have sent that a manager here has not yet accepted.
+// Gold other branches have sent that a manager here has not yet accepted.
 const waiting = computed(() => Number(usePage().props.tenancy?.incoming_transfers ?? 0));
 
 const isEmpty = computed(() => props.stats.every((s) => s.count === 0) && props.recent.length === 0);
@@ -54,12 +54,12 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     </li>
                 </ul>
 
-                <!-- Looking at every office: how much gold each one holds, with a way to see the lots. -->
+                <!-- Looking at every branch: how much gold each one holds, with a way to see the lots. -->
                 <div v-if="stockByOffice && stockByOffice.length" class="card mt-4 overflow-x-auto">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th scope="col">Gold in stock, by office</th>
+                                <th scope="col">Gold in stock, by branch</th>
                                 <th scope="col" class="num">Grams</th>
                             </tr>
                         </thead>
@@ -114,7 +114,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <MoreMenu label="More ways to record">
                             <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
                             <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
-                            <MenuItem v-if="canTransfer" :href="route('transfers.create')">Send gold to another office</MenuItem>
+                            <MenuItem v-if="canTransfer" :href="route('transfers.create')">Send gold to another branch</MenuItem>
                             <MenuItem v-if="canCreate" :href="route('ledgers.create')">Add a ledger</MenuItem>
                             <MenuItem :href="route('ledgers.index')">Find a ledger</MenuItem>
                         </MoreMenu>

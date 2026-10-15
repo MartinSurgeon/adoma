@@ -8,7 +8,7 @@ use App\Domain\Support\Money;
 /**
  * Ledger balances, always worked out from the journal lines and never stored.
  * A balance is debits minus credits, in pesewas: positive is a debit balance.
- * It covers the offices in the current context, so an office sees its own books.
+ * It covers the branches in the current context, so a branch sees its own books.
  */
 final class LedgerBalances
 {

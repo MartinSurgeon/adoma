@@ -5,7 +5,7 @@ namespace App\Domain\Documents;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * The counter behind voucher numbers: one row per office and document type.
+ * The counter behind voucher numbers: one row per branch and document type.
  * Nothing else reads or writes it. Use VoucherNumbers::next().
  */
 class NumberSequence extends Model

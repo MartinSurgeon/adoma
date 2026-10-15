@@ -63,9 +63,9 @@ const dialog = computed(() => {
 });
 
 function accessLabel(user) {
-    if (user.tenant_role === 'owner') return 'Owner, all offices';
-    if (user.tenant_role === 'admin') return 'Admin, all offices';
-    if (!user.offices.length) return 'No offices yet';
+    if (user.tenant_role === 'owner') return 'Owner, all branches';
+    if (user.tenant_role === 'admin') return 'Admin, all branches';
+    if (!user.offices.length) return 'No branches yet';
     return user.offices.map((o) => `${o.name}: ${o.role}`).join(', ');
 }
 </script>

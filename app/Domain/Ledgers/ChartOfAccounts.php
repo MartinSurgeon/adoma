@@ -7,7 +7,7 @@ use App\Domain\Tenancy\Tenant;
 
 /**
  * Builds the default chart of accounts for a business, and the account that
- * stands for each office. Every method is safe to run again: it only adds what is missing.
+ * stands for each branch. Every method is safe to run again: it only adds what is missing.
  */
 final class ChartOfAccounts
 {
@@ -69,7 +69,7 @@ final class ChartOfAccounts
             ->each(fn (Branch $branch) => self::ensureBranchLedger($branch));
     }
 
-    /** The account other offices use to buy from or sell to this office. */
+    /** The account other branches use to buy from or sell to this branch. */
     public static function ensureBranchLedger(Branch $branch): Ledger
     {
         $group = self::group($branch->tenant_id, LedgerKind::Branch->groupKey());

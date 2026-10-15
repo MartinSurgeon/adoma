@@ -11,10 +11,10 @@ use App\Models\User;
 /**
  * Who may do what with ledgers.
  *
- *  - Anyone with access to the active office can look.
- *  - A clerk can add and edit customers and suppliers in their own office.
+ *  - Anyone with access to the active branch can look.
+ *  - A clerk can add and edit customers and suppliers in their own branch.
  *  - A manager can also add and edit banks, cash accounts and expenses.
- *  - Shared ledgers (used by every office) are for owners and admins only.
+ *  - Shared ledgers (used by every branch) are for owners and admins only.
  *  - System accounts and office accounts are never edited or switched off by hand.
  *  - Switching a ledger on or off needs a manager.
  */
@@ -75,7 +75,7 @@ class LedgerPolicy
         return $user->roleIn($ledger->branch_id)?->atLeast($minimum) ?? false;
     }
 
-    /** The user's role in the office they are working in, or as admin when viewing all offices. */
+    /** The user's role in the branch they are working in, or as admin when viewing all branches. */
     private function activeRole(User $user): ?Role
     {
         $context = app(TenantContext::class);

@@ -10,10 +10,10 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 use InvalidArgumentException;
 
-/** Sending gold to another office: a date, the office, and how much. */
+/** Sending gold to another branch: a date, the branch, and how much. */
 class SaveTransferRequest extends FormRequest
 {
-    /** The receiving office, found only among this business's offices. */
+    /** The receiving branch, found only among this business's offices. */
     public ?Branch $toBranch = null;
 
     /** The weight in hundredths of a gram. */
@@ -46,7 +46,7 @@ class SaveTransferRequest extends FormRequest
                     ->first();
 
                 if ($this->toBranch === null && ! $validator->errors()->has('to_branch_id')) {
-                    $validator->errors()->add('to_branch_id', 'Choose the office the gold is going to.');
+                    $validator->errors()->add('to_branch_id', 'Choose the branch the gold is going to.');
                 }
 
                 try {
@@ -68,8 +68,8 @@ class SaveTransferRequest extends FormRequest
             'date.before_or_equal' => 'The date cannot be in the future.',
             'date.date_format' => 'Enter the date as day, month and year.',
             'date.required' => 'Enter the date.',
-            'to_branch_id.required' => 'Choose the office the gold is going to.',
-            'to_branch_id.integer' => 'Choose the office the gold is going to.',
+            'to_branch_id.required' => 'Choose the branch the gold is going to.',
+            'to_branch_id.integer' => 'Choose the branch the gold is going to.',
             'weight.required' => 'Enter the weight.',
         ];
     }

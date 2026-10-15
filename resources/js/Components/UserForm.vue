@@ -27,7 +27,7 @@ const roleHelp = {
 const form = useForm({
     name: props.initial.name ?? '',
     email: props.initial.email ?? '',
-    // 'offices' = works in chosen offices, otherwise the owner/admin value.
+    // 'offices' = works in chosen branches, otherwise the owner/admin value.
     access: props.initial.tenant_role ?? 'offices',
     roles: Object.fromEntries(
         props.branches.map((b) => [b.id, props.initial.offices?.find((o) => o.branch_id === b.id)?.role ?? '']),
@@ -77,16 +77,16 @@ const select = 'block min-h-12 rounded-md border-gray-300 text-base shadow-sm fo
             <div>
                 <InputLabel for="access" value="Access level" />
                 <select id="access" v-model="form.access" :class="[select, 'mt-1 w-full sm:max-w-md']">
-                    <option value="offices">Works in chosen offices</option>
-                    <option v-if="canAssignAdminRoles" value="admin">Admin: all offices, manages users and settings</option>
-                    <option v-if="canAssignAdminRoles" value="owner">Owner: everything, in all offices</option>
+                    <option value="offices">Works in chosen branches</option>
+                    <option v-if="canAssignAdminRoles" value="admin">Admin: all branches, manages users and settings</option>
+                    <option v-if="canAssignAdminRoles" value="owner">Owner: everything, in all branches</option>
                 </select>
                 <InputError class="mt-2" :message="form.errors.tenant_role" />
             </div>
 
             <div v-if="worksInOffices" class="mt-5">
-                <p class="text-base font-medium text-gray-900">Offices and role in each</p>
-                <p class="mt-1 text-sm text-gray-700">Leave an office on "No access" if this person should not see it.</p>
+                <p class="text-base font-medium text-gray-900">Branches and role in each</p>
+                <p class="mt-1 text-sm text-gray-700">Leave a branch on "No access" if this person should not see it.</p>
 
                 <div class="mt-3 divide-y divide-gray-200 rounded-md border border-gray-200">
                     <div
@@ -106,7 +106,7 @@ const select = 'block min-h-12 rounded-md border-gray-300 text-base shadow-sm fo
                 <InputError class="mt-2" :message="form.errors.offices" />
             </div>
             <p v-else class="mt-4 text-base text-gray-700">
-                Owners and admins can open every office, so there is nothing to choose here.
+                Owners and admins can open every branch, so there is nothing to choose here.
             </p>
         </FormSection>
 

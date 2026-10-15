@@ -118,7 +118,7 @@ it('keeps the weighing and the figures with the document', function () {
         ->and($line->formulaSet->version)->toBe(1);
 });
 
-it('adds a lot of gold to the office\'s stock, with a movement to show how it got there', function () {
+it('adds a lot of gold to the branch\'s stock, with a movement to show how it got there', function () {
     $document = buy($this);
     $lot = StockLot::firstOrFail();
 
@@ -166,11 +166,11 @@ it('refuses to buy from or sell to anything but a customer or supplier', functio
     expect(Document::count())->toBe(0)->and(StockLot::count())->toBe(0);
 });
 
-it('refuses a switched-off ledger and another office\'s or business\'s ledger', function () {
+it('refuses a switched-off ledger and another branch\'s or business\'s ledger', function () {
     $this->supplier->forceFill(['is_active' => false])->save();
 
     expect(fn () => buy($this))->toThrow(PostingError::class, 'switched off')
-        ->and(fn () => buy($this, party: $this->centralSupplier))->toThrow(PostingError::class, 'another office')
+        ->and(fn () => buy($this, party: $this->centralSupplier))->toThrow(PostingError::class, 'another branch')
         ->and(fn () => buy($this, party: $this->otherSupplier))->toThrow(PostingError::class, 'does not belong');
 });
 
@@ -298,7 +298,7 @@ it('lets a sale take all the stock, and refuses the next one', function () {
     expect(fn () => sell($this, '1.00'))->toThrow(PostingError::class, 'Not enough gold in stock');
 });
 
-it('refuses a sale for more gold than the office has, and says how much it has', function () {
+it('refuses a sale for more gold than the branch has, and says how much it has', function () {
     buy($this, rawFigures($this, '1000.00', '54.70'));
 
     expect(fn () => sell($this, '1000.01'))->toThrow(PostingError::class, 'Kumasi has 1,000.00 g and this sale is 1,000.01 g');
@@ -310,7 +310,7 @@ it('refuses a sale when there is no stock at all', function () {
     expect(fn () => sell($this, '10.00'))->toThrow(PostingError::class, 'Kumasi has 0.00 g');
 });
 
-it('cannot sell gold another office holds', function () {
+it('cannot sell gold another branch holds', function () {
     // Central buys its own gold, working in Central.
     $this->ctx->set($this->w->adoma, $this->w->central);
     buy($this, branch: $this->w->central, party: $this->centralSupplier);
@@ -446,7 +446,7 @@ it('never lets a formula version be changed or deleted', function () {
 
 // --------------------------------------------------------------------- scoping
 
-it('shows an office only its own lots, lines and movements', function () {
+it('shows a branch only its own lots, lines and movements', function () {
     buy($this);
     $this->ctx->set($this->w->adoma, $this->w->central);
 

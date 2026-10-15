@@ -44,7 +44,7 @@ class SaveLedgerRequest extends FormRequest
             $rules += [
                 'kind' => ['required', Rule::in(array_map(fn (LedgerKind $k) => $k->value, LedgerKind::creatable()))],
                 'is_shared' => ['sometimes', 'boolean'],
-                // Owners and admins viewing all offices must say which office the ledger is for.
+                // Owners and admins viewing all branches must say which branch the ledger is for.
                 'branch_id' => [
                     Rule::requiredIf($context->viewingAllBranches() && ! $this->boolean('is_shared')),
                     'nullable', 'integer',
@@ -59,13 +59,13 @@ class SaveLedgerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.unique' => 'This office already has a ledger with that name.',
-            'branch_id.required' => 'Choose which office this ledger is for.',
-            'branch_id.exists' => 'That office does not belong to your business.',
+            'name.unique' => 'This branch already has a ledger with that name.',
+            'branch_id.required' => 'Choose which branch this ledger is for.',
+            'branch_id.exists' => 'That branch does not belong to your business.',
         ];
     }
 
-    /** The office the ledger will belong to, or null for a shared ledger. */
+    /** The branch the ledger will belong to, or null for a shared ledger. */
     public function resolvedBranchId(?Ledger $editing = null): ?int
     {
         if ($editing !== null) {
