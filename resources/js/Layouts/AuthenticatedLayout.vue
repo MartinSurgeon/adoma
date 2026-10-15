@@ -23,6 +23,7 @@ const icons = {
     transfer: 'M4 8h13m0 0l-3-3m3 3l-3 3M20 16H7m0 0l3-3m-3 3l3 3',
     stock: 'M3 9l9-5 9 5v8l-9 5-9-5V9zM3 9l9 5 9-5M12 14v8',
     inbox: 'M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5a3 3 0 006 0h5',
+    reports: 'M4 20V10m6 10V4m6 16v-7m4 7H2',
     ledgers: 'M5 4h12a2 2 0 012 2v14H7a2 2 0 01-2-2V4zM9 8h6M9 12h6',
     users: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3 3 0 100-6 3 3 0 000 6zM20 20v-1a3 3 0 00-2-2.8M15 5.2a3 3 0 010 5.6',
     activity: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
@@ -52,6 +53,7 @@ const sections = computed(() =>
                 { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: false },
                 { label: 'Stock', href: route('stock.index'), active: route().current('stock.*'), icon: 'stock', show: Boolean(tenancy.value), mobile: false },
+                { label: 'Reports', href: route('reports.index'), active: route().current('reports.*'), icon: 'reports', show: Boolean(tenancy.value), mobile: false },
                 // Gold other branches have sent, waiting for a manager here to accept it. The badge counts what is waiting.
                 { label: 'Incoming gold', href: route('transfers.incoming'), active: route().current('transfers.incoming'), icon: 'inbox', show: canTransfer.value, mobile: false, badge: incoming.value },
             ],
@@ -93,7 +95,7 @@ const phoneSettings = computed(() =>
         </a>
 
         <!-- Sidebar, large screens -->
-        <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-teal-900 lg:flex" aria-label="Main">
+        <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-teal-900 print:hidden lg:flex" aria-label="Main">
             <div class="flex h-16 items-center px-6">
                 <Link :href="route('dashboard')" class="inline-flex min-h-12 items-center text-xl font-semibold tracking-tight text-white">
                     Adoma<span class="text-amber-400">.</span>
@@ -128,9 +130,9 @@ const phoneSettings = computed(() =>
             </nav>
         </aside>
 
-        <div class="lg:pl-64">
+        <div class="lg:pl-64 print:pl-0">
             <!-- Top bar -->
-            <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
+            <header class="sticky top-0 z-20 flex h-16 print:hidden items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
                 <Link :href="route('dashboard')" class="inline-flex min-h-12 items-center text-lg font-semibold text-teal-900 lg:hidden">
                     Adoma<span class="text-amber-700" aria-hidden="true">.</span>
                 </Link>
@@ -181,7 +183,7 @@ const phoneSettings = computed(() =>
         </div>
 
         <!-- Bottom bar, phones and tablets -->
-        <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white lg:hidden" aria-label="Main">
+        <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white print:hidden lg:hidden" aria-label="Main">
             <ul class="grid" :style="{ gridTemplateColumns: `repeat(${phoneItems.length}, minmax(0, 1fr))` }">
                 <li v-for="item in phoneItems" :key="item.label">
                     <Link

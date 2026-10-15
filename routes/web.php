@@ -11,6 +11,7 @@ use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\LedgerSearchController;
 use App\Http\Controllers\LedgerStatementController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\UserController;
@@ -54,6 +55,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/transfers/{transfer}/decline', [TransferController::class, 'decline'])->whereNumber('transfer')->name('transfers.decline');
     Route::post('/transfers', [TransferController::class, 'store'])->name('transfers.store');
     Route::get('/stock', StockController::class)->name('stock.index');
+
+    // Reports for a period: purchases, sales, one person's supplies, and opening and closing balances.
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
+        Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+        Route::get('/supplier', [ReportController::class, 'supplier'])->name('supplier');
+        Route::get('/summary', [ReportController::class, 'summary'])->name('summary');
+    });
 
     // Finding, reading, printing and reversing transactions.
     Route::prefix('transactions')->name('documents.')->group(function () {

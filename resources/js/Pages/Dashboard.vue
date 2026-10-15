@@ -117,6 +117,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                             <MenuItem v-if="canTransfer" :href="route('transfers.create')">Send gold to another branch</MenuItem>
                             <MenuItem v-if="canCreate" :href="route('ledgers.create')">Add a ledger</MenuItem>
                             <MenuItem :href="route('ledgers.index')">Find a ledger</MenuItem>
+                            <MenuItem :href="route('reports.index')">Reports</MenuItem>
                         </MoreMenu>
                     </template>
 
