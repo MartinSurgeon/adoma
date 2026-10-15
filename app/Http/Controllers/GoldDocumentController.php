@@ -9,6 +9,7 @@ use App\Domain\Documents\PostingService;
 use App\Domain\Documents\RepeatOf;
 use App\Domain\Gold\FormulaSet;
 use App\Domain\Stock\LotAllocator;
+use App\Domain\Stock\StockLot;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\TenantContext;
 use App\Http\Requests\SaveGoldDocumentRequest;
@@ -50,7 +51,30 @@ class GoldDocumentController extends Controller
             'baseKarat' => $formula->karat_base,
             'prefill' => RepeatOf::from($request, DocumentType::from($type)),
             'inStock' => $type === 'sale' ? Money::format(LotAllocator::availableH($context->branch())) : null,
+            // A sale can take the oldest gold, or the exact purchases the seller picks from this list.
+            'lots' => $type === 'sale' ? $this->lotsToChooseFrom() : [],
         ]);
+    }
+
+    /** What the branch holds, oldest first: each purchase with what is left of it. Cost is not shown here. */
+    private function lotsToChooseFrom(): array
+    {
+        return StockLot::query()->with(['goldLine.document.ledger', 'document.ledger'])
+            ->where('remaining_g', '>', 0)->orderBy('date')->orderBy('id')->limit(300)->get()
+            ->map(function (StockLot $lot) {
+                $origin = $lot->document ?? $lot->goldLine?->document;
+
+                return [
+                    'id' => $lot->id,
+                    'date' => $lot->date->format('j M Y'),
+                    'number' => $origin?->number,
+                    'from' => $origin?->ledger?->name,
+                    'form' => ucfirst($lot->form),
+                    'karat' => Money::format(Money::fromDb($lot->karat)),
+                    'remaining' => Money::decimal(Money::fromDb($lot->remaining_g)),
+                    'remaining_text' => Money::format(Money::fromDb($lot->remaining_g)),
+                ];
+            })->all();
     }
 
     public function store(SaveGoldDocumentRequest $request, string $type, PostingService $posting): RedirectResponse
@@ -59,10 +83,10 @@ class GoldDocumentController extends Controller
 
         try {
             $document = $type === 'sale'
-                ? $posting->postSale($branch, $request->validated('date'), $request->party, $request->figures, $request->validated('note'), $request->validated('idempotency_key'), $request->user())
+                ? $posting->postSale($branch, $request->validated('date'), $request->party, $request->figures, $request->validated('note'), $request->validated('idempotency_key'), $request->user(), $request->picks)
                 : $posting->postPurchase($branch, $request->validated('date'), $request->party, $request->figures, $request->validated('note'), $request->validated('idempotency_key'), $request->user());
         } catch (PostingError $error) {
-            return back()->withInput()->withErrors(['weight' => $error->getMessage()]);
+            return back()->withInput()->withErrors([$request->choosesLots() ? 'lots' : 'weight' => $error->getMessage()]);
         }
 
         return redirect()->route('documents.show', $document)

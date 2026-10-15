@@ -3,6 +3,7 @@
 namespace App\Domain\Documents;
 
 use App\Domain\Gold\FormulaSet;
+use App\Domain\Gold\GoldCalculator;
 use App\Domain\Gold\GoldFigures;
 use App\Domain\Gold\GoldLine;
 use App\Domain\Ledgers\ChartOfAccounts;
@@ -129,14 +130,32 @@ final class PostingService
      * Gold sold. The customer owes the amount and the sale is income. The gold leaves the oldest
      * lots, and what that gold had cost goes from Gold Stock to Cost of Sales, so the sale's
      * profit is the amount less that cost.
+     *
+     * With $picks (lot id and weight, from GoldCalculator::forLots) the seller chose the exact purchases instead:
+     * the gold leaves those lots, each slice is priced at its own lot's karat, and the rest stays in stock.
+     *
+     * @param  list<array{lotId: int, weightH: int}>|null  $picks
      */
-    public function postSale(Branch $branch, string $date, Ledger $party, GoldFigures $figures, ?string $note, ?string $idempotencyKey, User $by): Document
+    public function postSale(Branch $branch, string $date, Ledger $party, GoldFigures $figures, ?string $note, ?string $idempotencyKey, User $by, ?array $picks = null): Document
     {
-        return $this->once($branch, $idempotencyKey, $by, function () use ($branch, $date, $party, $figures, $note, $idempotencyKey, $by) {
+        return $this->once($branch, $idempotencyKey, $by, function () use ($branch, $date, $party, $figures, $note, $idempotencyKey, $by, $picks) {
             $this->assertGoldPosting($branch, $date, $party, $figures);
 
             $cents = $figures->amountCents();
-            $taken = $this->lots->allocate($branch, $figures->weightH);   // locks the lots until we finish
+            // Either way this locks the lots until we finish.
+            $taken = $picks === null ? $this->lots->allocate($branch, $figures->weightH) : $this->lots->pick($branch, $picks);
+
+            // Chosen lots were priced before they were locked. They must still come to the same weight and amount.
+            $values = [];
+
+            if ($picks !== null) {
+                $values = array_map(fn (array $slice) => GoldCalculator::amountFor($figures->formula, $slice['weightH'], Money::fromDb($slice['lot']->karat), $figures->priceH), $taken);
+
+                if (array_sum(array_column($taken, 'weightH')) !== $figures->weightH || array_sum($values) !== $figures->amountCedis) {
+                    throw new PostingError('The purchases chosen do not add up to this sale. Choose them again.');
+                }
+            }
+
             $costCents = array_sum(array_column($taken, 'costCents'));
 
             $lines = [[$party, $cents, 0], [$this->systemLedger($branch, 'sales'), 0, $cents]];
@@ -150,8 +169,9 @@ final class PostingService
 
             $this->writeGoldLine($document, $figures);
 
-            foreach ($taken as ['lot' => $lot, 'weightH' => $weightH, 'costCents' => $lotCost]) {
-                $this->writeMovement($lot, $document, $date, -$weightH, -$lotCost);
+            foreach ($taken as $i => ['lot' => $lot, 'weightH' => $weightH, 'costCents' => $lotCost]) {
+                // A chosen lot keeps what its slice sold for, so the sale can show it lot by lot.
+                $this->writeMovement($lot, $document, $date, -$weightH, -$lotCost, isset($values[$i]) ? $values[$i] * 100 : null);
 
                 $lot->forceFill([
                     'remaining_g' => Money::decimal(Money::fromDb($lot->remaining_g) - $weightH),

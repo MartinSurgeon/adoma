@@ -8,6 +8,7 @@ use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\LedgerBalances;
 use App\Domain\Documents\PostingError;
 use App\Domain\Documents\PostingService;
+use App\Domain\Stock\StockLot;
 use App\Domain\Stock\StockMovement;
 use App\Domain\Support\AmountInWords;
 use App\Domain\Support\Money;
@@ -164,6 +165,7 @@ class DocumentController extends Controller
             'gold' => $this->gold($document),
             'transfer' => $this->transfer($document, $viewer),
             'profit' => $this->profit($document, $viewer),
+            'lots_sold' => $this->lotsSold($document),
             'lines' => $document->lines->map(fn ($line) => [
                 'id' => $line->id,
                 'ledger' => $line->ledger?->name,
@@ -236,6 +238,35 @@ class DocumentController extends Controller
             'base_karat' => $line->formulaSet->karat_base,
             'formula_version' => $line->formulaSet->version,
         ];
+    }
+
+    /**
+     * Which purchases a sale's gold came from, and how much of each. The document was already authorized to be seen, so
+     * its lots are read without the branch scope (an owner may be looking at every branch). Cost is never shown here.
+     */
+    private function lotsSold(Document $document): array
+    {
+        if ($document->type !== DocumentType::Sale || $document->isReversal()) {
+            return [];
+        }
+
+        return StockMovement::withoutGlobalScopes()->where('document_id', $document->id)->orderBy('id')->get()
+            ->map(function (StockMovement $movement) {
+                $lot = StockLot::withoutGlobalScopes()->with(['goldLine.document.ledger', 'document.ledger'])->find($movement->lot_id);
+                $origin = $lot?->document ?? $lot?->goldLine?->document;
+
+                return [
+                    'origin_id' => $origin?->id,
+                    'origin_number' => $origin?->number,
+                    'origin_name' => $origin?->ledger?->name,
+                    'date' => $lot?->date->format('j M Y'),
+                    'form' => ucfirst((string) $lot?->form),
+                    'karat' => $lot ? Money::format(Money::fromDb($lot->karat)) : null,
+                    'weight' => Money::format(abs(Money::fromDb($movement->weight_g))),
+                    // Only a sale of chosen lots prices each slice.
+                    'amount' => $movement->value === null ? null : Money::cedis(Money::fromDb($movement->value)),
+                ];
+            })->all();
     }
 
     /**

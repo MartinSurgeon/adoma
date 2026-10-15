@@ -17,6 +17,7 @@ const props = defineProps({
     gold: { type: Object, default: null },
     profit: { type: Object, default: null },
     transfer: { type: Object, default: null },
+    lots_sold: { type: Array, default: () => [] },
     lines: Array,
     canReverse: Boolean,
     canRecordAnother: Boolean,
@@ -217,6 +218,34 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <div><dt class="text-gray-700">Formulas version</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.formula_version }}</dd></div>
                     </dl>
                 </details>
+            </section>
+
+            <!-- Which purchases a sale's gold came from. -->
+            <section v-if="lots_sold?.length" aria-labelledby="lots-heading" class="card overflow-x-auto p-6">
+                <h2 id="lots-heading" class="text-lg font-semibold text-gray-900">Gold taken from</h2>
+                <table class="data-table mt-2">
+                    <thead>
+                        <tr>
+                            <th scope="col">Purchase</th><th scope="col">Bought</th><th scope="col">Form</th>
+                            <th scope="col" class="num">Karat</th><th scope="col" class="num">Weight (g)</th>
+                            <th v-if="lots_sold.some((l) => l.amount)" scope="col" class="num">Sold for</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(lot, i) in lots_sold" :key="i">
+                            <td>
+                                <Link v-if="lot.origin_id" :href="route('documents.show', lot.origin_id)" class="font-medium text-teal-800 underline">{{ lot.origin_number }}</Link>
+                                <span v-else>—</span>
+                                <span v-if="lot.origin_name" class="text-gray-700"> · {{ lot.origin_name }}</span>
+                            </td>
+                            <td class="whitespace-nowrap">{{ lot.date }}</td>
+                            <td>{{ lot.form }}</td>
+                            <td class="num">{{ lot.karat }}</td>
+                            <td class="num">{{ lot.weight }}</td>
+                            <td v-if="lots_sold.some((l) => l.amount)" class="num">{{ lot.amount }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
 
             <!-- Details are one click away, not in the way. -->

@@ -83,6 +83,33 @@ final class GoldCalculator
         return self::finish($formula, 'refined', $weightH, null, null, $karatH, $priceH);
     }
 
+    /**
+     * A sale of chosen lots. Each lot is already weighed and has its karat, so there is no density step: every slice is
+     * priced by amountFor (the same rule as a transfer slice), and the sale is the sum. The karat shown is the weight-
+     * weighted average, cut off to hundredths, and the form says "mixed" when raw and refined lots are sold together.
+     *
+     * @param  list<array{form: string, karatH: int, weightH: int}>  $slices
+     */
+    public static function forLots(FormulaSet $formula, array $slices, string $price): GoldFigures
+    {
+        $priceH = self::positive($price, 'The price', self::MAX_PRICE, 'price');
+
+        if ($slices === []) {
+            throw new CalculationError('Choose the purchases to sell, and how much of each.', 'lots');
+        }
+
+        $weightH = array_sum(array_column($slices, 'weightH'));
+        $amountCedis = array_sum(array_map(fn (array $s) => self::amountFor($formula, $s['weightH'], $s['karatH'], $priceH), $slices));
+        $karatH = intdiv(array_sum(array_map(fn (array $s) => $s['karatH'] * $s['weightH'], $slices)), $weightH);
+        $forms = array_unique(array_column($slices, 'form'));
+
+        if ($amountCedis <= 0) {
+            throw new CalculationError('The amount works out to nothing. Check the weights and the price.', 'price');
+        }
+
+        return new GoldFigures(count($forms) === 1 ? $forms[0] : 'mixed', $weightH, null, self::poundsFor($formula, $weightH), null, $karatH, $priceH, $amountCedis, $formula);
+    }
+
     private static function finish(FormulaSet $formula, string $form, int $weightH, ?int $waterH, ?int $densityH, int $karatH, int $priceH, ?int $bigH = null): GoldFigures
     {
         $poundsH = self::poundsFor($formula, $weightH);

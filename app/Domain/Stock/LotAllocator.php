@@ -72,6 +72,60 @@ final class LotAllocator
     }
 
     /**
+     * The gold of lots the seller chose, instead of the oldest first: the same answer as allocate(), for these lots and
+     * these weights only. Part of a lot may be taken; what is not taken stays in stock.
+     *
+     * @param  list<array{lotId: int, weightH: int}>  $picks
+     * @return list<array{lot: StockLot, weightH: int, costCents: int}>
+     */
+    public function pick(Branch $branch, array $picks): array
+    {
+        $this->lockOffices([$branch]);
+
+        $ids = array_column($picks, 'lotId');
+
+        if (count($ids) !== count(array_unique($ids))) {
+            throw new PostingError('The same purchase was chosen twice.');
+        }
+
+        $lots = StockLot::withoutGlobalScopes()
+            ->where('tenant_id', $branch->tenant_id)->where('branch_id', $branch->id)
+            ->whereIn('id', $ids)->orderBy('date')->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+
+        $taken = [];
+
+        foreach ($picks as ['lotId' => $lotId, 'weightH' => $takeH]) {
+            $lot = $lots->get($lotId);
+
+            if ($lot === null) {
+                throw new PostingError("{$branch->name} does not hold one of the purchases chosen.");
+            }
+
+            $remainingH = Money::fromDb($lot->remaining_g);
+
+            if ($takeH <= 0 || $takeH > $remainingH) {
+                throw new PostingError(sprintf(
+                    'Only %s g is left of the %s purchase, and %s g was chosen.',
+                    Money::format($remainingH),
+                    $lot->date->format('j M Y'),
+                    Money::format($takeH),
+                ));
+            }
+
+            $remainingCost = Money::fromDb($lot->remaining_cost);
+
+            $taken[] = [
+                'lot' => $lot,
+                'weightH' => $takeH,
+                // As in allocate(): the rest of a lot takes the rest of its cost, a part takes its share.
+                'costCents' => $takeH === $remainingH ? $remainingCost : intdiv($remainingCost * $takeH, $remainingH),
+            ];
+        }
+
+        return $taken;
+    }
+
+    /**
      * Take the stock lock of one or more branches, lowest office first, every time.
      *
      * Anything that moves gold (a sale, a transfer, a reversal) takes this first, so only one of them

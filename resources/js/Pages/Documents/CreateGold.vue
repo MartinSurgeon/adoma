@@ -20,6 +20,7 @@ const props = defineProps({
     baseKarat: Number,
     inStock: { type: String, default: null }, // sales only: grams in stock
     prefill: { type: Object, default: null }, // "record another like this"
+    lots: { type: Array, default: () => [] }, // sales only: the purchases still in stock, to choose from
 });
 
 const form = useForm({
@@ -34,8 +35,14 @@ const form = useForm({
     note: props.prefill?.note ?? '',
     karat_override: false,
     override_reason: '',
+    choose_lots: false,
+    lots: props.lots.map((lot) => ({ id: lot.id, weight: '' })),
     idempotency_key: props.idempotencyKey ?? '',
 });
+
+// Only the purchases with a weight typed go to the server.
+const chosenLots = () => form.lots.filter((lot) => lot.weight !== '' && Number(lot.weight) > 0);
+form.transform((data) => ({ ...data, lots: data.choose_lots ? chosenLots() : [] }));
 
 // Starting values are not "typed in", so they do not count as unsaved work.
 form.defaults();
@@ -54,7 +61,15 @@ const working = ref(false);
 let timer = null;
 let latest = 0;
 
-const ready = computed(() => form.weight && form.price && (isRaw.value ? form.water_weight : form.karat));
+const choosing = computed(() => isSale.value && form.choose_lots);
+const ready = computed(() => (choosing.value
+    ? form.price && chosenLots().length > 0
+    : form.weight && form.price && (isRaw.value ? form.water_weight : form.karat)));
+
+const lotInfo = Object.fromEntries(props.lots.map((lot) => [lot.id, lot]));
+const takeAll = (row) => { row.weight = lotInfo[row.id].remaining; };
+const pickedGrams = computed(() => chosenLots().reduce((sum, lot) => sum + Math.round(Number(lot.weight) * 100), 0) / 100);
+const pickedText = computed(() => pickedGrams.value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
 async function calculate() {
     if (!ready.value) {
@@ -68,6 +83,8 @@ async function calculate() {
     try {
         const { data } = await axios.post(route('gold.calculate'), {
             type: props.type,
+            choose_lots: choosing.value,
+            lots: choosing.value ? chosenLots() : [],
             form: form.form,
             weight: form.weight,
             big_weight: isRaw.value ? form.big_weight : null,
@@ -85,7 +102,7 @@ async function calculate() {
     }
 }
 
-watch(() => [form.form, form.weight, form.big_weight, form.water_weight, form.karat, form.price, form.karat_override], () => {
+watch(() => [form.form, form.weight, form.big_weight, form.water_weight, form.karat, form.price, form.karat_override, form.choose_lots, form.lots.map((lot) => lot.weight).join('|')], () => {
     clearTimeout(timer);
     timer = setTimeout(calculate, 300);
 });
@@ -147,7 +164,64 @@ const submit = () => form.post(route(`${props.type}s.store`));
 
         <!-- What was weighed, with the figures it works out to right beside the boxes that drive them. -->
         <FormSection title="2. Gold">
-            <fieldset>
+            <!-- A sale takes the oldest gold first, unless the seller picks the exact purchases. -->
+            <fieldset v-if="isSale && lots.length" class="mb-4">
+                <legend class="text-base font-medium text-gray-800">Which gold is being sold?</legend>
+                <div class="mt-1 inline-flex overflow-hidden rounded-md border border-gray-300">
+                    <label
+                        v-for="option in [{ value: false, label: 'The oldest gold first' }, { value: true, label: 'Choose the purchases' }]"
+                        :key="String(option.value)"
+                        class="flex min-h-12 cursor-pointer items-center px-6 text-base font-medium"
+                        :class="form.choose_lots === option.value ? 'bg-teal-700 text-white' : 'bg-white text-gray-800 hover:bg-gray-50'"
+                    >
+                        <input type="radio" v-model="form.choose_lots" :value="option.value" class="sr-only" />
+                        {{ option.label }}
+                    </label>
+                </div>
+            </fieldset>
+
+            <!-- The exact purchases being sold, and how much of each. What is not chosen stays in stock. -->
+            <div v-if="choosing">
+                <p class="text-base text-gray-700">Type how many grams to sell from each purchase, or press All. A purchase can be sold in part, and what you leave stays in stock.</p>
+                <div class="mt-3 overflow-x-auto rounded-md ring-1 ring-gray-200">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Purchase</th><th scope="col">Bought</th><th scope="col">Form</th>
+                                <th scope="col" class="num">Karat</th><th scope="col" class="num">In stock (g)</th>
+                                <th scope="col" class="num">Sell (g)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in form.lots" :key="row.id">
+                                <td>{{ lotInfo[row.id].number ?? '—' }}<span v-if="lotInfo[row.id].from" class="text-gray-700"> · {{ lotInfo[row.id].from }}</span></td>
+                                <td class="whitespace-nowrap">{{ lotInfo[row.id].date }}</td>
+                                <td>{{ lotInfo[row.id].form }}</td>
+                                <td class="num">{{ lotInfo[row.id].karat }}</td>
+                                <td class="num">{{ lotInfo[row.id].remaining_text }}</td>
+                                <td class="num">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <TextInput
+                                            :id="`lot-${row.id}`"
+                                            class="block w-32 text-right tabular-nums"
+                                            inputmode="decimal"
+                                            autocomplete="off"
+                                            placeholder="0.00"
+                                            :aria-label="`Grams to sell from ${lotInfo[row.id].number ?? 'this purchase'}`"
+                                            v-model="row.weight"
+                                        />
+                                        <button type="button" class="min-h-12 rounded-md px-3 text-base font-medium text-teal-800 underline" @click="takeAll(row)">All</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-2 text-base font-medium text-gray-900">Chosen: {{ pickedText }} g</p>
+                <InputError class="mt-2" :message="form.errors.lots || problem('lots')" />
+            </div>
+
+            <fieldset v-if="!choosing">
                 <legend class="text-base font-medium text-gray-800">Form</legend>
                 <div class="mt-1 inline-flex overflow-hidden rounded-md border border-gray-300">
                     <label
@@ -163,7 +237,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
                 <InputError class="mt-2" :message="form.errors.form" />
             </fieldset>
 
-            <div class="mt-4 grid gap-4" :class="isRaw ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
+            <div v-if="!choosing" class="mt-4 grid gap-4" :class="isRaw ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
                 <div>
                     <InputLabel for="weight" :value="isRaw ? 'All the gold (g)' : 'Weight (g)'" />
                     <TextInput id="weight" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0.00" v-model="form.weight" required />
@@ -212,10 +286,10 @@ const submit = () => form.post(route(`${props.type}s.store`));
                     </div>
                     <div>
                         <dt class="text-sm font-medium text-gray-600">Density</dt>
-                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ isRaw ? dash(figures?.density) : 'Not used' }}</dd>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ isRaw && !choosing ? dash(figures?.density) : 'Not used' }}</dd>
                     </div>
                     <div>
-                        <dt class="text-sm font-medium text-gray-600">Karat</dt>
+                        <dt class="text-sm font-medium text-gray-600">{{ choosing ? 'Average karat' : 'Karat' }}</dt>
                         <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.karat) }}</dd>
                     </div>
                 </dl>
@@ -267,7 +341,8 @@ const submit = () => form.post(route(`${props.type}s.store`));
                     <template v-else>Adds {{ figures.weight }} g to {{ office }}'s stock. You will owe the supplier {{ figures.amount_text }}.</template>
                 </p>
                 <p v-else-if="!preview" class="mt-4 text-base text-gray-700">
-                    Fill in the weight, {{ isRaw ? 'water weight' : 'karat' }} and price to see how this will be recorded.
+                    <template v-if="choosing">Choose how much of each purchase to sell, and the price, to see how this will be recorded.</template>
+                    <template v-else>Fill in the weight, {{ isRaw ? 'water weight' : 'karat' }} and price to see how this will be recorded.</template>
                 </p>
 
                 <p class="mt-4 text-sm text-gray-700">The server works the figures out again when you save.</p>

@@ -11,6 +11,7 @@ use App\Domain\Gold\GoldFigures;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Stock\LotAllocator;
+use App\Domain\Stock\StockLot;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
@@ -26,21 +27,42 @@ class SaveGoldDocumentRequest extends FormRequest
 
     public ?Ledger $party = null;
 
+    /** For a sale of chosen lots: which lots, and how much of each. Empty when the oldest gold goes first. */
+    public ?array $picks = null;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', [Document::class, (string) $this->route('type')]);
     }
 
+    /** Only a sale can be of chosen lots. A purchase makes a lot, it does not take from one. */
+    public function choosesLots(): bool
+    {
+        return $this->route('type') === DocumentType::Sale->value && $this->boolean('choose_lots');
+    }
+
     public function rules(): array
     {
-        return [
+        // Chosen lots are already weighed, so the weighing boxes are not used.
+        $weighing = $this->choosesLots()
+            ? [
+                'form' => ['nullable'], 'weight' => ['nullable'],
+                'lots' => ['required', 'array', 'min:1', 'max:200'],
+                'lots.*.id' => ['required', 'integer'],
+                'lots.*.weight' => ['required', 'string', 'max:20'],
+            ]
+            : [
+                'form' => ['required', Rule::in(['raw', 'refined'])],
+                'weight' => ['required', 'string', 'max:20'],
+            ];
+
+        return $weighing + [
             'date' => ['required', 'date_format:Y-m-d', 'after:2000-01-01', 'before_or_equal:today'],
             'ledger_id' => ['required', 'integer'],
-            'form' => ['required', Rule::in(['raw', 'refined'])],
-            'weight' => ['required', 'string', 'max:20'],
+            'choose_lots' => ['nullable', 'boolean'],
             'big_weight' => ['nullable', 'string', 'max:20'],
-            'water_weight' => [Rule::requiredIf($this->input('form') === 'raw'), 'nullable', 'string', 'max:20'],
-            'karat' => [Rule::requiredIf($this->input('form') === 'refined'), 'nullable', 'string', 'max:20'],
+            'water_weight' => [Rule::requiredIf(! $this->choosesLots() && $this->input('form') === 'raw'), 'nullable', 'string', 'max:20'],
+            'karat' => [Rule::requiredIf(! $this->choosesLots() && $this->input('form') === 'refined'), 'nullable', 'string', 'max:20'],
             'price' => ['required', 'string', 'max:20'],
             'note' => ['nullable', 'string', 'max:500'],
             'karat_override' => ['nullable', 'boolean'],
@@ -67,10 +89,19 @@ class SaveGoldDocumentRequest extends FormRequest
                 }
 
                 try {
-                    $this->figures = self::calculate($this->user(), $this->input());
+                    if ($this->choosesLots()) {
+                        [$this->figures, $this->picks] = self::calculateLots($this->user(), (array) $this->input('lots'), (string) $this->input('price'));
+                    } else {
+                        $this->figures = self::calculate($this->user(), $this->input());
+                    }
                 } catch (CalculationError $error) {
                     $validator->errors()->add($error->field, $error->getMessage());
 
+                    return;
+                }
+
+                // Chosen lots were checked against what each lot holds, so there is no second stock check.
+                if ($this->choosesLots()) {
                     return;
                 }
 
@@ -100,6 +131,56 @@ class SaveGoldDocumentRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * A sale of the exact purchases the seller chose: [{id, weight}, ...] from this branch's stock. Each lot gives its
+     * own karat, so nothing is weighed again. The lots are found through the usual scopes, so only this branch's.
+     *
+     * @return array{0: GoldFigures, 1: list<array{lotId: int, weightH: int}>}
+     */
+    public static function calculateLots(User $user, array $lots, string $price): array
+    {
+        $ids = array_map(fn ($row) => (int) ($row['id'] ?? 0), $lots);
+
+        if ($ids === [] || count($ids) !== count(array_unique($ids))) {
+            throw new CalculationError($ids === [] ? 'Choose the purchases to sell, and how much of each.' : 'The same purchase was chosen twice.', 'lots');
+        }
+
+        $found = StockLot::query()->with(['goldLine.document', 'document'])->whereIn('id', $ids)->get()->keyBy('id');
+        $slices = [];
+        $picks = [];
+
+        foreach ($lots as $row) {
+            $lot = $found->get((int) ($row['id'] ?? 0));
+
+            if ($lot === null) {
+                throw new CalculationError('One of the purchases chosen is not in this branch\'s stock.', 'lots');
+            }
+
+            $name = ($lot->goldLine?->document ?? $lot->document)?->number ?? 'purchase '.$lot->id;
+
+            try {
+                $weightH = Money::cents((string) ($row['weight'] ?? ''));
+            } catch (\InvalidArgumentException) {
+                throw new CalculationError("The weight chosen from {$name} must be a number, for example 250.50.", 'lots');
+            }
+
+            $remainingH = Money::fromDb($lot->remaining_g);
+
+            if ($weightH <= 0 || $weightH > $remainingH) {
+                throw new CalculationError(sprintf(
+                    $weightH <= 0 ? 'The weight chosen from %s must be more than zero.' : 'Only %2$s g is left of %1$s.',
+                    $name,
+                    Money::format($remainingH),
+                ), 'lots');
+            }
+
+            $slices[] = ['form' => (string) $lot->form, 'karatH' => Money::fromDb($lot->karat), 'weightH' => $weightH];
+            $picks[] = ['lotId' => $lot->id, 'weightH' => $weightH];
+        }
+
+        return [GoldCalculator::forLots(FormulaSet::currentFor($user->tenant_id), $slices, $price), $picks];
     }
 
     /**

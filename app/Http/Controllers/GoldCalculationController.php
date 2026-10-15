@@ -24,6 +24,13 @@ class GoldCalculationController extends Controller
         $this->authorize('create', [Document::class, $type]);
 
         try {
+            // A sale of the exact purchases the seller chose: priced lot by lot, no weighing.
+            if ($type === 'sale' && $request->boolean('choose_lots')) {
+                [$figures] = SaveGoldDocumentRequest::calculateLots($request->user(), (array) $request->input('lots'), (string) $request->input('price'));
+
+                return response()->json(['ok' => true, 'figures' => $figures->toArray(), 'stock_ok' => true]);
+            }
+
             $figures = SaveGoldDocumentRequest::calculate($request->user(), $request->only(['form', 'weight', 'big_weight', 'water_weight', 'karat', 'price', 'karat_override']));
         } catch (CalculationError $error) {
             return response()->json([
