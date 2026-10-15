@@ -32,7 +32,12 @@ final class GoldCalculator
 
     public const MAX_PRICE = 1_000_000;
 
-    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null): GoldFigures
+    /** Karat is a share of 24, so more is a mistake in the weights. An admin may allow a little more, up to this. */
+    public const MAX_KARAT = 24;
+
+    public const MAX_KARAT_WITH_OVERRIDE = 30;
+
+    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null, bool $allowAboveMax = false): GoldFigures
     {
         $weightH = self::positive($weight, 'The weight', self::MAX_WEIGHT_G, 'weight');
         $waterH = self::positive($waterWeight, 'The water weight', self::MAX_WEIGHT_G, 'water_weight');
@@ -62,18 +67,18 @@ final class GoldCalculator
         // TRUNC(((density - offset) * factor) / density, 2), with density in hundredths and factor in thousandths.
         $karatH = intdiv(($densityH - $offsetH) * $factorK, 10 * $densityH);
 
-        self::assertKarat($karatH, $densityH);
+        self::assertKarat($karatH, $densityH, $allowAboveMax);
 
         return self::finish($formula, 'raw', $weightH, $waterH, $densityH, $karatH, $priceH, $bigH);
     }
 
-    public static function refined(FormulaSet $formula, string $weight, string $karat, string $price): GoldFigures
+    public static function refined(FormulaSet $formula, string $weight, string $karat, string $price, bool $allowAboveMax = false): GoldFigures
     {
         $weightH = self::positive($weight, 'The weight', self::MAX_WEIGHT_G, 'weight');
-        $karatH = self::positive($karat, 'The karat', 24, 'karat');
+        $karatH = self::positive($karat, 'The karat', self::MAX_KARAT_WITH_OVERRIDE, 'karat');
         $priceH = self::positive($price, 'The price', self::MAX_PRICE, 'price');
 
-        self::assertKarat($karatH, null);
+        self::assertKarat($karatH, null, $allowAboveMax);
 
         return self::finish($formula, 'refined', $weightH, null, null, $karatH, $priceH);
     }
@@ -106,22 +111,29 @@ final class GoldCalculator
         return intdiv($karatH * $priceH * self::poundsFor($formula, $weightH), $formula->karat_base * 1_000_000);
     }
 
-    /** Karat is a share of 24. Outside 0 to 24 means the weights are wrong, so the answer is refused. */
-    private static function assertKarat(int $karatH, ?int $densityH): void
+    /**
+     * Karat is a share of 24. Outside 0 to 24 means the weights are wrong, so the answer is refused. Just above 24 an
+     * admin can allow it (for the second opinion the client wants), but never beyond MAX_KARAT_WITH_OVERRIDE.
+     */
+    private static function assertKarat(int $karatH, ?int $densityH, bool $allowAboveMax = false): void
     {
-        if ($karatH > 0 && $karatH <= 2400) {
+        $ceilingH = ($allowAboveMax ? self::MAX_KARAT_WITH_OVERRIDE : self::MAX_KARAT) * 100;
+
+        if ($karatH > 0 && $karatH <= $ceilingH) {
             return;
         }
 
         $karat = Money::format($karatH);
+        $overridable = $karatH > self::MAX_KARAT * 100 && $karatH <= self::MAX_KARAT_WITH_OVERRIDE * 100;
+        $field = $densityH === null ? 'karat' : 'water_weight';
 
-        throw $densityH === null
-            ? new CalculationError("Karat must be more than 0 and no more than 24, and {$karat} is not.", 'karat')
-            : new CalculationError(sprintf(
+        throw new CalculationError($densityH === null
+            ? "Karat must be more than 0 and no more than 24, and {$karat} is not."
+            : sprintf(
                 'The density works out to %s, which gives %s karat. Karat must be more than 0 and no more than 24, so check the weight and the water weight.',
                 Money::format($densityH),
                 $karat,
-            ), 'water_weight');
+            ), $field, $overridable);
     }
 
     /** A plain number above zero and up to a limit, in hundredths. */

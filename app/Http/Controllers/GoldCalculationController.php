@@ -24,9 +24,13 @@ class GoldCalculationController extends Controller
         $this->authorize('create', [Document::class, $type]);
 
         try {
-            $figures = SaveGoldDocumentRequest::calculate($request->user()->tenant_id, $request->only(['form', 'weight', 'big_weight', 'water_weight', 'karat', 'price']));
+            $figures = SaveGoldDocumentRequest::calculate($request->user(), $request->only(['form', 'weight', 'big_weight', 'water_weight', 'karat', 'price', 'karat_override']));
         } catch (CalculationError $error) {
-            return response()->json(['ok' => false, 'field' => $error->field, 'message' => $error->getMessage()]);
+            return response()->json([
+                'ok' => false, 'field' => $error->field, 'message' => $error->getMessage(),
+                // The form shows the "Allow this karat" box only to someone who may tick it.
+                'needs_override' => $error->overridable, 'can_override' => $error->overridable && $request->user()->isTenantAdmin(),
+            ]);
         }
 
         $response = ['ok' => true, 'figures' => $figures->toArray()];

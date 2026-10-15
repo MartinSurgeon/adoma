@@ -227,6 +227,11 @@ class DocumentController extends Controller
             'pounds' => $format($line->pounds),
             'density' => $format($line->density),
             'karat' => $format($line->karat),
+            // A karat above 24 that an admin allowed: who, and why.
+            'karat_override' => $line->karat_overridden_by === null ? null : [
+                'by' => $line->overriddenBy?->name,
+                'reason' => $line->karat_override_reason,
+            ],
             'price' => Money::cedis(Money::fromDb($line->price)),
             'base_karat' => $line->formulaSet->karat_base,
             'formula_version' => $line->formulaSet->version,

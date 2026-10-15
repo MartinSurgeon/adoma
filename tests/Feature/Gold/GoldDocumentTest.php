@@ -388,7 +388,7 @@ it('shows the weighing on the saved page', function () {
 
     expect($props['gold'])->toBe([
         'form' => 'raw', 'weight' => '2,094.25', 'big_weight' => null, 'water_weight' => '114.56', 'pounds' => '270.22', 'density' => '18.28',
-        'karat' => '22.45', 'price' => 'GH₵ 10,600.00', 'base_karat' => 23, 'formula_version' => 1,
+        'karat' => '22.45', 'karat_override' => null, 'price' => 'GH₵ 10,600.00', 'base_karat' => 23, 'formula_version' => 1,
     ])
         ->and($props['document']['total'])->toBe('GH₵ 2,795,837.00')
         ->and($props['document']['total_in_words'])->toBe('Two Million Seven Hundred Ninety Five Thousand Eight Hundred Thirty Seven Ghana Cedis, No Pesewas')

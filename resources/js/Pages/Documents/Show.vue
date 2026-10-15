@@ -198,6 +198,11 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     <div class="col-span-2 sm:col-span-4"><dt class="text-gray-700">Price per pound at {{ gold.base_karat }} karat</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.price }}</dd></div>
                 </dl>
 
+                <Banner v-if="gold.karat_override" variant="warning" class="mt-4">
+                    <p class="font-semibold">Karat above 24, allowed by {{ gold.karat_override.by ?? 'an admin' }}</p>
+                    <p class="mt-1">Reason: {{ gold.karat_override.reason }}</p>
+                </Banner>
+
                 <Banner v-if="profit" :variant="profit.is_loss ? 'error' : 'success'" class="mt-4">
                     This gold had cost {{ profit.cost }}. {{ profit.is_loss ? 'The sale made a loss of' : 'The sale made a profit of' }}
                     <span class="font-semibold">{{ profit.profit }}</span>.

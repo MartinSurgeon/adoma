@@ -32,6 +32,8 @@ const form = useForm({
     karat: '',
     price: props.prefill?.price ?? '',
     note: props.prefill?.note ?? '',
+    karat_override: false,
+    override_reason: '',
     idempotency_key: props.idempotencyKey ?? '',
 });
 
@@ -72,6 +74,7 @@ async function calculate() {
             water_weight: isRaw.value ? form.water_weight : null,
             karat: isRaw.value ? null : form.karat,
             price: form.price,
+            karat_override: form.karat_override,
         });
         if (mine === latest) preview.value = data;
     } catch {
@@ -82,7 +85,7 @@ async function calculate() {
     }
 }
 
-watch(() => [form.form, form.weight, form.big_weight, form.water_weight, form.karat, form.price], () => {
+watch(() => [form.form, form.weight, form.big_weight, form.water_weight, form.karat, form.price, form.karat_override], () => {
     clearTimeout(timer);
     timer = setTimeout(calculate, 300);
 });
@@ -91,6 +94,9 @@ const figures = computed(() => (preview.value?.ok ? preview.value.figures : null
 const problem = (field) => (preview.value && !preview.value.ok && preview.value.field === field ? preview.value.message : '');
 const notEnoughStock = computed(() => isSale.value && preview.value?.ok && preview.value.stock_ok === false);
 const blocked = computed(() => (preview.value && !preview.value.ok) || notEnoughStock.value);
+
+// A karat above 24 is normally a mistake in the weights. An admin can allow it, with a reason, for a second opinion.
+const showOverride = computed(() => form.karat_override || preview.value?.can_override || figures.value?.above_max_karat);
 
 const dash = (value) => value ?? '—';
 const submit = () => form.post(route(`${props.type}s.store`));
@@ -213,6 +219,19 @@ const submit = () => form.post(route(`${props.type}s.store`));
                         <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.karat) }}</dd>
                     </div>
                 </dl>
+            </div>
+
+            <div v-if="showOverride" class="mt-4 rounded-md bg-amber-50 p-4 ring-1 ring-amber-300">
+                <label class="flex min-h-12 cursor-pointer items-center gap-3 text-base font-medium text-gray-900">
+                    <input id="karat_override" type="checkbox" v-model="form.karat_override" class="h-6 w-6 rounded border-gray-400 text-teal-700 focus:ring-teal-600" />
+                    Allow this karat (above 24)
+                </label>
+                <div v-if="form.karat_override" class="mt-2">
+                    <InputLabel for="override_reason" value="Why is it allowed?" />
+                    <TextInput id="override_reason" class="mt-1 block w-full" v-model="form.override_reason" maxlength="300" />
+                    <p class="mt-1 text-sm text-gray-700">Kept with the record, with your name, as the second opinion.</p>
+                    <InputError class="mt-2" :message="form.errors.override_reason" />
+                </div>
             </div>
         </FormSection>
 

@@ -492,6 +492,8 @@ final class PostingService
             'pounds' => Money::decimal($figures->poundsH),
             'density' => $figures->densityH === null ? null : Money::decimal($figures->densityH),
             'karat' => Money::decimal($figures->karatH),
+            'karat_override_reason' => $figures->isAboveMaxKarat() ? $figures->overrideReason : null,
+            'karat_overridden_by' => $figures->isAboveMaxKarat() ? $figures->overriddenBy : null,
             'price' => Money::decimal($figures->priceH),
             'amount' => Money::decimal($figures->amountCents()),
             'formula_set_id' => $figures->formula->id,

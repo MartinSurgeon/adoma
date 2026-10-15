@@ -22,7 +22,24 @@ final readonly class GoldFigures
         public int $amountCedis,        // whole cedis
         public FormulaSet $formula,
         public ?int $bigH = null,         // grams x 100: the weight with the particles taken out, which goes with the water weight
+        public ?string $overrideReason = null,   // why an admin allowed a karat above 24
+        public ?int $overriddenBy = null,        // the admin's user id
     ) {
+    }
+
+    /** True when the karat is above the usual 24 maximum, which only an admin can allow. */
+    public function isAboveMaxKarat(): bool
+    {
+        return $this->karatH > GoldCalculator::MAX_KARAT * 100;
+    }
+
+    /** The same figures, with the admin who allowed an unusual karat and why. */
+    public function withOverride(string $reason, int $userId): self
+    {
+        return new self(
+            $this->form, $this->weightH, $this->waterH, $this->poundsH, $this->densityH, $this->karatH,
+            $this->priceH, $this->amountCedis, $this->formula, $this->bigH, $reason, $userId,
+        );
     }
 
     /** The amount in pesewas, ready for the books. */
@@ -42,6 +59,7 @@ final readonly class GoldFigures
             'pounds' => Money::decimal($this->poundsH),
             'density' => $this->densityH === null ? null : Money::decimal($this->densityH),
             'karat' => Money::decimal($this->karatH),
+            'above_max_karat' => $this->isAboveMaxKarat(),
             'price' => Money::decimal($this->priceH),
             'amount' => Money::decimal($this->amountCents()),
             'amount_text' => Money::cedis($this->amountCents()),

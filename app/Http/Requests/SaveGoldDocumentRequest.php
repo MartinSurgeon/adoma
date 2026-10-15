@@ -13,6 +13,7 @@ use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Stock\LotAllocator;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\TenantContext;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -42,6 +43,8 @@ class SaveGoldDocumentRequest extends FormRequest
             'karat' => [Rule::requiredIf($this->input('form') === 'refined'), 'nullable', 'string', 'max:20'],
             'price' => ['required', 'string', 'max:20'],
             'note' => ['nullable', 'string', 'max:500'],
+            'karat_override' => ['nullable', 'boolean'],
+            'override_reason' => ['nullable', 'string', 'max:300'],
             'idempotency_key' => ['required', 'string', 'max:64'],
         ];
     }
@@ -64,11 +67,24 @@ class SaveGoldDocumentRequest extends FormRequest
                 }
 
                 try {
-                    $this->figures = self::calculate($this->user()->tenant_id, $this->input());
+                    $this->figures = self::calculate($this->user(), $this->input());
                 } catch (CalculationError $error) {
                     $validator->errors()->add($error->field, $error->getMessage());
 
                     return;
+                }
+
+                // A karat above 24 an admin allowed needs a reason, which is kept with the gold line.
+                if ($this->figures->isAboveMaxKarat()) {
+                    $reason = trim((string) $this->input('override_reason'));
+
+                    if (mb_strlen($reason) < 5) {
+                        $validator->errors()->add('override_reason', 'Say why this karat is allowed, so the next person can see.');
+
+                        return;
+                    }
+
+                    $this->figures = $this->figures->withOverride($reason, $this->user()->id);
                 }
 
                 $context = app(TenantContext::class);
@@ -86,14 +102,32 @@ class SaveGoldDocumentRequest extends FormRequest
         ];
     }
 
-    /** Raw gold gets its karat from the density. Refined gold has its karat typed in. */
-    public static function calculate(int $tenantId, array $input): GoldFigures
+    /**
+     * Raw gold gets its karat from the density. Refined gold has its karat typed in. A karat above 24 is refused unless
+     * the user is an admin who ticked the override; anyone else is told to ask one.
+     */
+    public static function calculate(User $user, array $input): GoldFigures
     {
-        $formula = FormulaSet::currentFor($tenantId);
+        $formula = FormulaSet::currentFor($user->tenant_id);
+        $allow = $user->isTenantAdmin() && filter_var($input['karat_override'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        return ($input['form'] ?? '') === 'refined'
-            ? GoldCalculator::refined($formula, (string) ($input['weight'] ?? ''), (string) ($input['karat'] ?? ''), (string) ($input['price'] ?? ''))
-            : GoldCalculator::raw($formula, (string) ($input['weight'] ?? ''), (string) ($input['water_weight'] ?? ''), (string) ($input['price'] ?? ''), $input['big_weight'] ?? null);
+        try {
+            return ($input['form'] ?? '') === 'refined'
+                ? GoldCalculator::refined($formula, (string) ($input['weight'] ?? ''), (string) ($input['karat'] ?? ''), (string) ($input['price'] ?? ''), $allow)
+                : GoldCalculator::raw($formula, (string) ($input['weight'] ?? ''), (string) ($input['water_weight'] ?? ''), (string) ($input['price'] ?? ''), $input['big_weight'] ?? null, $allow);
+        } catch (CalculationError $error) {
+            if (! $error->overridable) {
+                throw $error;
+            }
+
+            throw new CalculationError(
+                $error->getMessage().' '.($user->isTenantAdmin()
+                    ? 'If the weighing is right, tick "Allow this karat" and say why.'
+                    : 'If the weighing is right, ask an admin to record it.'),
+                $error->field,
+                true,
+            );
+        }
     }
 
     public function messages(): array

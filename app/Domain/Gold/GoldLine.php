@@ -21,7 +21,7 @@ class GoldLine extends Model
 
     protected $fillable = [
         'tenant_id', 'branch_id', 'document_id', 'form', 'weight_g', 'big_weight_g', 'water_weight_g', 'pounds',
-        'density', 'karat', 'price', 'amount', 'formula_set_id',
+        'density', 'karat', 'karat_override_reason', 'karat_overridden_by', 'price', 'amount', 'formula_set_id',
     ];
 
     protected function casts(): array
@@ -41,6 +41,12 @@ class GoldLine extends Model
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class);
+    }
+
+    /** The admin who allowed a karat above 24, if one did. */
+    public function overriddenBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'karat_overridden_by');
     }
 
     public function formulaSet(): BelongsTo
