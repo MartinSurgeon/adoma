@@ -218,6 +218,31 @@ it('blocks users of a suspended business', function () {
         ->assertJson(['message' => 'This business account is not active.']);
 });
 
+it('lets a switched-off user sign out, so the computer is free for the next person', function () {
+    $this->w->kumasiClerk->forceFill(['is_active' => false])->save();
+
+    $this->actingAs($this->w->kumasiClerk)->post(route('logout'))->assertRedirect('/');
+    $this->assertGuest();
+});
+
+it('lets the user of a suspended business sign out', function () {
+    $this->w->adoma->update(['status' => 'suspended']);
+
+    $this->actingAs($this->w->owner)->post(route('logout'))->assertRedirect('/');
+    $this->assertGuest();
+});
+
+it('offers a switched-off user the way out, not a Home that leads back to the same refusal', function () {
+    $this->w->kumasiClerk->forceFill(['is_active' => false])->save();
+
+    $this->actingAs($this->w->kumasiClerk)->get(route('dashboard'))
+        ->assertForbidden()
+        ->assertInertia(fn ($page) => $page
+            ->component('Error')
+            ->where('message', 'This account is switched off.')
+            ->where('primary', ['label' => 'Log out', 'logout' => true]));
+});
+
 it('shows nothing to a signed-in user who belongs to no business', function () {
     probeRoute();
     $stray = App\Models\User::factory()->create();

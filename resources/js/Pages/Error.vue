@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import NavIcon from '@/Components/NavIcon.vue';
@@ -17,7 +17,7 @@ const props = defineProps({
     status: { type: Number, required: true },
     title: { type: String, required: true },
     message: { type: String, required: true },
-    primary: { type: Object, required: true }, // { label, href }, or { label, reload: true }
+    primary: { type: Object, required: true }, // { label, href }, { label, reload: true } or { label, logout: true }
     secondary: { type: Object, default: null }, // { label, href }
 });
 
@@ -27,6 +27,14 @@ const framed = computed(() => Boolean(page.props.auth?.user && page.props.tenanc
 const icon = computed(() => ({ 403: 'lock', 404: 'search' })[props.status] ?? 'alert');
 
 const reload = () => window.location.reload();
+
+// For an account that has been switched off: nothing else works, so no "Are you sure?" first.
+const logOut = () => router.post(route('logout'));
+
+function act() {
+    if (props.primary.logout) logOut();
+    else reload();
+}
 </script>
 
 <template>
@@ -48,7 +56,7 @@ const reload = () => window.location.reload();
                 <!-- One main way on, and at most one quieter one. On a phone the main one comes first. -->
                 <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
                     <ButtonLink v-if="secondary" :href="secondary.href" variant="secondary">{{ secondary.label }}</ButtonLink>
-                    <button v-if="primary.reload" type="button" class="btn btn-primary" @click="reload">{{ primary.label }}</button>
+                    <button v-if="primary.reload || primary.logout" type="button" class="btn btn-primary" @click="act">{{ primary.label }}</button>
                     <ButtonLink v-else :href="primary.href">{{ primary.label }}</ButtonLink>
                 </div>
             </section>

@@ -86,7 +86,11 @@ final class ErrorPage
             403 => [
                 'title' => 'You cannot open this page',
                 'message' => self::ownReason($e) ?? self::notAllowed($context),
-                'primary' => $home,
+                // Signed in, but stopped before any branch was set (the account or business is switched off):
+                // every page answers the same, so Home would lead straight back here. Signing out is the way on.
+                'primary' => $request->user() !== null && $context->tenant() === null
+                    ? ['label' => 'Log out', 'logout' => true]
+                    : $home,
                 'secondary' => null,
             ],
             503 => [

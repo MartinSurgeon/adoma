@@ -28,6 +28,12 @@ class ResolveTenantContext
             return $next($request);
         }
 
+        // Signing out always works, even for an account or business that has been switched off. Otherwise that
+        // person stays signed in on the computer, and the next person cannot sign in there. It reads nothing scoped.
+        if ($request->routeIs('logout')) {
+            return $next($request);
+        }
+
         abort_unless($user->is_active, 403, 'This account is switched off.');
 
         $tenant = $user->tenant;
