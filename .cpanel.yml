@@ -1,0 +1,24 @@
+---
+# What cPanel does on "Deploy HEAD Commit" (cPanel → Git Version Control → Manage → Pull or Deploy).
+#
+# The clone lives in ~/repositories/passion, on the "production" branch (made by scripts/release.ps1, with the built
+# screens in public/build). The app runs from ~/adoma, whose public folder is the subdomain's document root.
+# The server's own .env and storage/ are never in Git and are never touched here.
+#
+# PHP is the server's PHP 8.3 (Namecheap/CloudLinux path). If `ls /opt/alt/` shows another version, change PHP below.
+deployment:
+  tasks:
+    - 'export DEPLOYPATH=$HOME/adoma'
+    - 'export PHP=/opt/alt/php83/usr/bin/php'
+    - 'export COMPOSER=/opt/cpanel/composer/bin/composer'
+    - 'mkdir -p $DEPLOYPATH'
+    # While files change, visitors see "being updated" instead of a half-copied app.
+    - 'if [ -f $DEPLOYPATH/.env ]; then cd $DEPLOYPATH && $PHP artisan down --retry=15 || true; fi'
+    # The code. The first time only, storage/ is copied too; after that it holds the server's own data.
+    - '/bin/rsync -a --delete --exclude=.git --exclude=.env --exclude=/storage/ --exclude=/vendor/ --exclude=/node_modules/ --exclude=/tests/ --exclude=/bootstrap/cache/ ./ $DEPLOYPATH/'
+    - 'if [ ! -d $DEPLOYPATH/storage ]; then cp -r storage $DEPLOYPATH/; fi'
+    - 'mkdir -p $DEPLOYPATH/bootstrap/cache'
+    - 'cd $DEPLOYPATH && $PHP $COMPOSER install --no-dev --optimize-autoloader --no-interaction'
+    # Only once .env exists (made by hand after the first deploy): update the database, then cache settings and routes.
+    - 'if [ -f $DEPLOYPATH/.env ]; then cd $DEPLOYPATH && $PHP artisan migrate --force && $PHP artisan optimize; fi'
+    - 'if [ -f $DEPLOYPATH/.env ]; then cd $DEPLOYPATH && $PHP artisan up; fi'
