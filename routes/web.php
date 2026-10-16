@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\BranchController;
 use App\Http\Controllers\Auth\ForcedPasswordController;
 use App\Http\Controllers\CashDocumentController;
 use App\Http\Controllers\DashboardController;
@@ -97,6 +98,17 @@ Route::middleware('auth')->group(function () {
         Route::put('/{user}', [UserController::class, 'update'])->whereNumber('user')->name('update');
         Route::patch('/{user}/status', [UserController::class, 'toggle'])->whereNumber('user')->name('toggle');
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->whereNumber('user')->name('reset');
+    });
+
+    // The branches, and who works in each in what role. Rules live in BranchPolicy.
+    Route::prefix('settings/branches')->name('branches.')->group(function () {
+        Route::get('/', [BranchController::class, 'index'])->name('index');
+        Route::get('/create', [BranchController::class, 'create'])->name('create');
+        Route::post('/', [BranchController::class, 'store'])->name('store');
+        Route::get('/{branch}', [BranchController::class, 'show'])->whereNumber('branch')->name('show');
+        Route::get('/{branch}/edit', [BranchController::class, 'edit'])->whereNumber('branch')->name('edit');
+        Route::put('/{branch}', [BranchController::class, 'update'])->whereNumber('branch')->name('update');
+        Route::put('/{branch}/access', [BranchController::class, 'updateAccess'])->whereNumber('branch')->name('access');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -40,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Ledger::class, LedgerPolicy::class);
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(Document::class, DocumentPolicy::class);
+        Gate::policy(\App\Domain\Tenancy\Branch::class, \App\Policies\BranchPolicy::class);
 
         // Who signed in, who signed out, and failed attempts, in the same log as every change.
         Event::listen(Login::class, fn (Login $event) => Audit::record('login', $event->user, actor: $event->user));

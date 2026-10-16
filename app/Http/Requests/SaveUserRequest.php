@@ -34,6 +34,10 @@ class SaveUserRequest extends FormRequest
                     ? Rule::in([Role::Owner->value, Role::Admin->value])
                     : 'prohibited',
             ],
+            // Letting an admin add and edit branches: an owner-only decision, like making someone an admin.
+            'can_manage_branches' => [
+                $actor->can('grantBranchManagement', \App\Models\User::class) ? 'boolean' : 'prohibited',
+            ],
             'offices' => ['array'],
             'offices.*.branch_id' => [
                 'required', 'integer', 'distinct',
@@ -59,6 +63,7 @@ class SaveUserRequest extends FormRequest
     {
         return [
             'tenant_role.prohibited' => 'Only an owner can make someone an owner or an admin.',
+            'can_manage_branches.prohibited' => 'Only an owner can let an admin add and edit branches.',
             'email.unique' => 'Someone already uses this email address.',
             'offices.*.branch_id.exists' => 'That branch does not belong to your business.',
         ];

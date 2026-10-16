@@ -23,7 +23,7 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
-     * tenant_id, tenant_role and is_active are deliberately not listed.
+     * tenant_id, tenant_role, can_manage_branches and is_active are deliberately not listed.
      * They control access, so only admin code may set them, one attribute at a time.
      *
      * @var list<string>
@@ -42,6 +42,7 @@ class User extends Authenticatable
      */
     protected $attributes = [
         'is_active' => true,
+        'can_manage_branches' => false,
     ];
 
     /** @var array<int, Role>|null Filled by roleMap(). */
@@ -69,6 +70,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
+            'can_manage_branches' => 'boolean',
         ];
     }
 
@@ -86,6 +88,13 @@ class User extends Authenticatable
     public function isTenantAdmin(): bool
     {
         return in_array($this->tenant_role, [Role::Owner->value, Role::Admin->value], true);
+    }
+
+    /** An owner may always add and edit branches. An admin may only once an owner has allowed it. */
+    public function canManageBranches(): bool
+    {
+        return $this->tenant_role === Role::Owner->value
+            || ($this->tenant_role === Role::Admin->value && $this->can_manage_branches);
     }
 
     /**

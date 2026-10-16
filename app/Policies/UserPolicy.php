@@ -48,4 +48,10 @@ class UserPolicy
     {
         return $actor->tenant_role === Role::Owner->value;
     }
+
+    /** So is letting an admin add and edit branches. */
+    public function grantBranchManagement(User $actor): bool
+    {
+        return $actor->tenant_role === Role::Owner->value;
+    }
 }

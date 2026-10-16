@@ -23,7 +23,7 @@ const model = defineModel();
         <label
             v-for="option in options"
             :key="String(option.value)"
-            class="flex min-h-12 cursor-pointer items-center justify-center rounded-lg px-4 py-2 text-center text-base font-medium leading-snug transition has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-teal-600 sm:px-6"
+            class="flex min-h-12 cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-center text-base font-medium leading-snug transition has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-teal-600 sm:px-6"
             :class="
                 model === option.value
                     ? 'bg-gradient-to-b from-teal-700 to-teal-800 font-semibold text-white shadow-md shadow-teal-900/20 ring-1 ring-inset ring-white/10'

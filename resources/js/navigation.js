@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/vue3';
  * Every way around the app, in one place, so the sidebar, the phone's bottom bar and the "New" menu always agree.
  *
  * Kept short on purpose. Recording is one "New" menu (as the client's FileMaker had), not five links, so the sidebar
- * holds six places to go plus two admin pages folded away. People see what they may use and nothing else.
+ * holds six places to go plus three admin pages folded away. People see what they may use and nothing else.
  */
 export function useNavigation() {
     const page = usePage();
@@ -46,6 +46,7 @@ export function useNavigation() {
     const adminItems = computed(() =>
         [
             { key: 'users', label: 'Users', href: route('users.index'), icon: 'users', active: is('users.*'), show: isAdmin.value },
+            { key: 'branches', label: 'Branches', href: route('branches.index'), icon: 'branch', active: is('branches.*'), show: isAdmin.value },
             { key: 'activity', label: 'Activity', href: route('activity.index'), icon: 'activity', active: is('activity.*'), show: isAdmin.value },
         ].filter((item) => item.show),
     );

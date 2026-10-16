@@ -29,6 +29,7 @@ class AuditLog extends Model
         'name' => 'name', 'phone' => 'phone', 'email' => 'email',
         'tenant_role' => 'access level', 'code' => 'code', 'region' => 'region',
         'is_head_office' => 'head office setting', 'status' => 'status', 'plan' => 'plan',
+        'can_manage_branches' => 'permission to add and edit branches',
     ];
 
     protected function casts(): array
