@@ -15,12 +15,12 @@ defineProps({
 <template>
     <Head title="Add a ledger" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-xl font-semibold leading-tight text-gray-800">Add a ledger</h1>
-            <p class="mt-1 text-sm text-gray-600">A ledger is an account for a person, bank or cost you record transactions against.</p>
-        </template>
-
+    <AuthenticatedLayout
+        title="Add a ledger"
+        subtitle="A ledger is an account for a person, bank or cost you record transactions against."
+        :back="{ href: route('ledgers.index'), label: 'Ledgers' }"
+        width="3xl"
+    >
         <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <LedgerForm
                 :kinds="kinds"

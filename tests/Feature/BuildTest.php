@@ -30,3 +30,38 @@ it('says so in words when the app\'s files cannot load, instead of showing a bla
         ->assertSee('id="load-problem"', false)
         ->assertSee('This page did not load.', false);
 });
+
+// The app may run on a local network with no internet. Anything fetched from another website (a font, a stylesheet
+// from a CDN) would then fail, and the screens would lose their look. Everything must come from the app itself.
+
+it('loads nothing from other websites, so every screen looks the same without the internet', function () {
+    $html = $this->get(route('login'))->assertOk()->getContent();
+
+    preg_match_all('/<(?:link|script|img|iframe)\b[^>]*\b(?:href|src)="([^"]+)"/i', $html, $found);
+
+    $own = parse_url(config('app.url'), PHP_URL_HOST);
+    $elsewhere = collect($found[1])
+        ->filter(fn (string $url) => ($host = parse_url($url, PHP_URL_HOST)) !== null && $host !== $own)
+        ->values()->all();
+
+    expect($elsewhere)->toBe([])
+        ->and($html)->not->toContain('fonts.bunny.net')->not->toContain('fonts.googleapis.com');
+});
+
+it('bundles the typeface with the app\'s own files, and the styles point nowhere else', function () {
+    $styles = glob(public_path('build/assets').'/app-*.css');
+
+    if ($styles === [] || $styles === false) {
+        $this->markTestSkipped('The styles are not built here. Run npm run build first.');
+    }
+
+    $css = file_get_contents($styles[0]);
+
+    // Every url(...) is a file beside the stylesheet or data written inline, never an address on the internet.
+    preg_match_all('/url\(\s*["\']?([^)"\']+)/i', $css, $urls);
+    $outside = collect($urls[1])->reject(fn (string $url) => str_starts_with($url, './') || str_starts_with($url, 'data:'))->values()->all();
+
+    expect($css)->toContain('Inter Variable')
+        ->and($outside)->toBe([])
+        ->and(glob(public_path('build/assets').'/inter-latin-*.woff2'))->not->toBe([]);
+});

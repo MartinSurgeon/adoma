@@ -1,4 +1,5 @@
 import defaultTheme from 'tailwindcss/defaultTheme';
+import containerQueries from '@tailwindcss/container-queries';
 import forms from '@tailwindcss/forms';
 
 /** @type {import('tailwindcss').Config} */
@@ -12,11 +13,14 @@ export default {
 
     theme: {
         extend: {
+            // Inter is bundled with the app (see app.js), so it looks the same with or without the internet.
             fontFamily: {
-                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+                sans: ['"Inter Variable"', 'Inter', ...defaultTheme.fontFamily.sans],
             },
         },
     },
 
-    plugins: [forms],
+    // Container queries (@3xl:, @6xl:) size grids by the room the page really has, which changes when the
+    // sidebar is folded, not by the width of the whole window.
+    plugins: [forms, containerQueries],
 };

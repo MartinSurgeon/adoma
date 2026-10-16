@@ -6,9 +6,9 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
+        {{-- Nothing here comes from another website. The typeface, styles and scripts are all built into the app's own
+             files, so the screens look and work the same on a local network with no internet. --}}
+        <meta name="theme-color" content="#134e4a">
 
         <!-- Scripts -->
         @routes

@@ -23,12 +23,12 @@ const submit = () => {
     <GuestLayout>
         <Head title="Choose a new password" />
 
-        <h1 class="text-lg font-semibold text-gray-900">Choose your own password</h1>
-        <p class="mb-4 mt-1 text-base text-gray-700">
+        <h1 class="text-2xl font-semibold text-gray-900">Choose your own password</h1>
+        <p class="mt-1 text-base text-gray-700">
             Your admin gave you a temporary password. Choose a new one to continue.
         </p>
 
-        <form @submit.prevent="submit" class="space-y-4">
+        <form @submit.prevent="submit" class="mt-6 space-y-5">
             <div>
                 <InputLabel for="current_password" value="Temporary password" />
                 <TextInput
@@ -70,19 +70,20 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
             </div>
 
-            <div class="flex items-center justify-between pt-2">
+            <PrimaryButton class="w-full" :disabled="form.processing">
+                {{ form.processing ? 'Saving…' : 'Save new password' }}
+            </PrimaryButton>
+
+            <p class="text-center">
                 <Link
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="text-base text-gray-700 underline hover:text-gray-900"
+                    class="inline-flex min-h-12 items-center rounded-md px-2 text-base font-medium text-gray-700 underline hover:text-gray-900"
                 >
-                    Sign out
+                    Log out instead
                 </Link>
-                <PrimaryButton class="min-h-12" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Save new password
-                </PrimaryButton>
-            </div>
+            </p>
         </form>
     </GuestLayout>
 </template>

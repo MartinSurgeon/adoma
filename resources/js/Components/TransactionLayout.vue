@@ -84,11 +84,8 @@ watch(
 <template>
     <Head :title="title" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">{{ title }}</h1>
-            <p v-if="$slots.subtitle" class="mt-1 text-base text-gray-700"><slot name="subtitle" /></p>
-        </template>
+    <AuthenticatedLayout :title="title" width="5xl">
+        <template v-if="$slots.subtitle" #subtitle><slot name="subtitle" /></template>
 
         <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
             <Banner v-if="needsOffice" variant="warning">
@@ -100,7 +97,8 @@ watch(
 
             <slot v-else-if="$slots.instead" name="instead" />
 
-            <form v-else class="grid gap-6 pb-28 lg:grid-cols-[1fr_20rem]" @submit.prevent="$emit('submit')">
+            <!-- minmax(0, …) lets a wide table scroll inside its own box instead of pushing the page sideways. -->
+            <form v-else class="grid grid-cols-1 gap-6 pb-28 lg:grid-cols-[minmax(0,1fr)_20rem]" @submit.prevent="$emit('submit')">
                 <div v-if="problems.length" ref="summary" class="lg:col-span-2">
                     <Banner variant="error">
                         <p class="font-semibold">
@@ -112,7 +110,7 @@ watch(
                     </Banner>
                 </div>
 
-                <div class="space-y-6">
+                <div class="min-w-0 space-y-6">
                     <slot />
                 </div>
 

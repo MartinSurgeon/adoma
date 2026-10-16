@@ -51,12 +51,11 @@ function confirm() {
 <template>
     <Head title="Incoming gold" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Incoming gold</h1>
-            <p class="mt-1 text-base text-gray-700">Gold other branches have sent to {{ office }}. It joins your stock only when you accept it.</p>
-        </template>
-
+    <AuthenticatedLayout
+        title="Incoming gold"
+        :subtitle="`Gold other branches have sent to ${office}. It joins your stock only when you accept it.`"
+        width="5xl"
+    >
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
             <Banner v-if="success" variant="success">{{ success }}</Banner>
             <Banner v-if="problem" variant="error">{{ problem }}</Banner>

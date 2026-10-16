@@ -13,6 +13,13 @@
  */
 
 @layer base {
+    /* Sizes the frame shares with the pages: the sidebar (16rem open, 5rem folded, set by sidebar.js) and the
+       phone's bottom bar (56px of links, a 1px line, and the phone's own home-bar space). */
+    :root {
+        --sidebar-width: 16rem;
+        --bottom-bar-height: calc(57px + env(safe-area-inset-bottom, 0px));
+    }
+
     html {
         font-size: 16px;
     }

@@ -14,11 +14,7 @@ defineProps({
 <template>
     <Head :title="`Edit ${user.name}`" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Edit {{ user.name }}</h1>
-        </template>
-
+    <AuthenticatedLayout :title="`Edit ${user.name}`" :back="{ href: route('users.index'), label: 'Users' }" width="3xl">
         <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <UserForm
                 :initial="user"

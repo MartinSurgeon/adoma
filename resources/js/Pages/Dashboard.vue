@@ -31,12 +31,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 <template>
     <Head title="Home" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Home</h1>
-            <p class="mt-1 text-base text-gray-700">{{ where }}</p>
-        </template>
-
+    <AuthenticatedLayout title="Home" :subtitle="where" width="7xl">
         <div class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
             <Banner v-if="waiting > 0" variant="warning">
                 <p class="font-semibold">{{ waiting === 1 ? 'Gold is waiting for you to accept' : `${waiting} transfers of gold are waiting for you to accept` }}</p>
@@ -46,8 +41,9 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             <!-- 1. What you have. The stock total opens the page, in the same card as every other figure. -->
             <section aria-labelledby="have-heading">
                 <h2 id="have-heading" class="text-lg font-semibold text-gray-900">What you have</h2>
-                <ul class="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
-                    <li class="col-span-2 lg:col-span-1">
+                <!-- Sized by the room the page has: the stock on its own row, then the four counts, or all five in one row. -->
+                <ul class="mt-3 grid grid-cols-2 gap-4 @3xl:grid-cols-4 @6xl:grid-cols-5">
+                    <li class="col-span-2 @3xl:col-span-4 @6xl:col-span-1">
                         <StatCard label="Gold in stock" :value="goldInStock" unit="g" :featured="true" />
                     </li>
                     <li v-for="stat in stats" :key="stat.label">

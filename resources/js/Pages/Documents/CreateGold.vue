@@ -7,6 +7,7 @@ import FormSection from '@/Components/FormSection.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import LedgerPicker from '@/Components/LedgerPicker.vue';
+import SegmentedControl from '@/Components/SegmentedControl.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TransactionLayout from '@/Components/TransactionLayout.vue';
 
@@ -167,73 +168,65 @@ const submit = () => form.post(route(`${props.type}s.store`));
             <!-- A sale takes the oldest gold first, unless the seller picks the exact purchases. -->
             <fieldset v-if="isSale && lots.length" class="mb-4">
                 <legend class="text-base font-medium text-gray-800">Which gold is being sold?</legend>
-                <div class="mt-1 inline-flex overflow-hidden rounded-md border border-gray-300">
-                    <label
-                        v-for="option in [{ value: false, label: 'The oldest gold first' }, { value: true, label: 'Choose the purchases' }]"
-                        :key="String(option.value)"
-                        class="flex min-h-12 cursor-pointer items-center px-6 text-base font-medium"
-                        :class="form.choose_lots === option.value ? 'bg-teal-700 text-white' : 'bg-white text-gray-800 hover:bg-gray-50'"
-                    >
-                        <input type="radio" v-model="form.choose_lots" :value="option.value" class="sr-only" />
-                        {{ option.label }}
-                    </label>
-                </div>
+                <SegmentedControl
+                    v-model="form.choose_lots"
+                    name="choose_lots"
+                    :options="[{ value: false, label: 'The oldest gold first' }, { value: true, label: 'Choose the purchases' }]"
+                />
             </fieldset>
 
             <!-- The exact purchases being sold, and how much of each. What is not chosen stays in stock. -->
             <div v-if="choosing">
                 <p class="text-base text-gray-700">Type how many grams to sell from each purchase, or press All. A purchase can be sold in part, and what you leave stays in stock.</p>
-                <div class="mt-3 overflow-x-auto rounded-md ring-1 ring-gray-200">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th scope="col">Purchase</th><th scope="col">Bought</th><th scope="col">Form</th>
-                                <th scope="col" class="num">Karat</th><th scope="col" class="num">In stock (g)</th>
-                                <th scope="col" class="num">Sell (g)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="row in form.lots" :key="row.id">
-                                <td>{{ lotInfo[row.id].number ?? '—' }}<span v-if="lotInfo[row.id].from" class="text-gray-700"> · {{ lotInfo[row.id].from }}</span></td>
-                                <td class="whitespace-nowrap">{{ lotInfo[row.id].date }}</td>
-                                <td>{{ lotInfo[row.id].form }}</td>
-                                <td class="num">{{ lotInfo[row.id].karat }}</td>
-                                <td class="num">{{ lotInfo[row.id].remaining_text }}</td>
-                                <td class="num">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <TextInput
-                                            :id="`lot-${row.id}`"
-                                            class="block w-32 text-right tabular-nums"
-                                            inputmode="decimal"
-                                            autocomplete="off"
-                                            placeholder="0.00"
-                                            :aria-label="`Grams to sell from ${lotInfo[row.id].number ?? 'this purchase'}`"
-                                            v-model="row.weight"
-                                        />
-                                        <button type="button" class="min-h-12 rounded-md px-3 text-base font-medium text-teal-800 underline" @click="takeAll(row)">All</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <!-- One row per purchase: what it is on the left, how much to sell on the right. In a narrow space the
+                     "Sell" box moves under the details instead of off the edge of the screen. -->
+                <ul class="mt-3 divide-y divide-gray-200 rounded-md ring-1 ring-gray-200">
+                    <li
+                        v-for="row in form.lots"
+                        :key="row.id"
+                        class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
+                        :class="{ 'bg-teal-50/60': row.weight !== '' && Number(row.weight) > 0 }"
+                    >
+                        <div class="min-w-0 flex-1 basis-60">
+                            <p class="text-base text-gray-900">
+                                <span class="whitespace-nowrap font-medium">{{ lotInfo[row.id].number ?? '—' }}</span>
+                                <span v-if="lotInfo[row.id].from" class="text-gray-700"> · {{ lotInfo[row.id].from }}</span>
+                            </p>
+                            <p class="text-sm text-gray-700">
+                                Bought {{ lotInfo[row.id].date }} · {{ lotInfo[row.id].form }} · {{ lotInfo[row.id].karat }} karat ·
+                                <span class="whitespace-nowrap font-medium text-gray-900">{{ lotInfo[row.id].remaining_text }} g in stock</span>
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label :for="`lot-${row.id}`" class="text-base font-medium text-gray-800">Sell</label>
+                            <TextInput
+                                :id="`lot-${row.id}`"
+                                class="block w-32 text-right tabular-nums"
+                                inputmode="decimal"
+                                autocomplete="off"
+                                placeholder="0.00"
+                                :aria-label="`Sell, grams from ${lotInfo[row.id].number ?? 'this purchase'}`"
+                                v-model="row.weight"
+                            />
+                            <span class="text-base text-gray-700" aria-hidden="true">g</span>
+                            <button
+                                type="button"
+                                class="min-h-12 rounded-md px-3 text-base font-medium text-teal-800 underline hover:bg-teal-50"
+                                :aria-label="`Sell all ${lotInfo[row.id].remaining_text} g of ${lotInfo[row.id].number ?? 'this purchase'}`"
+                                @click="takeAll(row)"
+                            >
+                                All
+                            </button>
+                        </div>
+                    </li>
+                </ul>
                 <p class="mt-2 text-base font-medium text-gray-900">Chosen: {{ pickedText }} g</p>
                 <InputError class="mt-2" :message="form.errors.lots || problem('lots')" />
             </div>
 
             <fieldset v-if="!choosing">
                 <legend class="text-base font-medium text-gray-800">Form</legend>
-                <div class="mt-1 inline-flex overflow-hidden rounded-md border border-gray-300">
-                    <label
-                        v-for="option in [{ value: 'raw', label: 'Raw' }, { value: 'refined', label: 'Refined' }]"
-                        :key="option.value"
-                        class="flex min-h-12 cursor-pointer items-center px-6 text-base font-medium"
-                        :class="form.form === option.value ? 'bg-teal-700 text-white' : 'bg-white text-gray-800 hover:bg-gray-50'"
-                    >
-                        <input type="radio" v-model="form.form" :value="option.value" class="sr-only" />
-                        {{ option.label }}
-                    </label>
-                </div>
+                <SegmentedControl v-model="form.form" name="form" :options="[{ value: 'raw', label: 'Raw' }, { value: 'refined', label: 'Refined' }]" />
                 <InputError class="mt-2" :message="form.errors.form" />
             </fieldset>
 

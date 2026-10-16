@@ -73,15 +73,9 @@ function accessLabel(user) {
 <template>
     <Head title="Users" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">Users</h1>
-                    <p class="mt-1 text-base text-gray-700">People who can sign in to your business.</p>
-                </div>
-                <ButtonLink :href="route('users.create')">Add user</ButtonLink>
-            </div>
+    <AuthenticatedLayout title="Users" subtitle="People who can sign in to your business." width="7xl">
+        <template #actions>
+            <ButtonLink :href="route('users.create')">Add user</ButtonLink>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">

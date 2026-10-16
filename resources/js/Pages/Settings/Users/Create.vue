@@ -13,14 +13,12 @@ defineProps({
 <template>
     <Head title="Add a user" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Add a user</h1>
-            <p class="mt-1 text-base text-gray-700">
-                You will get a temporary password to give them. They choose their own when they first sign in.
-            </p>
-        </template>
-
+    <AuthenticatedLayout
+        title="Add a user"
+        subtitle="You will get a temporary password to give them. They choose their own when they first sign in."
+        :back="{ href: route('users.index'), label: 'Users' }"
+        width="3xl"
+    >
         <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <UserForm
                 :initial="{ name: '', email: '', tenant_role: null, offices: [] }"

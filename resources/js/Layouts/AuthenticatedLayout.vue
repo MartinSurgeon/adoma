@@ -1,202 +1,299 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
+import MenuItem from '@/Components/MenuItem.vue';
+import NavIcon from '@/Components/NavIcon.vue';
 import OfficeSwitcher from '@/Components/OfficeSwitcher.vue';
+import PopoverMenu from '@/Components/PopoverMenu.vue';
+import SidebarNav from '@/Components/SidebarNav.vue';
+import { useNavigation } from '@/navigation';
+import { sidebarCollapsed } from '@/sidebar';
+
+/**
+ * The frame around every signed-in page.
+ *
+ * Wide screens: a sidebar that can fold to icons (the menu button at the top left, remembered per browser).
+ * Phones and tablets: a bar of five at the bottom, and the full menu in a drawer from the same menu button.
+ *
+ * The page's title sits right above its content and lines up with it: pass the same width the content uses.
+ */
+const props = defineProps({
+    title: { type: String, default: null },
+    subtitle: { type: String, default: null },
+    back: { type: Object, default: null }, // { href, label }: the page this one belongs to
+    width: { type: String, default: '7xl' }, // 3xl, 5xl, 6xl or 7xl: the same as the page's content
+});
 
 const page = usePage();
-const tenancy = computed(() => page.props.tenancy);
-const isAdmin = computed(() => Boolean(tenancy.value?.can_view_all));
-const canRecord = computed(() => Boolean(tenancy.value?.can_record));
-const canTransfer = computed(() => Boolean(tenancy.value?.can_transfer));
-const incoming = computed(() => Number(tenancy.value?.incoming_transfers ?? 0));
+const user = computed(() => page.props.auth.user);
+const { tenancy, newItems, mainItems, incoming } = useNavigation();
 
-// Icons are 24 x 24 outlines. Each page that exists gets one entry; more arrive with each phase.
-const icons = {
-    home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
-    purchase: 'M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3',
-    sale: 'M12 15V3m0 0L8 7m4-4l4 4M4 17v3h16v-3',
-    receipt: 'M12 4v10m0 0l-4-4m4 4l4-4M5 20h14',
-    payment: 'M12 20V10m0 0l-4 4m4-4l4 4M5 4h14',
-    transactions: 'M5 6h14M5 12h14M5 18h9',
-    transfer: 'M4 8h13m0 0l-3-3m3 3l-3 3M20 16H7m0 0l3-3m-3 3l3 3',
-    stock: 'M3 9l9-5 9 5v8l-9 5-9-5V9zM3 9l9 5 9-5M12 14v8',
-    inbox: 'M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5a3 3 0 006 0h5',
-    reports: 'M4 20V10m6 10V4m6 16v-7m4 7H2',
-    ledgers: 'M5 4h12a2 2 0 012 2v14H7a2 2 0 01-2-2V4zM9 8h6M9 12h6',
-    users: 'M16 20v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1M10 11a3 3 0 100-6 3 3 0 000 6zM20 20v-1a3 3 0 00-2-2.8M15 5.2a3 3 0 010 5.6',
-    activity: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-};
+const widths = { '3xl': 'max-w-3xl', '5xl': 'max-w-5xl', '6xl': 'max-w-6xl', '7xl': 'max-w-7xl' };
+const container = computed(() => widths[props.width] ?? widths['7xl']);
 
-// Predictable and shallow: one level, grouped the way the work is done.
-const sections = computed(() =>
-    [
-        {
-            title: null,
-            items: [{ label: 'Home', href: route('dashboard'), active: route().current('dashboard'), icon: 'home', show: true, mobile: true }],
-        },
-        {
-            title: 'New',
-            items: [
-                { label: 'Purchase', href: route('purchases.create'), active: route().current('purchases.*'), icon: 'purchase', show: canRecord.value, mobile: true },
-                { label: 'Sale', href: route('sales.create'), active: route().current('sales.*'), icon: 'sale', show: canRecord.value, mobile: true },
-                { label: 'Receipt', href: route('receipts.create'), active: route().current('receipts.*'), icon: 'receipt', show: canRecord.value, mobile: true },
-                { label: 'Payment', href: route('payments.create'), active: route().current('payments.*'), icon: 'payment', show: canRecord.value, mobile: true },
-                // Managers only. On a phone it moves into the account menu, so the bottom bar stays at five.
-                { label: 'Transfer', href: route('transfers.create'), active: route().current('transfers.*'), icon: 'transfer', show: canTransfer.value, mobile: false },
-            ],
-        },
-        {
-            title: 'Find',
-            items: [
-                { label: 'Transactions', href: route('documents.index'), active: route().current('documents.*'), icon: 'transactions', show: Boolean(tenancy.value), mobile: false },
-                { label: 'Ledgers', href: route('ledgers.index'), active: route().current('ledgers.*'), icon: 'ledgers', show: Boolean(tenancy.value), mobile: false },
-                { label: 'Stock', href: route('stock.index'), active: route().current('stock.*'), icon: 'stock', show: Boolean(tenancy.value), mobile: false },
-                { label: 'Reports', href: route('reports.index'), active: route().current('reports.*'), icon: 'reports', show: Boolean(tenancy.value), mobile: false },
-                // Gold other branches have sent, waiting for a manager here to accept it. The badge counts what is waiting.
-                { label: 'Incoming gold', href: route('transfers.incoming'), active: route().current('transfers.incoming'), icon: 'inbox', show: canTransfer.value, mobile: false, badge: incoming.value },
-            ],
-        },
-        {
-            title: 'Settings',
-            items: [
-                { label: 'Users', href: route('users.index'), active: route().current('users.*'), icon: 'users', show: isAdmin.value, mobile: false },
-                { label: 'Activity', href: route('activity.index'), active: route().current('activity.*'), icon: 'activity', show: isAdmin.value, mobile: false },
-            ],
-        },
-    ]
-        .map((section) => ({ ...section, items: section.items.filter((item) => item.show) }))
-        .filter((section) => section.items.length > 0),
-);
+// ---- Wide or narrow: the menu button folds the sidebar on a wide screen and opens the drawer on a narrow one.
+const wideQuery = window.matchMedia('(min-width: 1024px)');
+const isWide = ref(wideQuery.matches);
 
-// A phone's bottom bar holds five at most. The settings pages move into the account menu there.
-// People who cannot record anything get the Find pages in the bar instead, so it is never nearly empty.
-const phoneItems = computed(() =>
-    sections.value
-        .flatMap((section) => section.items)
-        .filter((item) => item.mobile || (!canRecord.value && ['Transactions', 'Ledgers'].includes(item.label)))
-        .slice(0, 5),
-);
-const phoneSettings = computed(() =>
-    sections.value
-        .flatMap((section) => section.items)
-        .filter((item) => !phoneItems.value.some((shown) => shown.label === item.label)),
-);
+const menuButton = ref(null);
+const drawerOpen = ref(false);
+const drawer = ref(null);
+
+const menuLabel = computed(() => {
+    if (!isWide.value) return 'Open the menu';
+    return sidebarCollapsed.value ? 'Show the menu names' : 'Fold the menu to icons';
+});
+
+function pressMenu() {
+    if (isWide.value) {
+        sidebarCollapsed.value = !sidebarCollapsed.value;
+    } else {
+        openDrawer();
+    }
+}
+
+async function openDrawer() {
+    drawerOpen.value = true;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onDrawerKey);
+    await nextTick();
+    drawer.value?.querySelector('[data-autofocus]')?.focus();
+}
+
+function closeDrawer(returnFocus = true) {
+    if (!drawerOpen.value) return;
+    drawerOpen.value = false;
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onDrawerKey);
+    if (returnFocus) menuButton.value?.focus();
+}
+
+// Inside the drawer, Tab goes round its own links and Escape closes it.
+function onDrawerKey(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDrawer();
+        return;
+    }
+
+    if (event.key !== 'Tab' || !drawer.value) return;
+
+    const focusable = [...drawer.value.querySelectorAll('a[href], button:not([disabled]), select, input, [tabindex]:not([tabindex="-1"])')];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (!drawer.value.contains(document.activeElement)) {
+        event.preventDefault();
+        first?.focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+    }
+}
+
+function onWideChange(event) {
+    isWide.value = event.matches;
+    if (event.matches) closeDrawer(false);
+}
+
+onMounted(() => wideQuery.addEventListener('change', onWideChange));
+onBeforeUnmount(() => {
+    wideQuery.removeEventListener('change', onWideChange);
+    closeDrawer(false);
+});
+
+// ---- The phone's bottom bar: five at most, the most used. "New" sits in the middle for anyone who records.
+const phoneItems = computed(() => {
+    const keys = newItems.value.length
+        ? ['home', 'transactions', 'new', 'stock', 'ledgers']
+        : ['home', 'transactions', 'stock', 'ledgers', 'reports'];
+
+    return keys
+        .map((key) => (key === 'new' ? { key: 'new' } : mainItems.value.find((item) => item.key === key)))
+        .filter(Boolean);
+});
+
+const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUpperCase());
 </script>
 
 <template>
     <div class="min-h-screen bg-gray-50">
         <a
             href="#main"
-            class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-teal-900 focus:shadow"
+            class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-md focus:bg-white focus:px-4 focus:py-3 focus:text-teal-900 focus:shadow"
         >
             Skip to content
         </a>
 
-        <!-- Sidebar, large screens -->
-        <aside class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-teal-900 print:hidden lg:flex" aria-label="Main">
-            <div class="flex h-16 items-center px-6">
-                <Link :href="route('dashboard')" class="inline-flex min-h-12 items-center text-xl font-semibold tracking-tight text-white">
-                    Adoma<span class="text-amber-400">.</span>
-                </Link>
-            </div>
+        <!-- Sidebar, wide screens. Folds to icons; the width is shared with the page through --sidebar-width. -->
+        <div
+            class="fixed inset-y-0 left-0 z-30 hidden flex-col bg-teal-900 print:hidden lg:flex motion-safe:transition-[width] motion-safe:duration-200"
+            style="width: var(--sidebar-width)"
+        >
+            <SidebarNav :collapsed="sidebarCollapsed" />
+        </div>
 
-            <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-                <div v-for="(section, index) in sections" :key="index">
-                    <p v-if="section.title" class="px-3 pb-2 text-sm font-semibold uppercase tracking-wider text-teal-100">
-                        {{ section.title }}
-                    </p>
-                    <ul class="space-y-1">
-                        <li v-for="item in section.items" :key="item.label">
-                            <Link
-                                :href="item.href"
-                                :aria-current="item.active ? 'page' : undefined"
-                                class="group flex min-h-12 items-center gap-3 rounded-md px-3 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                                :class="item.active ? 'bg-teal-800 text-white' : 'text-teal-50 hover:bg-teal-800/60 hover:text-white'"
-                            >
-                                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path :d="icons[item.icon]" />
-                                </svg>
-                                {{ item.label }}
-                                <span v-if="item.badge" class="ms-auto rounded-full bg-amber-400 px-2.5 py-0.5 text-sm font-semibold text-teal-950">
-                                    {{ item.badge }}<span class="sr-only"> waiting</span>
-                                </span>
-                                <span v-else-if="item.active" class="ms-auto h-2 w-2 rounded-full bg-amber-400" aria-hidden="true"></span>
-                            </Link>
-                        </li>
-                    </ul>
+        <!-- The menu drawer, phones and tablets. -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition-opacity duration-200 motion-reduce:transition-none"
+                enter-from-class="opacity-0"
+                leave-active-class="transition-opacity duration-150 motion-reduce:transition-none"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="drawerOpen" id="menu-drawer" class="fixed inset-0 z-50 print:hidden lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+                    <div class="absolute inset-0 bg-gray-900/50" aria-hidden="true" @click="closeDrawer()"></div>
+                    <div ref="drawer" class="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-teal-900 shadow-xl">
+                        <SidebarNav @navigate="closeDrawer(false)">
+                            <template #brand-end>
+                                <button
+                                    type="button"
+                                    data-autofocus
+                                    class="inline-flex h-12 w-12 items-center justify-center rounded-md text-teal-50 hover:bg-teal-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                                    aria-label="Close the menu"
+                                    @click="closeDrawer()"
+                                >
+                                    <NavIcon name="close" class="h-6 w-6" />
+                                </button>
+                            </template>
+                        </SidebarNav>
+                    </div>
                 </div>
-            </nav>
-        </aside>
+            </Transition>
+        </Teleport>
 
-        <div class="lg:pl-64 print:pl-0">
-            <!-- Top bar -->
-            <header class="sticky top-0 z-20 flex h-16 print:hidden items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
-                <Link :href="route('dashboard')" class="inline-flex min-h-12 items-center text-lg font-semibold text-teal-900 lg:hidden">
+        <div class="lg:ps-[var(--sidebar-width)] motion-safe:transition-[padding] motion-safe:duration-200 print:!ps-0">
+            <!-- Top bar: the menu button, then where you are working and who you are. -->
+            <header class="sticky top-0 z-20 flex h-16 items-center gap-1 border-b border-gray-200 bg-white px-2 print:hidden sm:gap-2 sm:px-4 lg:px-6">
+                <button
+                    ref="menuButton"
+                    type="button"
+                    class="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    :aria-label="menuLabel"
+                    :title="menuLabel"
+                    :aria-expanded="isWide ? !sidebarCollapsed : drawerOpen"
+                    :aria-controls="isWide ? undefined : 'menu-drawer'"
+                    @click="pressMenu"
+                >
+                    <NavIcon name="menu" class="h-6 w-6" />
+                    <!-- On a phone the incoming-gold count lives in the drawer, so the button carries a dot. -->
+                    <span v-if="incoming > 0" class="absolute right-2 top-2 h-3 w-3 rounded-full bg-amber-500 ring-2 ring-white lg:hidden" aria-hidden="true"></span>
+                </button>
+
+                <Link :href="route('dashboard')" class="inline-flex min-h-12 shrink-0 items-center rounded-md px-1 text-lg font-semibold text-teal-900 lg:hidden">
                     Adoma<span class="text-amber-700" aria-hidden="true">.</span>
                 </Link>
-                <span class="hidden text-base text-gray-700 lg:block">{{ tenancy?.tenant }}</span>
 
-                <div class="flex items-center gap-2 sm:gap-3">
+                <div class="ms-auto flex min-w-0 items-center gap-1 sm:gap-3">
                     <OfficeSwitcher />
 
-                    <Dropdown align="right" width="48">
-                        <template #trigger>
-                            <button
-                                type="button"
-                                class="inline-flex min-h-12 items-center gap-2 rounded-md px-3 text-base font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-                            >
-                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-900" aria-hidden="true">
-                                    {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
-                                </span>
-                                <span class="hidden max-w-[10rem] truncate sm:inline">{{ $page.props.auth.user.name }}</span>
-                                <svg class="h-4 w-4 text-gray-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                                <span class="sr-only">Account menu</span>
-                            </button>
+                    <PopoverMenu
+                        placement="bottom-end"
+                        menu-class="w-72 max-w-[calc(100vw-1rem)]"
+                        button-class="inline-flex min-h-12 min-w-12 items-center gap-2 rounded-md px-1.5 text-base font-medium text-gray-800 hover:bg-gray-100 sm:px-2"
+                    >
+                        <template #button="{ open }">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-base font-semibold text-teal-900" aria-hidden="true">{{ initial }}</span>
+                            <span class="hidden max-w-[10rem] truncate md:inline">{{ user.name }}</span>
+                            <span class="sr-only md:hidden">{{ user.name }}</span>
+                            <NavIcon name="chevronDown" class="hidden h-4 w-4 text-gray-700 transition-transform sm:block" :class="{ 'rotate-180': open }" />
                         </template>
 
-                        <template #content>
-                            <div class="border-b border-gray-100 px-4 py-2 text-base text-gray-700">{{ $page.props.auth.user.email }}</div>
-                            <div v-if="phoneSettings.length" class="lg:hidden">
-                                <DropdownLink v-for="item in phoneSettings" :key="item.label" :href="item.href">{{ item.label }}<template v-if="item.badge"> ({{ item.badge }} waiting)</template></DropdownLink>
-                            </div>
-                            <DropdownLink :href="route('profile.edit')">My profile</DropdownLink>
-                            <DropdownLink :href="route('logout')" method="post" as="button">Log out</DropdownLink>
-                        </template>
-                    </Dropdown>
+                        <div class="border-b border-gray-100 px-4 py-3">
+                            <p class="truncate text-base font-semibold text-gray-900">{{ user.name }}</p>
+                            <p class="truncate text-sm text-gray-700">{{ user.email }}</p>
+                            <p v-if="tenancy?.tenant" class="mt-1 truncate text-sm text-gray-700">{{ tenancy.tenant }}</p>
+                        </div>
+                        <MenuItem :href="route('profile.edit')" :current="route().current('profile.*')">
+                            <NavIcon name="profile" class="h-5 w-5 shrink-0 text-gray-700" />
+                            My profile
+                        </MenuItem>
+                        <MenuItem :href="route('logout')" method="post">
+                            <NavIcon name="logout" class="h-5 w-5 shrink-0 text-gray-700" />
+                            Log out
+                        </MenuItem>
+                    </PopoverMenu>
                 </div>
             </header>
 
-            <!-- Page heading -->
-            <div v-if="$slots.header" class="border-b border-gray-200 bg-white">
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </div>
+            <main id="main" tabindex="-1" class="@container pb-32 focus:outline-none lg:pb-12">
+                <!-- The page's title, lined up with its content. -->
+                <div v-if="title || $slots.header" class="mx-auto px-4 sm:px-6 lg:px-8" :class="[container, back ? 'pt-3' : 'pt-6']">
+                    <Link
+                        v-if="back"
+                        :href="back.href"
+                        class="-ms-2 mb-1 inline-flex min-h-12 items-center gap-2 rounded-md px-2 text-base font-medium text-teal-800 hover:bg-teal-50 hover:text-teal-900 print:hidden"
+                    >
+                        <NavIcon name="back" class="h-5 w-5" />
+                        {{ back.label }}
+                    </Link>
 
-            <main id="main" class="pb-24 lg:pb-10">
+                    <slot name="header">
+                        <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <h1 class="break-words text-2xl font-semibold leading-tight text-gray-900">{{ title }}</h1>
+                                    <slot name="status" />
+                                </div>
+                                <p v-if="subtitle || $slots.subtitle" class="mt-1 text-base text-gray-700">
+                                    <slot name="subtitle">{{ subtitle }}</slot>
+                                </p>
+                            </div>
+                            <div v-if="$slots.actions" class="flex flex-wrap items-center gap-3 print:hidden">
+                                <slot name="actions" />
+                            </div>
+                        </div>
+                    </slot>
+                </div>
+
                 <slot />
             </main>
         </div>
 
-        <!-- Bottom bar, phones and tablets -->
-        <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white print:hidden lg:hidden" aria-label="Main">
-            <ul class="grid" :style="{ gridTemplateColumns: `repeat(${phoneItems.length}, minmax(0, 1fr))` }">
-                <li v-for="item in phoneItems" :key="item.label">
+        <!-- Bottom bar, phones and tablets: five at most, "New" in the middle. -->
+        <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] print:hidden lg:hidden" aria-label="Quick links">
+            <!-- Each takes the room its word needs plus an equal share of the rest, so "Transactions" is never cut. -->
+            <ul class="flex">
+                <li v-for="item in phoneItems" :key="item.key" class="min-w-0 flex-auto">
+                    <PopoverMenu
+                        v-if="item.key === 'new'"
+                        block
+                        placement="top"
+                        menu-class="w-80 max-w-[calc(100vw-1rem)]"
+                        button-class="flex min-h-[56px] w-full flex-col items-center justify-center gap-1 px-1 text-sm font-semibold text-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
+                    >
+                        <template #button>
+                            <span class="flex h-8 w-12 items-center justify-center rounded-full bg-teal-700 text-white" aria-hidden="true">
+                                <NavIcon name="plus" class="h-6 w-6" stroke-width="2.2" />
+                            </span>
+                            New
+                        </template>
+
+                        <p class="px-4 pb-1 pt-2 text-sm font-semibold text-gray-700">Record a new…</p>
+                        <MenuItem v-for="choice in newItems" :key="choice.key" :href="choice.href" :current="choice.active">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-800">
+                                <NavIcon :name="choice.icon" class="h-5 w-5" />
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block font-medium">{{ choice.label }}</span>
+                                <span class="block text-sm text-gray-700">{{ choice.hint }}</span>
+                            </span>
+                        </MenuItem>
+                    </PopoverMenu>
+
                     <Link
+                        v-else
                         :href="item.href"
                         :aria-current="item.active ? 'page' : undefined"
-                        class="flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
+                        class="relative flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
                         :class="item.active ? 'text-teal-800' : 'text-gray-700'"
                     >
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" :stroke-width="item.active ? 2.2 : 1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path :d="icons[item.icon]" />
-                        </svg>
-                        {{ item.label }}
-                        <span v-if="item.active" class="h-1 w-6 rounded-full bg-amber-400" aria-hidden="true"></span>
+                        <NavIcon :name="item.icon" class="h-6 w-6" :stroke-width="item.active ? 2.2 : 1.8" />
+                        <span class="whitespace-nowrap">{{ item.label }}</span>
+                        <span v-if="item.active" class="absolute inset-x-0 top-0 mx-auto h-1 w-10 rounded-b-full bg-amber-400" aria-hidden="true"></span>
                     </Link>
                 </li>
             </ul>

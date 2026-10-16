@@ -77,15 +77,9 @@ const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm
 <template>
     <Head title="Ledgers" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">Ledgers</h1>
-                    <p class="mt-1 text-base text-gray-700">Customers, suppliers, banks, cash accounts and expenses.</p>
-                </div>
-                <ButtonLink v-if="canCreate" :href="route('ledgers.create')">Add ledger</ButtonLink>
-            </div>
+    <AuthenticatedLayout title="Ledgers" subtitle="Customers, suppliers, banks, cash accounts and expenses." width="7xl">
+        <template v-if="canCreate" #actions>
+            <ButtonLink :href="route('ledgers.create')">Add ledger</ButtonLink>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">

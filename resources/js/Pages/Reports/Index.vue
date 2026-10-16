@@ -17,11 +17,7 @@ const reports = [
 <template>
     <Head title="Reports" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Reports</h1>
-            <p class="mt-1 text-base text-gray-700">{{ covers }} · choose a report, then the period it should cover.</p>
-        </template>
+    <AuthenticatedLayout title="Reports" :subtitle="`${covers} · choose a report, then the period it should cover.`" width="5xl">
 
         <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
             <ul class="grid gap-4 sm:grid-cols-2">

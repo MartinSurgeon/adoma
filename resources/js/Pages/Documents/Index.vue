@@ -35,22 +35,14 @@ const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm
 <template>
     <Head title="Transactions" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">Transactions</h1>
-                    <p class="mt-1 text-base text-gray-700">Everything recorded, newest first.</p>
-                </div>
-                <div v-if="canRecord" class="flex flex-wrap items-center gap-3">
-                    <ButtonLink :href="route('purchases.create')">Record a purchase</ButtonLink>
-                    <ButtonLink :href="route('sales.create')" variant="secondary">Record a sale</ButtonLink>
-                    <MoreMenu label="More ways to record">
-                        <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
-                        <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
-                    </MoreMenu>
-                </div>
-            </div>
+    <AuthenticatedLayout title="Transactions" subtitle="Everything recorded, newest first." width="7xl">
+        <template v-if="canRecord" #actions>
+            <ButtonLink :href="route('purchases.create')">Record a purchase</ButtonLink>
+            <ButtonLink :href="route('sales.create')" variant="secondary">Record a sale</ButtonLink>
+            <MoreMenu label="More ways to record">
+                <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
+                <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
+            </MoreMenu>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">

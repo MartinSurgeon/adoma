@@ -9,12 +9,12 @@ defineProps({ ledger: Object });
 <template>
     <Head :title="`Edit ${ledger.name}`" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Edit {{ ledger.name }}</h1>
-            <p class="mt-1 text-base text-gray-700">{{ ledger.kind_label }} · {{ ledger.office }}</p>
-        </template>
-
+    <AuthenticatedLayout
+        :title="`Edit ${ledger.name}`"
+        :subtitle="`${ledger.kind_label} · ${ledger.office}`"
+        :back="{ href: route('ledgers.index'), label: 'Ledgers' }"
+        width="3xl"
+    >
         <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <LedgerForm
                 :initial="{ name: ledger.name, phone: ledger.phone ?? '' }"

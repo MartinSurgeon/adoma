@@ -34,15 +34,14 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 <template>
     <Head :title="`Statement: ${ledger.name}`" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">{{ ledger.name }}</h1>
-                    <p class="mt-1 text-base text-gray-700">{{ ledger.kind_label }} · showing {{ covers }}</p>
-                </div>
-                <SecondaryButton type="button" class="print:hidden" onclick="window.print()">Print statement</SecondaryButton>
-            </div>
+    <AuthenticatedLayout
+        :title="ledger.name"
+        :subtitle="`${ledger.kind_label} · showing ${covers}`"
+        :back="{ href: route('ledgers.index'), label: 'Ledgers' }"
+        width="5xl"
+    >
+        <template #actions>
+            <SecondaryButton type="button" onclick="window.print()">Print statement</SecondaryButton>
         </template>
 
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">

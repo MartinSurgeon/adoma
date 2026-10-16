@@ -1,3 +1,5 @@
+// The typeface ships inside the app's own files, not from a font website, so screens keep their look offline.
+import '@fontsource-variable/inter';
 import '../css/app.css';
 import './bootstrap';
 

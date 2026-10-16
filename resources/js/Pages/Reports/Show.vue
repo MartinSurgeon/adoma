@@ -64,19 +64,13 @@ const select = 'mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base 
 <template>
     <Head :title="title" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h1 class="text-2xl font-semibold leading-tight text-gray-900">{{ title }}</h1>
-                    <p class="mt-1 text-base text-gray-700">{{ covers }} · {{ period.label }}<span v-if="person"> · {{ person.name }}</span></p>
-                </div>
-                <MoreMenu v-if="tables.length" class="print:hidden" label="Print or download this report">
-                    <MenuItem @click="print">Print this report</MenuItem>
-                    <MenuItem :href="downloadHref" external>Download for a spreadsheet</MenuItem>
-                    <MenuItem :href="route('reports.index')">All reports</MenuItem>
-                </MoreMenu>
-            </div>
+    <AuthenticatedLayout :title="title" :back="{ href: route('reports.index'), label: 'Reports' }" width="6xl">
+        <template #subtitle>{{ covers }} · {{ period.label }}<span v-if="person"> · {{ person.name }}</span></template>
+        <template v-if="tables.length" #actions>
+            <MoreMenu label="Print or download this report">
+                <MenuItem @click="print">Print this report</MenuItem>
+                <MenuItem :href="downloadHref" external>Download for a spreadsheet</MenuItem>
+            </MoreMenu>
         </template>
 
         <div class="mx-auto max-w-6xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
@@ -123,7 +117,7 @@ const select = 'mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base 
                 Choose a shorter period to see the rest.
             </Banner>
 
-            <ul v-if="stats.length" class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <ul v-if="stats.length" class="grid grid-cols-1 gap-4 @md:grid-cols-2 @6xl:grid-cols-4">
                 <li v-for="stat in stats" :key="stat.label"><StatCard :label="stat.label" :value="stat.value" :unit="stat.unit ?? null" /></li>
             </ul>
 

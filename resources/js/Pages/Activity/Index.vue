@@ -30,14 +30,9 @@ function show(value) {
 <template>
     <Head title="Activity" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h1 class="text-2xl font-semibold leading-tight text-gray-900">Activity</h1>
-            <p class="mt-1 text-base text-gray-700">Who did what, newest first. Entries cannot be changed or removed.</p>
-        </template>
-
+    <AuthenticatedLayout title="Activity" subtitle="Who did what, newest first. Entries cannot be changed or removed." width="5xl">
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
-            <div class="rounded-lg bg-white p-4 shadow-sm">
+            <div class="card p-4">
                 <label for="type" class="block text-base font-medium text-gray-700">Show</label>
                 <select
                     id="type"

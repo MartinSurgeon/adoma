@@ -54,11 +54,13 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 <template>
     <Head :title="document.number" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex flex-wrap items-center gap-3">
-                <h1 class="text-2xl font-semibold leading-tight text-gray-900">{{ document.type_label }} {{ document.number }}</h1>
-                <span
+    <AuthenticatedLayout
+        :title="`${document.type_label} ${document.number}`"
+        :back="{ href: route('documents.index'), label: 'Transactions' }"
+        width="3xl"
+    >
+        <template #status>
+            <span
                     class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium"
                     :class="reversed ? 'bg-gray-200 text-gray-800' : document.reverses ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-900'"
                 >
@@ -72,8 +74,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                     </svg>
                     {{ reversed ? 'Reversed' : document.reverses ? 'Reversal' : 'Saved' }}
-                </span>
-            </div>
+            </span>
         </template>
 
         <div class="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
