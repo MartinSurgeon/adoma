@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import Banner from '@/Components/Banner.vue';
 import ConfirmHost from '@/Components/ConfirmHost.vue';
 import MenuItem from '@/Components/MenuItem.vue';
 import NavIcon from '@/Components/NavIcon.vue';
@@ -32,6 +33,9 @@ const { tenancy, newItems, mainItems, incoming } = useNavigation();
 
 const widths = { '3xl': 'max-w-3xl', '5xl': 'max-w-5xl', '6xl': 'max-w-6xl', '7xl': 'max-w-7xl' };
 const container = computed(() => widths[props.width] ?? widths['7xl']);
+
+// A one-time note from the server about what just happened, such as where switching branch took you.
+const notice = computed(() => page.props.flash?.notice);
 
 // ---- Wide or narrow: the menu button folds the sidebar on a wide screen and opens the drawer on a narrow one.
 const wideQuery = window.matchMedia('(min-width: 1024px)');
@@ -224,6 +228,10 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
             </header>
 
             <main id="main" tabindex="-1" class="@container pb-32 focus:outline-none lg:pb-12">
+                <div v-if="notice" class="mx-auto px-4 pt-6 sm:px-6 lg:px-8 print:hidden" :class="container">
+                    <Banner variant="info"><p>{{ notice }}</p></Banner>
+                </div>
+
                 <!-- The page's title, lined up with its content. -->
                 <div v-if="title || $slots.header" class="mx-auto px-4 sm:px-6 lg:px-8" :class="[container, back ? 'pt-3' : 'pt-6']">
                     <Link

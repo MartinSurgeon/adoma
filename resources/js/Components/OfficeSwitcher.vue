@@ -48,7 +48,9 @@ async function switchOffice(event) {
         return;
     }
 
-    router.post(route('branch.switch'), { branch: chosen }, { preserveScroll: true, preserveState: false });
+    // Back to the same page keeps your place on it. A page that cannot come along lands on its list, from the top.
+    const from = page.url;
+    router.post(route('branch.switch'), { branch: chosen }, { preserveScroll: (next) => next.url === from, preserveState: false });
 }
 </script>
 

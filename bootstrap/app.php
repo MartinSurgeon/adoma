@@ -29,5 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Errors are shown as a page of the app, in plain words, never as a bare error box. Right after a branch
+        // switch, a page that cannot come along sends you on to its list instead (see AfterBranchSwitch).
+        $exceptions->respond(\App\Http\ErrorPage::respond(...));
     })->create();
