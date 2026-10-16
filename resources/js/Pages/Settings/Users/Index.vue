@@ -95,7 +95,7 @@ function accessLabel(user) {
                 <SecondaryButton type="button" class="mt-3" @click="copyPassword">{{ copied ? 'Copied' : 'Copy password' }}</SecondaryButton>
             </Banner>
 
-            <div class="card overflow-x-auto">
+            <div class="table-card overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -108,15 +108,19 @@ function accessLabel(user) {
                     <tbody>
                         <tr v-for="user in users" :key="user.id">
                             <td>
-                                <div class="font-medium text-gray-900">{{ user.name }}</div>
-                                <div class="text-gray-700">{{ user.email }}</div>
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-base font-semibold text-teal-900" aria-hidden="true">
+                                        {{ user.name.trim().charAt(0).toUpperCase() }}
+                                    </span>
+                                    <span class="min-w-0">
+                                        <span class="block font-medium text-gray-900">{{ user.name }}</span>
+                                        <span class="block truncate text-sm text-gray-700">{{ user.email }}</span>
+                                    </span>
+                                </div>
                             </td>
-                            <td class="hidden sm:table-cell">{{ accessLabel(user) }}</td>
+                            <td class="hidden text-gray-800 sm:table-cell">{{ accessLabel(user) }}</td>
                             <td>
-                                <span
-                                    class="inline-flex rounded-full px-3 py-1 text-sm font-medium"
-                                    :class="user.is_active ? 'bg-green-100 text-green-900' : 'bg-gray-200 text-gray-900'"
-                                >
+                                <span class="badge" :class="user.is_active ? 'badge-green' : 'badge-gray'">
                                     {{ user.is_active ? 'Active' : 'Switched off' }}
                                 </span>
                                 <span v-if="user.must_change_password" class="mt-1 block text-sm text-amber-900">

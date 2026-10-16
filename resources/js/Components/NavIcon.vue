@@ -38,6 +38,7 @@ const paths = {
     person: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
     book: 'M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3V4zM5 17a3 3 0 013-3h11',
     summary: 'M4 5h16M4 10h16M4 15h10M4 20h7',
+    arrowRight: 'M5 12h14m-6-6l6 6-6 6',
 };
 </script>
 

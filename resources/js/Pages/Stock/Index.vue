@@ -3,12 +3,14 @@ import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Banner from '@/Components/Banner.vue';
 import ButtonLink from '@/Components/ButtonLink.vue';
+import NavIcon from '@/Components/NavIcon.vue';
 import Pagination from '@/Components/Pagination.vue';
 import StatCard from '@/Components/StatCard.vue';
 
 defineProps({
     where: String,
     showOffice: Boolean,
+    onlyBranch: { type: Object, default: null }, // { id, name } when opened from a branch card
     lots: Object,
     totals: Object,
     canSeeCost: Boolean,
@@ -28,6 +30,12 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
+            <!-- Opened from a branch card on the home page: one branch only, with the way back to all of them. -->
+            <p v-if="onlyBranch" class="flex flex-wrap items-center gap-3 text-base text-gray-700">
+                <span class="badge badge-teal"><NavIcon name="branch" class="h-4 w-4" />{{ onlyBranch.name }} only</span>
+                <Link :href="route('stock.index')" class="inline-flex min-h-12 items-center font-medium text-teal-800 underline">Show all branches</Link>
+            </p>
+
             <ul class="grid grid-cols-2 gap-4 @3xl:grid-cols-3">
                 <li class="col-span-2 @3xl:col-span-1"><StatCard label="Gold in stock" :value="totals.grams" unit="g" featured /></li>
                 <li :class="canSeeCost ? 'col-span-2 @md:col-span-1' : 'col-span-2 @3xl:col-span-1'"><StatCard label="Lots" :value="totals.lots" icon="stock" /></li>
@@ -43,7 +51,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 {{ onTheWay.sent.grams }} g you sent is on its way, waiting for the other branch to accept. It is not in your stock until it comes back.
             </Banner>
 
-            <div class="card overflow-x-auto">
+            <div class="table-card overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -61,13 +69,19 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         <tr v-for="lot in lots.data" :key="lot.id">
                             <td class="whitespace-nowrap">{{ day(lot.date) }}</td>
                             <td>
-                                <Link v-if="lot.origin_id" :href="route('documents.show', lot.origin_id)" class="inline-flex min-h-12 items-center font-medium text-teal-800 hover:underline">
+                                <Link v-if="lot.origin_id" :href="route('documents.show', lot.origin_id)" class="ref inline-flex min-h-12 items-center font-medium text-teal-800 underline-offset-4 hover:underline">
                                     {{ lot.origin_number }}
                                 </Link>
                                 <span class="block text-sm text-gray-700">{{ lot.origin_kind }} {{ lot.origin_name }}</span>
                             </td>
                             <td v-if="showOffice">{{ lot.office }}</td>
-                            <td>{{ lot.form }}</td>
+                            <td class="whitespace-nowrap">
+                                <!-- The same colours as the raw and refined bar on the branch cards. -->
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="h-2.5 w-2.5 rounded-sm" :class="lot.form === 'Raw' ? 'bg-teal-800' : 'bg-amber-400'" aria-hidden="true"></span>
+                                    {{ lot.form }}
+                                </span>
+                            </td>
                             <td class="num">{{ lot.karat }}</td>
                             <td class="num">{{ lot.weight }}</td>
                             <td class="num font-semibold">{{ lot.remaining }}</td>

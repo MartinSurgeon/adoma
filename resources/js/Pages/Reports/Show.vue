@@ -121,9 +121,13 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                 <li v-for="stat in stats" :key="stat.label"><StatCard :label="stat.label" :value="stat.value" :unit="stat.unit ?? null" /></li>
             </ul>
 
-            <section v-for="table in tables" :key="table.title" class="card overflow-x-auto">
-                <h2 class="px-4 pt-4 text-lg font-semibold text-gray-900">{{ table.title }}</h2>
+            <section v-for="table in tables" :key="table.title" class="table-card">
+                <div class="table-title">
+                    <h2 class="text-lg font-semibold text-gray-900">{{ table.title }}</h2>
+                    <p v-if="hasRows(table)" class="text-sm text-gray-700">{{ table.rows.filter((r) => !r.heading).length }} {{ table.rows.filter((r) => !r.heading).length === 1 ? 'row' : 'rows' }}</p>
+                </div>
 
+                <div class="overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -136,7 +140,17 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                                 <th scope="colgroup" :colspan="table.columns.length">{{ row.heading }}</th>
                             </tr>
                             <tr v-else>
-                                <td v-for="(cell, i) in row" :key="i" :class="{ num: table.columns[i]?.number, 'whitespace-nowrap': table.columns[i]?.number || ['Date', 'Number'].includes(table.columns[i]?.label) }">{{ cell }}</td>
+                                <td
+                                    v-for="(cell, i) in row"
+                                    :key="i"
+                                    :class="{
+                                        num: table.columns[i]?.number,
+                                        'whitespace-nowrap': table.columns[i]?.number || ['Date', 'Number'].includes(table.columns[i]?.label),
+                                        ref: table.columns[i]?.label === 'Number',
+                                    }"
+                                >
+                                    {{ cell }}
+                                </td>
                             </tr>
                         </template>
                         <tr v-if="!hasRows(table)">
@@ -149,6 +163,7 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                         </tr>
                     </tfoot>
                 </table>
+                </div>
             </section>
 
             <ul v-if="notes.length" class="space-y-1 text-base text-gray-700">

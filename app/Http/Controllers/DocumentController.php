@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Domain\Audit\AuditLog;
 use App\Domain\Documents\Document;
+use App\Domain\Documents\DocumentRows;
 use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\LedgerBalances;
 use App\Domain\Documents\PostingError;
@@ -14,6 +15,7 @@ use App\Domain\Support\AmountInWords;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\Branch;
 use App\Domain\Tenancy\Role;
+use App\Domain\Tenancy\TenantContext;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +40,7 @@ class DocumentController extends Controller
         ];
 
         $page = Document::query()
-            ->with(['ledger', 'branch'])
+            ->with(['ledger', 'branch', 'goldLine'])
             ->when($filters['type'], fn ($q, $v) => $q->where('type', $v))
             ->when($filters['status'], fn ($q, $v) => $q->where('status', $v))
             ->when($filters['from'], fn ($q, $v) => $q->where('date', '>=', $v))
@@ -51,29 +53,12 @@ class DocumentController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        // A transfer out is "waiting" until the receiving branch accepts it, which writes its other half.
-        $sent = $page->getCollection()
-            ->filter(fn (Document $d) => $d->type === DocumentType::Transfer && $d->status === Document::POSTED && ! $d->isReversal())
-            ->pluck('id')->all();
-        $accepted = $sent === [] ? [] : Document::withoutGlobalScopes()->whereIn('paired_id', $sent)->pluck('paired_id')->all();
-        $waitingIds = array_values(array_diff($sent, $accepted));
-
-        $documents = $page
-            ->through(fn (Document $d) => [
-                'id' => $d->id,
-                'waiting' => in_array($d->id, $waitingIds, true),
-                'number' => $d->number,
-                'type_label' => $d->type->label(),
-                'date' => $d->date->toDateString(),
-                'party' => $d->ledger?->name,
-                'office' => $d->branch?->name,
-                'total' => Money::format(Money::cents($d->total)),
-                'status' => $d->status,
-                'is_reversal' => $d->isReversal(),
-            ]);
+        // The same rows as the home page's latest transactions: weight, the other branch on a transfer, waiting or not.
+        $page->setCollection(collect(DocumentRows::from($page->getCollection())));
 
         return Inertia::render('Documents/Index', [
-            'documents' => $documents,
+            'documents' => $page,
+            'showOffice' => app(TenantContext::class)->viewingAllBranches(),
             'filters' => $filters,
             'types' => collect(DocumentType::cases())->filter(fn ($t) => $t->isListed())
                 ->map(fn ($t) => ['value' => $t->value, 'label' => $t->pluralLabel()])->values(),

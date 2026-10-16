@@ -553,9 +553,9 @@ it('tells an owner how much gold each branch holds, and nobody else', function (
     $this->flushSession();   // the owner's "all branches" choice belongs to the owner's own session
     $manager = trProps($this->actingAs($this->w->kumasiManager)->get(route('dashboard'))->assertOk());
 
-    expect(collect($owner['stockByOffice'])->pluck('grams', 'name')->all())->toBe(['Central' => '1,000.00', 'Kumasi' => '1,094.25'])
+    expect(collect($owner['branches'])->pluck('grams', 'name')->all())->toBe(['Central' => '1,000.00', 'Kumasi' => '1,094.25'])
         ->and($owner['goldInStock'])->toBe('2,094.25')
-        ->and($manager['stockByOffice'])->toBeNull()
+        ->and($manager['branches'])->toBeNull()
         ->and($manager['canTransfer'])->toBeTrue()
         ->and(trProps($this->actingAs($this->w->kumasiClerk)->get(route('dashboard')))['canTransfer'])->toBeFalse();
 });

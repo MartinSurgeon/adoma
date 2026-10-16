@@ -221,9 +221,11 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             </section>
 
             <!-- Which purchases a sale's gold came from. -->
-            <section v-if="lots_sold?.length" aria-labelledby="lots-heading" class="card overflow-x-auto p-6">
-                <h2 id="lots-heading" class="text-lg font-semibold text-gray-900">Gold taken from</h2>
-                <table class="data-table mt-2">
+            <section v-if="lots_sold?.length" aria-labelledby="lots-heading" class="table-card overflow-x-auto">
+                <div class="table-title">
+                    <h2 id="lots-heading" class="text-lg font-semibold text-gray-900">Gold taken from</h2>
+                </div>
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th scope="col">Purchase</th><th scope="col">Bought</th><th scope="col">Form</th>
@@ -234,7 +236,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     <tbody>
                         <tr v-for="(lot, i) in lots_sold" :key="i">
                             <td>
-                                <Link v-if="lot.origin_id" :href="route('documents.show', lot.origin_id)" class="font-medium text-teal-800 underline">{{ lot.origin_number }}</Link>
+                                <Link v-if="lot.origin_id" :href="route('documents.show', lot.origin_id)" class="ref inline-flex min-h-12 items-center font-medium text-teal-800 underline underline-offset-4">{{ lot.origin_number }}</Link>
                                 <span v-else>—</span>
                                 <span v-if="lot.origin_name" class="text-gray-700"> · {{ lot.origin_name }}</span>
                             </td>
@@ -249,9 +251,9 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             </section>
 
             <!-- Details are one click away, not in the way. -->
-            <details class="card px-6 py-2">
-                <summary class="flex min-h-12 cursor-pointer items-center text-base font-medium text-gray-900">Accounting entries</summary>
-                <div class="overflow-x-auto pb-4">
+            <details class="table-card">
+                <summary class="flex min-h-12 cursor-pointer items-center px-6 text-base font-medium text-gray-900">Accounting entries</summary>
+                <div class="overflow-x-auto border-t border-gray-200">
                     <table class="data-table">
                         <thead>
                             <tr><th scope="col">Ledger</th><th scope="col" class="num">Debit</th><th scope="col" class="num">Credit</th></tr>

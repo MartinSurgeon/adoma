@@ -145,39 +145,99 @@
         @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-teal-50 to-teal-100/70 text-teal-800 ring-1 ring-inset ring-teal-200/60;
     }
 
-    /* Every table in the app. Header in plain words, rows with room to breathe, numbers on the right. */
+    /* A small rounded label: a status ("Reversed", "Waiting") or a fact ("Head office"). Words, never colour alone. */
+    .badge {
+        @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-sm font-medium ring-1 ring-inset;
+    }
+
+    .badge-gray {
+        @apply bg-gray-100 text-gray-800 ring-gray-300/70;
+    }
+
+    .badge-amber {
+        @apply bg-amber-50 text-amber-900 ring-amber-600/25;
+    }
+
+    .badge-green {
+        @apply bg-green-50 text-green-900 ring-green-600/25;
+    }
+
+    .badge-teal {
+        @apply bg-teal-50 text-teal-900 ring-teal-600/25;
+    }
+
+    /*
+     * Tables. Every table in the app is a .data-table, usually inside a .table-card:
+     *  - a quiet header row in plain words, a hairline under it, and generous room at both ends of each row,
+     *  - rows divided by hairlines that light up under the pointer,
+     *  - numbers on the right in figures that line up, and money never broken over two lines,
+     *  - totals ruled like a ledger: a single line above, and a double line below.
+     */
+    .table-card {
+        @apply card overflow-hidden;
+    }
+
+    /* A table's own heading, inside its card: the title on the left and any action on the right. */
+    .table-title {
+        @apply flex flex-wrap items-center justify-between gap-3 px-6 pb-4 pt-5;
+    }
+
     .data-table {
         @apply min-w-full text-base;
     }
 
-    .data-table thead {
-        @apply bg-gray-50/80 text-left text-sm font-semibold text-gray-700;
+    .data-table thead th {
+        @apply whitespace-nowrap border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-700;
+    }
+
+    .data-table td {
+        @apply px-4 py-3.5 align-middle text-gray-900;
+    }
+
+    .data-table tr > :first-child {
+        @apply ps-6;
+    }
+
+    .data-table tr > :last-child {
+        @apply pe-6;
     }
 
     .data-table tbody tr {
-        @apply transition-colors hover:bg-teal-50/40;
+        @apply border-t border-gray-100 transition-colors first:border-t-0 hover:bg-teal-50/40;
     }
 
-    .data-table th,
-    .data-table td {
-        @apply px-4 py-4 align-middle;
-    }
-
-    .data-table tbody tr,
-    .data-table tfoot tr {
-        @apply border-t border-gray-100;
-    }
-
-    .data-table tfoot {
-        @apply border-t-2 border-gray-300 bg-gray-50 font-semibold text-gray-900;
+    .data-table tfoot td,
+    .data-table tfoot th {
+        @apply bg-gray-50 py-3.5 font-semibold text-gray-900;
+        border-top: 1px solid theme('colors.gray.300');
+        border-bottom: 3px double theme('colors.gray.400');
     }
 
     .data-table .num {
+        @apply whitespace-nowrap text-right tabular-nums;
+    }
+
+    .data-table thead th.num {
         @apply text-right;
+    }
+
+    /* A document number: in even-width letters, so a column of them lines up and reads like a reference. */
+    .ref {
+        @apply font-mono text-sm tracking-tight;
     }
 
     /* A heading row that groups the rows below it, such as "Customers". */
     .data-table .group-row th {
-        @apply bg-gray-50 py-2 text-left text-sm font-semibold text-teal-900;
+        @apply border-t border-gray-200 bg-teal-50/60 py-2.5 text-left text-sm font-semibold text-teal-900;
+    }
+
+    /* A row that can be opened: the whole row is the target, the link inside it is for the keyboard. */
+    .data-table tr.row-link {
+        @apply cursor-pointer;
+    }
+
+    /* A list whose rows each hold a 48px link: the link sets the height, so the cells need little room of their own. */
+    .data-table-compact td {
+        @apply py-1;
     }
 }

@@ -61,7 +61,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 This period has more than {{ limit }} entries. Only the first {{ limit }} are shown. Choose a shorter period to see the rest.
             </Banner>
 
-            <div class="card overflow-x-auto">
+            <div class="table-card overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -73,14 +73,14 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="bg-gray-50">
-                            <td colspan="4">Balance brought forward</td>
-                            <td class="num">{{ opening }}</td>
+                        <tr class="group-row">
+                            <th scope="row" colspan="4">Balance brought forward</th>
+                            <td class="num bg-teal-50/60 font-semibold text-teal-900">{{ opening }}</td>
                         </tr>
                         <tr v-for="row in rows" :key="row.id">
-                            <td class="whitespace-nowrap">{{ day(row.date) }}</td>
+                            <td class="whitespace-nowrap text-gray-700">{{ day(row.date) }}</td>
                             <td>
-                                <Link :href="route('documents.show', row.document_id)" class="inline-flex min-h-12 items-center font-medium text-teal-800 hover:underline">{{ row.number }}</Link>
+                                <Link :href="route('documents.show', row.document_id)" class="ref inline-flex min-h-12 items-center font-medium text-teal-800 underline-offset-4 hover:underline">{{ row.number }}</Link>
                                 <span class="ms-2 text-sm text-gray-700">{{ row.type_label }}</span>
                                 <span v-if="row.note" class="block text-sm text-gray-700">{{ row.note }}</span>
                             </td>
@@ -104,13 +104,12 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
             </div>
 
             <!-- The amount owed comes last, and is the largest thing on the page. -->
-            <div class="card p-6">
-                <p class="text-base text-gray-700">Now</p>
-                <p class="mt-1 text-2xl font-semibold text-gray-900">{{ closing_words }}</p>
-                <p class="mt-2 text-sm text-gray-700">Dr means debit, Cr means credit. A customer who owes you has a debit balance.</p>
+            <div class="card-feature p-6">
+                <div class="auth-dots pointer-events-none absolute inset-0" aria-hidden="true"></div>
+                <p class="relative text-sm font-medium uppercase tracking-wide text-amber-200">Now</p>
+                <p class="relative mt-1 text-2xl font-semibold text-white">{{ closing_words }}</p>
+                <p class="relative mt-2 text-sm text-teal-100">Dr means debit, Cr means credit. A customer who owes you has a debit balance.</p>
             </div>
-
-            <Link :href="route('ledgers.index')" class="inline-flex min-h-12 items-center text-base font-medium text-teal-800 hover:underline print:hidden">Back to ledgers</Link>
         </div>
     </AuthenticatedLayout>
 </template>

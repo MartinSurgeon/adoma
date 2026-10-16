@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Documents\Document;
+use App\Domain\Documents\DocumentRows;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
+use App\Domain\Stock\BranchStock;
 use App\Domain\Stock\StockLot;
 use App\Domain\Support\Money;
 use App\Domain\Tenancy\TenantContext;
+use App\Domain\Transfers\PendingTransfers;
+use App\Domain\Transfers\TransitList;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +23,9 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
+    /** How many of the latest transactions the home page lists. The rest are one click away, on Transactions. */
+    private const LATEST = 8;
+
     private const STATS = [
         ['kind' => LedgerKind::Customer, 'label' => 'Customers'],
         ['kind' => LedgerKind::Supplier, 'label' => 'Suppliers'],
@@ -37,26 +44,14 @@ class DashboardController extends Controller
             ->groupBy('kind')
             ->pluck('total', 'kind');
 
-        // The latest transactions the signed-in person may read, newest first, for the branch in context.
+        // The latest transactions the signed-in person may read, in the order they were recorded, for the branch in context.
         $recent = $user->can('viewAny', Document::class)
-            ? Document::query()
-                ->with(['ledger', 'branch'])
-                ->orderByDesc('date')->orderByDesc('id')
-                ->limit(5)
-                ->get()
-                ->map(fn (Document $d) => [
-                    'id' => $d->id,
-                    'number' => $d->number,
-                    'type' => $d->type->value,
-                    'type_label' => $d->type->label(),
-                    'date' => $d->date->toDateString(),
-                    'party' => $d->ledger?->name,
-                    'office' => $d->branch?->name,
-                    'total' => Money::format(Money::cents($d->total)),
-                    'status' => $d->status,
-                    'is_reversal' => $d->isReversal(),
-                ])->values()
-            : collect();
+            ? DocumentRows::from(Document::query()
+                ->with(['ledger', 'branch', 'goldLine'])
+                ->orderByDesc('id')
+                ->limit(self::LATEST)
+                ->get())
+            : [];
 
         // Gold in stock, for the branches in context: the number an owner looks for first.
         $goldInStock = StockLot::query()->where('remaining_g', '>', 0)->sum('remaining_g');
@@ -69,20 +64,31 @@ class DashboardController extends Controller
             ->map(fn (string $label, string $form) => ['label' => $label, 'grams' => Money::format(Money::fromDb($byForm[$form] ?? 0))])
             ->values();
 
-        // For an owner or admin looking at every branch: how much gold each one holds.
-        $stockByOffice = null;
+        // An owner or admin looking at every branch: each branch's gold, and everything on the road between them.
+        // Anyone working in one branch: the gold on its way to that branch, and what it sent that is not yet accepted.
+        $branches = null;
+        $transit = [];
 
         if ($context->viewingAllBranches() && $user->isTenantAdmin()) {
-            $held = StockLot::query()->where('remaining_g', '>', 0)
-                ->selectRaw('branch_id, SUM(remaining_g) as grams')->groupBy('branch_id')->pluck('grams', 'branch_id');
+            $waiting = PendingTransfers::inBusiness($user->tenant_id)->orderByDesc('documents.id')->get();
+            $branches = BranchStock::overview($user->accessibleBranches(), $waiting);
+            $transit = TransitList::rows($waiting, null, fn (Document $d) => route('documents.show', $d->id));
+        } elseif ($context->branch() !== null && $user->can('viewAny', Document::class)) {
+            $office = $context->branch();
+            $waiting = PendingTransfers::addressedTo($office)->get()
+                ->merge(PendingTransfers::sentBy($office)->get())
+                ->sortByDesc('id')->values();
+            $canReceive = $user->can('receiveTransfer', Document::class);
 
-            $stockByOffice = $user->accessibleBranches()
-                ->map(fn ($branch) => ['name' => $branch->name, 'grams' => Money::format(Money::fromDb($held[$branch->id] ?? 0))])
-                ->values();
+            // Sent from here: open the transfer. Coming here: the page where a manager accepts it.
+            $transit = TransitList::rows($waiting, $office, fn (Document $d, ?string $way) => $way === 'out'
+                ? route('documents.show', $d->id)
+                : ($canReceive ? route('transfers.incoming') : null));
         }
 
         return Inertia::render('Dashboard', [
-            'stockByOffice' => $stockByOffice,
+            'branches' => $branches,
+            'transit' => $transit,
             'canTransfer' => $user->can('create', [Document::class, 'transfer']),
             'where' => $context->viewingAllBranches() ? 'All branches' : $context->branch()?->name,
             'goldInStock' => Money::format(Money::fromDb($goldInStock)),

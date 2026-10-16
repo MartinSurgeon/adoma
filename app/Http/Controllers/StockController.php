@@ -26,7 +26,13 @@ class StockController extends Controller
         $user = $request->user();
         $context = app(TenantContext::class);
 
-        $query = StockLot::query()->where('remaining_g', '>', 0);
+        // An owner looking at every branch can narrow the list to one: the branch cards on the home page link here.
+        // Only a branch this person may open is used; anything else is ignored.
+        $only = $context->viewingAllBranches() && $request->integer('branch') > 0
+            ? $user->accessibleBranches()->firstWhere('id', $request->integer('branch'))
+            : null;
+
+        $query = StockLot::query()->where('remaining_g', '>', 0)->when($only, fn ($q) => $q->where('branch_id', $only->id));
 
         $totals = (clone $query)->selectRaw('SUM(remaining_g) as grams, SUM(remaining_cost) as cost, COUNT(*) as lots')->first();
 
@@ -34,6 +40,7 @@ class StockController extends Controller
             ->with(['branch', 'goldLine.document.ledger', 'document.ledger'])
             ->orderBy('date')->orderBy('id')
             ->paginate(25)
+            ->withQueryString()
             ->through(function (StockLot $lot) {
                 // A lot comes from a purchase, or from another branch's transfer.
                 $origin = $lot->document ?? $lot->goldLine?->document;
@@ -67,8 +74,9 @@ class StockController extends Controller
                 'sent' => $sent && $sent['count'] ? ['count' => $sent['count'], 'grams' => Money::format($sent['weightH'])] : null,
                 'incoming' => $incoming && $incoming['count'] ? ['count' => $incoming['count'], 'grams' => Money::format($incoming['weightH'])] : null,
             ],
-            'where' => $context->viewingAllBranches() ? 'All branches' : $context->branch()?->name,
-            'showOffice' => $context->viewingAllBranches(),
+            'where' => $only?->name ?? ($context->viewingAllBranches() ? 'All branches' : $context->branch()?->name),
+            'showOffice' => $context->viewingAllBranches() && $only === null,
+            'onlyBranch' => $only ? ['id' => $only->id, 'name' => $only->name] : null,
             'lots' => $lots->through(function (array $row) use ($canSeeCost) {
                 return $canSeeCost ? $row : array_merge($row, ['cost' => null]);
             }),

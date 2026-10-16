@@ -113,17 +113,30 @@ function dashPost(object $t, Branch $branch, string $partyName, int $cents, stri
     }
 }
 
-it('lists the five latest transactions, newest first, from the branch in view only', function () {
-    foreach (range(1, 7) as $i) {
+it('lists the eight latest transactions, last recorded first, from the branch in view only', function () {
+    foreach (range(1, 9) as $i) {
         dashPost($this, $this->w->kumasi, "Customer $i", $i * 100, "2026-03-0$i");
     }
     dashPost($this, $this->w->central, 'Central Only', 999, '2026-03-09');
 
     $recent = collect(dashProps($this->actingAs($this->w->kumasiClerk)->get(route('dashboard')))['recent']);
 
-    expect($recent->pluck('party')->all())->toBe(['Customer 7', 'Customer 6', 'Customer 5', 'Customer 4', 'Customer 3'])
+    expect($recent->pluck('party')->all())->toBe(['Customer 9', 'Customer 8', 'Customer 7', 'Customer 6', 'Customer 5', 'Customer 4', 'Customer 3', 'Customer 2'])
         ->and($recent->first()['office'])->toBe('Kumasi')
-        ->and($recent->first()['type_label'])->toBe('Receipt');
+        ->and($recent->first()['type_label'])->toBe('Receipt')
+        // A receipt moves money, not gold, and the row says when it was recorded.
+        ->and($recent->first()['weight'])->toBeNull()
+        ->and($recent->first()['recorded_at'])->not->toBeNull();
+});
+
+it('puts the most recently recorded first, even when it is dated earlier', function () {
+    dashPost($this, $this->w->kumasi, 'Dated today', 100, '2026-03-09');
+    dashPost($this, $this->w->kumasi, 'Backdated', 200, '2026-03-01');
+
+    $recent = collect(dashProps($this->actingAs($this->w->kumasiClerk)->get(route('dashboard')))['recent']);
+
+    expect($recent->pluck('party')->all())->toBe(['Backdated', 'Dated today'])
+        ->and($recent->first()['date'])->toBe('2026-03-01');
 });
 
 it('shows the add button only to people who can add a ledger', function (string $who, bool $expected) {

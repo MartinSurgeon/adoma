@@ -120,7 +120,7 @@ const select = 'mt-1 block w-full rounded-lg border-gray-300 text-base shadow-sm
                 </div>
             </div>
 
-            <div class="card overflow-x-auto">
+            <div class="table-card overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -135,13 +135,13 @@ const select = 'mt-1 block w-full rounded-lg border-gray-300 text-base shadow-sm
                         <tr class="group-row">
                             <th scope="colgroup" colspan="4">{{ section.label }}s</th>
                         </tr>
-                        <tr v-for="ledger in section.rows" :key="ledger.id" class="transition-colors hover:bg-gray-50/75" :class="{ 'bg-gray-50/60': !ledger.is_active }">
+                        <tr v-for="ledger in section.rows" :key="ledger.id" :class="{ 'bg-gray-50/60': !ledger.is_active }">
                             <td>
                                 <div class="flex flex-wrap items-center gap-2">
                                     <Link :href="route('ledgers.statement', ledger.id)" class="inline-flex min-h-12 items-center font-medium text-teal-800 hover:underline">
                                         {{ ledger.name }}
                                     </Link>
-                                    <span v-if="!ledger.is_active" class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-sm font-medium text-gray-800">
+                                    <span v-if="!ledger.is_active" class="badge badge-gray">
                                         <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
                                         </svg>
@@ -151,7 +151,7 @@ const select = 'mt-1 block w-full rounded-lg border-gray-300 text-base shadow-sm
                                 <span v-if="ledger.phone" class="block text-sm text-gray-700">{{ ledger.phone }}</span>
                             </td>
                             <td class="hidden sm:table-cell text-gray-700">{{ ledger.office }}</td>
-                            <td class="num font-semibold whitespace-nowrap text-gray-900">{{ ledger.balance }}</td>
+                            <td class="num font-semibold text-gray-900">{{ ledger.balance }}</td>
                             <td class="text-right">
                                 <MoreMenu v-if="ledger.can_edit || ledger.can_toggle" :label="`More actions for ${ledger.name}`">
                                     <MenuItem :href="route('ledgers.statement', ledger.id)">Statement</MenuItem>

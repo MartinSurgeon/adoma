@@ -33,6 +33,12 @@ final class PendingTransfers
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('documents as accepted')->whereColumn('accepted.paired_id', 'documents.id'));
     }
 
+    /** Every transfer in the business still waiting, for an owner or admin looking at all branches. */
+    public static function inBusiness(int $tenantId): Builder
+    {
+        return self::waiting($tenantId);
+    }
+
     /** Waiting for this branch to accept or decline. */
     public static function addressedTo(Branch $office): Builder
     {
