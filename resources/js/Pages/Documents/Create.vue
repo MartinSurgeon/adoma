@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import Banner from '@/Components/Banner.vue';
@@ -9,6 +9,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import LedgerPicker from '@/Components/LedgerPicker.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TransactionLayout from '@/Components/TransactionLayout.vue';
+import { longDay } from '@/format';
 
 const props = defineProps({
     type: String, // receipt or payment
@@ -73,6 +74,20 @@ const typed = computed(() => {
 const amountText = computed(() => (typed.value === null ? null : 'GH₵ ' + typed.value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })));
 const cashName = computed(() => props.cashLedgers.find((l) => l.id === form.cash_ledger_id)?.name);
 const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down'));
+
+// ---- The check before saving: who, which account, when, and the amount, last and largest.
+const party = ref(props.prefill?.ledger ?? null);
+
+const review = computed(() => ({
+    title: props.type === 'receipt' ? 'Save this receipt?' : 'Save this payment?',
+    details: [
+        { label: props.words.party, value: party.value?.name ?? '—' },
+        { label: props.words.cash, value: cashName.value ?? '—' },
+        { label: 'Date', value: longDay(form.date) },
+        ...(form.note ? [{ label: 'Note', value: form.note }] : []),
+        { label: 'Amount', value: amountText.value ?? '—', strong: true },
+    ],
+}));
 </script>
 
 <template>
@@ -84,6 +99,7 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
         :noun="type"
         :dirty="form.isDirty"
         :errors="form.errors"
+        :review="review"
         @submit="submit"
     >
         <template #subtitle>{{ office }}</template>
@@ -108,6 +124,7 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
                         :error="form.errors.ledger_id"
                         :initial="prefill?.ledger"
                         help="Customers, suppliers, banks and other accounts in your list."
+                        @chosen="party = $event"
                     />
                 </div>
                 <div>

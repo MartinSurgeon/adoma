@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TransactionLayout from '@/Components/TransactionLayout.vue';
+import { cedis, grams, longDay } from '@/format';
 
 const props = defineProps({
     needsOffice: Boolean,
@@ -70,6 +71,24 @@ const blocked = computed(() => quote.value !== null && quote.value.ok === false)
 const problem = (field) => (quote.value && !quote.value.ok && quote.value.field === field ? quote.value.message : '');
 const stockProblem = computed(() => quote.value && !quote.value.ok && quote.value.enough === false);
 const submit = () => form.post(route('transfers.store'));
+
+// ---- The check before sending: where to, how much, the price, and what they will owe, last and largest.
+const review = computed(() => {
+    const q = quote.value?.ok ? quote.value : null;
+    const to = destination.value;
+
+    return {
+        title: to ? `Send gold to ${to}?` : 'Send this gold?',
+        details: [
+            { label: 'To', value: to ?? '—' },
+            { label: 'Date', value: longDay(form.date) },
+            { label: 'Gold', value: q ? `${grams(form.weight)} from ${q.lots} ${q.lots === 1 ? 'lot' : 'lots'}` : grams(form.weight) },
+            { label: 'Price per pound', value: cedis(form.price) },
+            { label: `${to ?? 'They'} will owe you`, value: q?.amount ?? '—', strong: true },
+        ],
+        body: `The gold leaves ${props.office}'s stock now, and joins ${to ?? 'theirs'} only when they accept it. Until then you can cancel it.`,
+    };
+});
 </script>
 
 <template>
@@ -82,6 +101,7 @@ const submit = () => form.post(route('transfers.store'));
         noun="transfer"
         :dirty="form.isDirty"
         :errors="form.errors"
+        :review="review"
         @submit="submit"
     >
         <template #subtitle>{{ office }} · {{ inStock }} g in stock</template>

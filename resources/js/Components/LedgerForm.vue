@@ -6,6 +6,7 @@ import FormSection from '@/Components/FormSection.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { useLeaveGuard } from '@/leaveGuard';
 
 const props = defineProps({
     // Add mode: the kinds this person may add. Edit mode: left empty.
@@ -40,6 +41,10 @@ function submit() {
         )
         [props.method](props.action);
 }
+
+// Adding or renaming a ledger is easy to undo (edit it, or switch it off), so saving does not ask. Leaving with
+// typed-in details does.
+useLeaveGuard({ dirty: () => form.isDirty, busy: () => form.processing, noun: 'ledger' });
 </script>
 
 <template>

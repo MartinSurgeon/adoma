@@ -1,5 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import ConfirmHost from '@/Components/ConfirmHost.vue';
 import GoldBarsArt from '@/Components/GoldBarsArt.vue';
 
 /**
@@ -83,5 +84,7 @@ const points = [
                 © {{ year }} Adoma · Gold trading and accounting
             </footer>
         </div>
+
+        <ConfirmHost />
     </div>
 </template>

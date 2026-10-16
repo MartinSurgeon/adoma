@@ -1,16 +1,19 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { computed, nextTick, ref, watch } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Banner from '@/Components/Banner.vue';
-import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import FormActionBar from '@/Components/FormActionBar.vue';
+import { confirm } from '@/confirm';
+import { useLeaveGuard } from '@/leaveGuard';
 
 /**
- * The one layout every transaction form uses, so purchases, sales, receipts and payments feel the same:
+ * The one layout every transaction form uses, so purchases, sales, receipts, payments and transfers feel the same:
  * numbered groups on the left, a summary beside them, and the sticky bar with one main button.
  *
- * It also looks after two things people would otherwise lose work to:
+ * It also looks after three things people would otherwise lose work or money to:
+ *  - a check before saving: "Save this purchase?" with who, how much and the amount, so a typing slip is caught
+ *    before it is in the books (the client's FileMaker asked the same "are you sure?"),
  *  - a "leave without saving?" question when typed-in data would be thrown away, and
  *  - a short list of what needs fixing, at the top, after a save that was refused.
  */
@@ -24,45 +27,30 @@ const props = defineProps({
     cancelHref: { type: String, default: '/dashboard' },
     dirty: { type: Boolean, default: false }, // something has been typed that is not saved yet
     errors: { type: Object, default: () => ({}) }, // the form's errors, by field
+    // What the check before saving shows: { title, details: [{ label, value, strong }], body }. Leave empty to save at once.
+    review: { type: Object, default: null },
 });
 
-defineEmits(['submit']);
+const emit = defineEmits(['submit']);
 
-// ---- Leaving with unsaved data
-const leaving = ref(null); // the address the person was heading to
-let allowLeave = false;
-let removeListener = null;
+useLeaveGuard({ dirty: () => props.dirty, busy: () => props.processing, noun: props.noun });
 
-function warnBeforeUnload(event) {
-    if (props.dirty && !props.processing) {
-        event.preventDefault();
-        event.returnValue = '';
+// ---- The check before saving
+async function submit() {
+    if (props.processing || props.blocked) return;
+
+    if (props.review) {
+        const yes = await confirm({
+            title: props.review.title,
+            details: props.review.details ?? [],
+            body: props.review.body ?? '',
+            confirmLabel: props.submitLabel,
+            cancelLabel: 'Go back and change',
+        });
+        if (!yes) return;
     }
-}
 
-onMounted(() => {
-    window.addEventListener('beforeunload', warnBeforeUnload);
-    removeListener = router.on('before', (event) => {
-        const visit = event.detail.visit;
-
-        // Saving is a POST. Only moving to another page by link is a "leave".
-        if (allowLeave || !props.dirty || props.processing || visit.method !== 'get') return;
-
-        leaving.value = visit.url.href;
-        return false; // hold the move until the person decides
-    });
-});
-
-onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', warnBeforeUnload);
-    removeListener?.();
-});
-
-function leave() {
-    const target = leaving.value;
-    allowLeave = true;
-    leaving.value = null;
-    router.visit(target);
+    emit('submit');
 }
 
 // ---- A short list of what needs fixing
@@ -98,7 +86,7 @@ watch(
             <slot v-else-if="$slots.instead" name="instead" />
 
             <!-- minmax(0, …) lets a wide table scroll inside its own box instead of pushing the page sideways. -->
-            <form v-else class="grid grid-cols-1 gap-6 pb-28 lg:grid-cols-[minmax(0,1fr)_20rem]" @submit.prevent="$emit('submit')">
+            <form v-else class="grid grid-cols-1 gap-6 pb-28 lg:grid-cols-[minmax(0,1fr)_20rem]" @submit.prevent="submit">
                 <div v-if="problems.length" ref="summary" class="lg:col-span-2">
                     <Banner variant="error">
                         <p class="font-semibold">
@@ -121,17 +109,5 @@ watch(
                 <FormActionBar :cancel-href="cancelHref" :submit-label="submitLabel" :processing="processing" :disabled="blocked" />
             </form>
         </div>
-
-        <ConfirmDialog
-            :show="leaving !== null"
-            title="Leave without saving?"
-            confirm-label="Leave and lose it"
-            cancel-label="Keep editing"
-            danger
-            @close="leaving = null"
-            @confirm="leave"
-        >
-            <p>You have typed in details for this {{ noun }} that are not saved. If you leave now, they will be lost.</p>
-        </ConfirmDialog>
     </AuthenticatedLayout>
 </template>

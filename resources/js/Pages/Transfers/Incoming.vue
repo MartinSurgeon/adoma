@@ -97,14 +97,20 @@ function confirm() {
             :confirm-label="answering?.kind === 'accept' ? 'Accept and add to stock' : 'Decline'"
             :danger="answering?.kind === 'decline'"
             :processing="working"
+            :details="
+                answering?.kind === 'accept'
+                    ? [
+                          { label: 'From', value: answering.transfer.from },
+                          { label: 'Gold', value: `${answering.transfer.weight} g` },
+                          { label: 'You will owe', value: answering.transfer.amount, strong: true },
+                      ]
+                    : []
+            "
             @close="close"
             @confirm="confirm"
         >
             <template v-if="answering?.kind === 'accept'">
-                <p>
-                    Check that the gold has arrived and the weight matches. Accepting buys it for {{ answering.transfer.amount }}: it joins
-                    {{ office }}'s stock at that cost, and {{ office }} will owe {{ answering.transfer.from }} that amount until it is settled.
-                </p>
+                <p>Check that the gold has arrived and the weight matches. It joins {{ office }}'s stock at this cost, and {{ office }} owes {{ answering.transfer.from }} until it is paid.</p>
             </template>
             <template v-else-if="answering">
                 <p>The gold goes back to {{ answering.transfer.from }}'s stock and nothing changes here. They will see your reason.</p>

@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import NavIcon from '@/Components/NavIcon.vue';
+import { UNSAVED_WARNING, confirm, hasUnsavedWork } from '@/confirm';
 
 const page = usePage();
 const tenancy = computed(() => page.props.tenancy);
@@ -12,12 +13,42 @@ const current = computed(() => (tenancy.value?.all_branches ? 'all' : tenancy.va
 // Someone with one branch has nothing to switch to: they see its name, not a control that does nothing.
 const onlyOne = computed(() => !tenancy.value?.can_view_all && (tenancy.value?.branches?.length ?? 0) <= 1);
 
-function switchOffice(event) {
-    router.post(
-        route('branch.switch'),
-        { branch: event.target.value },
-        { preserveScroll: true, preserveState: false },
+const nameOf = (value) => (value === 'all' ? 'All branches' : tenancy.value?.branches?.find((b) => String(b.id) === String(value))?.name ?? 'that branch');
+
+/**
+ * Switching branch changes where every new purchase, sale and payment is recorded, so it asks first.
+ * Saying no puts the list back on the branch you are in.
+ */
+async function switchOffice(event) {
+    const chosen = event.target.value;
+    const here = nameOf(current.value);
+    const there = nameOf(chosen);
+    const unsaved = hasUnsavedWork();
+
+    const yes = await confirm(
+        chosen === 'all'
+            ? {
+                  title: 'Look at all branches?',
+                  body: unsaved ? UNSAVED_WARNING : 'You can see every branch. To record anything, choose one branch again.',
+                  confirmLabel: 'All branches',
+                  cancelLabel: `Stay in ${here}`,
+                  danger: unsaved,
+              }
+            : {
+                  title: `Work in ${there}?`,
+                  body: unsaved ? UNSAVED_WARNING : `New purchases, sales and payments will be recorded in ${there}.`,
+                  confirmLabel: `Switch to ${there}`,
+                  cancelLabel: `Stay in ${here}`,
+                  danger: unsaved,
+              },
     );
+
+    if (!yes) {
+        event.target.value = String(current.value);
+        return;
+    }
+
+    router.post(route('branch.switch'), { branch: chosen }, { preserveScroll: true, preserveState: false });
 }
 </script>
 

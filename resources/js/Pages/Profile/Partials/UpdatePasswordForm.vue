@@ -5,6 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useLeaveGuard } from '@/leaveGuard';
 
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
@@ -14,6 +15,10 @@ const form = useForm({
     password: '',
     password_confirmation: '',
 });
+
+// Changing the password needs the current one, so it is never done by accident and does not ask again.
+// Leaving with a half-typed new password does ask.
+useLeaveGuard({ dirty: () => form.isDirty, busy: () => form.processing, noun: 'new password' });
 
 const updatePassword = () => {
     form.put(route('password.update'), {

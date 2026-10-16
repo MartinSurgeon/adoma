@@ -16,7 +16,8 @@ const props = defineProps({
     help: { type: String, default: '' },
     initial: { type: Object, default: null }, // a ledger to start with: { id, name, kind_label, balance }
 });
-const emit = defineEmits(['update:modelValue']);
+// "chosen" hands the whole ledger ({ id, name, kind_label, balance }) to the form, so it can name it (or null when cleared).
+const emit = defineEmits(['update:modelValue', 'chosen']);
 
 const query = ref('');
 const results = ref([]);
@@ -104,6 +105,7 @@ function show() {
 function choose(item) {
     selected.value = item;
     emit('update:modelValue', item.id);
+    emit('chosen', item);
     open.value = false;
     query.value = '';
 }
@@ -111,6 +113,7 @@ function choose(item) {
 function change() {
     selected.value = null;
     emit('update:modelValue', '');
+    emit('chosen', null);
     nextTick(() => document.getElementById(props.inputId)?.focus());
 }
 

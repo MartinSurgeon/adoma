@@ -5,7 +5,9 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
+import { logOut } from '@/logout';
+import { useLeaveGuard } from '@/leaveGuard';
 
 const form = useForm({
     current_password: '',
@@ -14,6 +16,8 @@ const form = useForm({
 });
 
 const showPasswords = ref(false);
+
+useLeaveGuard({ dirty: () => form.isDirty, busy: () => form.processing, noun: 'new password' });
 
 const submit = () => {
     form.put(route('password.force.update'), {
@@ -74,14 +78,13 @@ const fields = [
         </form>
 
         <p class="mt-6 border-t border-gray-200 pt-4 text-center">
-            <Link
-                :href="route('logout')"
-                method="post"
-                as="button"
-                class="inline-flex min-h-12 items-center rounded-md px-2 text-base font-medium text-gray-700 underline hover:text-gray-900"
+            <button
+                type="button"
+                class="inline-flex min-h-12 items-center rounded-lg px-2 text-base font-medium text-gray-700 underline hover:text-gray-900"
+                @click="logOut"
             >
                 Log out instead
-            </Link>
+            </button>
         </p>
     </GuestLayout>
 </template>

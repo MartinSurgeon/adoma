@@ -6,6 +6,8 @@ import FormSection from '@/Components/FormSection.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { confirm } from '@/confirm';
+import { useLeaveGuard } from '@/leaveGuard';
 
 const props = defineProps({
     // { name, email, tenant_role, offices: [{ branch_id, role }] }
@@ -36,7 +38,58 @@ const form = useForm({
 
 const worksInOffices = computed(() => form.access === 'offices');
 
-function submit() {
+// What a set of choices lets the person do, in words: "Admin, all branches" or "Kumasi: clerk · Central: viewer".
+function accessInWords(access, roles) {
+    if (access === 'owner') return 'Owner, all branches';
+    if (access === 'admin') return 'Admin, all branches';
+    const lines = props.branches.filter((b) => roles[b.id]).map((b) => `${b.name}: ${roles[b.id]}`);
+    return lines.length ? lines.join(' · ') : 'No branches';
+}
+
+const creating = computed(() => props.method === 'post');
+const startingAccess = accessInWords(form.access, { ...form.roles });
+const startingEmail = form.email;
+
+/**
+ * Giving someone access to the business, or changing what they can do, is asked first, with the access in words.
+ * A change of name only is saved at once.
+ */
+async function submit() {
+    const access = accessInWords(form.access, form.roles);
+    const name = form.name.trim() || 'this person';
+
+    if (creating.value) {
+        const yes = await confirm({
+            title: `Create an account for ${name}?`,
+            details: [
+                { label: 'Signs in with', value: form.email || '—' },
+                { label: 'Can work in', value: access },
+            ],
+            body: 'You will see a temporary password once, on the next screen, to give to them.',
+            confirmLabel: 'Create account',
+            cancelLabel: 'Go back',
+        });
+        if (!yes) return;
+    } else if (access !== startingAccess || form.email.trim() !== startingEmail) {
+        const yes = await confirm({
+            title: `Change what ${name} can do?`,
+            details: [
+                ...(access !== startingAccess ? [{ label: 'Access before', value: startingAccess }, { label: 'Access after', value: access }] : []),
+                ...(form.email.trim() !== startingEmail ? [{ label: 'New sign-in email', value: form.email }] : []),
+            ],
+            body: 'The change applies the next time they open a page.',
+            confirmLabel: 'Save changes',
+            cancelLabel: 'Go back',
+        });
+        if (!yes) return;
+    }
+
+    send();
+}
+
+useLeaveGuard({ dirty: () => form.isDirty, busy: () => form.processing, noun: 'user' });
+
+function send() {
     form
         .transform((data) => ({
             name: data.name,

@@ -20,18 +20,23 @@ const emit = defineEmits(['close']);
 const dialog = ref();
 const showSlot = ref(props.show);
 
+// Closing waits for the fade. A dialog opened again inside that wait (one question right after another)
+// must not be closed by the old timer.
+let closing = null;
+
 watch(
     () => props.show,
     () => {
         if (props.show) {
+            clearTimeout(closing);
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
 
-            dialog.value?.showModal();
+            if (!dialog.value?.open) dialog.value?.showModal();
         } else {
             document.body.style.overflow = '';
 
-            setTimeout(() => {
+            closing = setTimeout(() => {
                 dialog.value?.close();
                 showSlot.value = false;
             }, 200);
@@ -79,8 +84,9 @@ const maxWidthClass = computed(() => {
         class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
     >
+        <!-- A column, so the panel sits in the middle of the screen when it fits, and scrolls from the top when it does not. -->
         <div
-            class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0"
+            class="fixed inset-0 z-50 flex flex-col overflow-y-auto px-4 py-6 sm:px-0"
             scroll-region
         >
             <Transition
@@ -112,7 +118,7 @@ const maxWidthClass = computed(() => {
             >
                 <div
                     v-show="show"
-                    class="mb-6 transform overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5 transition-all sm:mx-auto sm:w-full"
+                    class="relative mb-6 transform overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5 transition-all sm:mx-auto sm:my-auto sm:w-full"
                     :class="maxWidthClass"
                 >
                     <slot v-if="showSlot" />

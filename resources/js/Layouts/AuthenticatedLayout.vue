@@ -1,11 +1,13 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import ConfirmHost from '@/Components/ConfirmHost.vue';
 import MenuItem from '@/Components/MenuItem.vue';
 import NavIcon from '@/Components/NavIcon.vue';
 import OfficeSwitcher from '@/Components/OfficeSwitcher.vue';
 import PopoverMenu from '@/Components/PopoverMenu.vue';
 import SidebarNav from '@/Components/SidebarNav.vue';
+import { logOut } from '@/logout';
 import { useNavigation } from '@/navigation';
 import { sidebarCollapsed } from '@/sidebar';
 
@@ -212,7 +214,8 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                             <NavIcon name="profile" class="h-5 w-5 shrink-0 text-gray-700" />
                             My profile
                         </MenuItem>
-                        <MenuItem :href="route('logout')" method="post">
+                        <!-- Asks first (see logout.js). -->
+                        <MenuItem @click="logOut">
                             <NavIcon name="logout" class="h-5 w-5 shrink-0 text-gray-700" />
                             Log out
                         </MenuItem>
@@ -299,5 +302,8 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                 </li>
             </ul>
         </nav>
+
+        <!-- The one "Are you sure?" dialog every page and menu asks through (see confirm.js). -->
+        <ConfirmHost />
     </div>
 </template>

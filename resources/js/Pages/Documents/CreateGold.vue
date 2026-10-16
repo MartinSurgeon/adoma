@@ -10,6 +10,7 @@ import LedgerPicker from '@/Components/LedgerPicker.vue';
 import SegmentedControl from '@/Components/SegmentedControl.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TransactionLayout from '@/Components/TransactionLayout.vue';
+import { cedis, grams, longDay } from '@/format';
 
 const props = defineProps({
     type: String, // purchase or sale
@@ -118,6 +119,30 @@ const showOverride = computed(() => form.karat_override || preview.value?.can_ov
 
 const dash = (value) => value ?? '—';
 const submit = () => form.post(route(`${props.type}s.store`));
+
+// ---- The check before saving: who, what gold, the price, and the amount, last and largest.
+const party = ref(props.prefill?.ledger ?? null);
+
+const review = computed(() => {
+    const f = figures.value;
+    const count = chosenLots().length;
+    const gold = choosing.value
+        ? `${grams(f?.weight ?? pickedGrams.value)} from ${count} ${count === 1 ? 'purchase' : 'purchases'}`
+        : `${grams(f?.weight ?? form.weight)} · ${isRaw.value ? 'raw' : 'refined'}`;
+
+    return {
+        title: isSale.value ? 'Save this sale?' : 'Save this purchase?',
+        details: [
+            { label: props.words.party, value: party.value?.name ?? '—' },
+            { label: 'Date', value: longDay(form.date) },
+            { label: 'Gold', value: gold },
+            ...(f ? [{ label: choosing.value ? 'Average karat' : 'Karat', value: f.karat }] : []),
+            { label: 'Price per pound', value: cedis(form.price) },
+            { label: props.words.owes, value: f?.amount_text ?? '—', strong: true },
+        ],
+        body: f?.above_max_karat ? `The karat is above 24. You are allowing it because: ${form.override_reason || '(no reason typed yet)'}` : '',
+    };
+});
 </script>
 
 <template>
@@ -130,6 +155,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
         :noun="type"
         :dirty="form.isDirty"
         :errors="form.errors"
+        :review="review"
         @submit="submit"
     >
         <template #subtitle>
@@ -148,6 +174,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
                         :error="form.errors.ledger_id"
                         :initial="prefill?.ledger"
                         help="Customers and suppliers in your list."
+                        @chosen="party = $event"
                     />
                 </div>
                 <div>

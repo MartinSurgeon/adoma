@@ -4,6 +4,8 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { confirm } from '@/confirm';
+import { useLeaveGuard } from '@/leaveGuard';
 
 defineProps({
     mustVerifyEmail: {
@@ -20,6 +22,27 @@ const form = useForm({
     name: user.name,
     email: user.email,
 });
+
+useLeaveGuard({ dirty: () => form.isDirty, busy: () => form.processing, noun: 'profile' });
+
+// A new email changes how you log in, so it is asked first. A new name is saved at once.
+async function save() {
+    if (form.email.trim().toLowerCase() !== String(user.email).toLowerCase()) {
+        const yes = await confirm({
+            title: 'Change the email you log in with?',
+            details: [
+                { label: 'From', value: user.email },
+                { label: 'To', value: form.email.trim() },
+            ],
+            body: 'From now on you will log in with the new email.',
+            confirmLabel: 'Change email',
+            cancelLabel: 'Keep the old one',
+        });
+        if (!yes) return;
+    }
+
+    form.patch(route('profile.update'));
+}
 </script>
 
 <template>
@@ -29,7 +52,7 @@ const form = useForm({
             <p class="mt-1 text-base text-gray-700">Your name shows on the transactions you record. You sign in with this email.</p>
         </header>
 
-        <form @submit.prevent="form.patch(route('profile.update'))" class="mt-6 space-y-6">
+        <form @submit.prevent="save" class="mt-6 space-y-6">
             <div>
                 <InputLabel for="name" value="Name" />
                 <TextInput id="name" type="text" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" />
