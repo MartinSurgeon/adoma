@@ -31,6 +31,19 @@ test('users can not authenticate with invalid password', function () {
     $this->assertGuest();
 });
 
+test('a wrong password is explained in plain words, with the usual cause', function () {
+    $user = User::factory()->create();
+
+    $this->post('/login', ['email' => $user->email, 'password' => 'wrong-password'])
+        ->assertSessionHasErrors(['email' => 'That email and password do not match. Check them, and that Caps Lock is off, then try again.']);
+});
+
+test('the login screen draws its picture itself and asks no other website for anything', function () {
+    $html = $this->get('/login')->assertOk()->getContent();
+
+    expect($html)->not->toMatch('/<img\b[^>]*src="https?:\/\//i');
+});
+
 test('users can logout', function () {
     $user = User::factory()->create();
 

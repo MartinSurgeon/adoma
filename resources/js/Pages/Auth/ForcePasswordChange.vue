@@ -1,8 +1,9 @@
 <script setup>
+import { ref } from 'vue';
+import AuthSubmitButton from '@/Components/AuthSubmitButton.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
@@ -12,78 +13,75 @@ const form = useForm({
     password_confirmation: '',
 });
 
+const showPasswords = ref(false);
+
 const submit = () => {
     form.put(route('password.force.update'), {
-        onFinish: () => form.reset(),
+        onFinish: () => {
+            form.reset();
+            showPasswords.value = false;
+        },
     });
 };
+
+const fields = [
+    { key: 'current_password', label: 'Temporary password', autocomplete: 'current-password', autofocus: true },
+    { key: 'password', label: 'New password', autocomplete: 'new-password', hint: 'At least 10 characters, with letters and numbers.' },
+    { key: 'password_confirmation', label: 'Type the new password again', autocomplete: 'new-password' },
+];
 </script>
 
 <template>
     <GuestLayout>
         <Head title="Choose a new password" />
 
-        <h1 class="text-2xl font-semibold text-gray-900">Choose your own password</h1>
-        <p class="mt-1 text-base text-gray-700">
-            Your admin gave you a temporary password. Choose a new one to continue.
-        </p>
+        <header>
+            <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Choose your own password</h1>
+            <p class="mt-2 text-pretty text-base text-gray-700">Your admin gave you a temporary password. Choose a new one to continue.</p>
+        </header>
 
-        <form @submit.prevent="submit" class="mt-6 space-y-5">
-            <div>
-                <InputLabel for="current_password" value="Temporary password" />
-                <TextInput
-                    id="current_password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.current_password"
-                    required
-                    autofocus
-                    autocomplete="current-password"
-                />
-                <InputError class="mt-2" :message="form.errors.current_password" />
+        <form class="mt-8 space-y-5" @submit.prevent="submit">
+            <div v-for="field in fields" :key="field.key">
+                <InputLabel :for="field.key" :value="field.label" />
+                <div class="relative mt-1.5">
+                    <span class="pointer-events-none absolute inset-y-0 start-0 flex w-12 items-center justify-center text-gray-500" aria-hidden="true">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 018 0v4" />
+                        </svg>
+                    </span>
+                    <TextInput
+                        :id="field.key"
+                        :type="showPasswords ? 'text' : 'password'"
+                        class="block w-full rounded-lg ps-12"
+                        v-model="form[field.key]"
+                        required
+                        :autofocus="field.autofocus || undefined"
+                        :autocomplete="field.autocomplete"
+                        :aria-invalid="form.errors[field.key] ? 'true' : undefined"
+                        :aria-describedby="[field.hint ? `${field.key}-hint` : null, form.errors[field.key] ? `${field.key}-error` : null].filter(Boolean).join(' ') || undefined"
+                    />
+                </div>
+                <p v-if="field.hint" :id="`${field.key}-hint`" class="mt-1.5 text-sm text-gray-700">{{ field.hint }}</p>
+                <InputError :id="`${field.key}-error`" class="mt-2" :message="form.errors[field.key]" />
             </div>
 
-            <div>
-                <InputLabel for="password" value="New password" />
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-                <p class="mt-1 text-base text-gray-700">At least 10 characters, with letters and numbers.</p>
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
+            <label class="flex min-h-12 cursor-pointer items-center gap-3">
+                <input v-model="showPasswords" type="checkbox" class="h-5 w-5 rounded border-gray-400 text-teal-700 shadow-sm focus:ring-teal-600" />
+                <span class="text-base text-gray-800">Show what I type</span>
+            </label>
 
-            <div>
-                <InputLabel for="password_confirmation" value="Type the new password again" />
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password_confirmation" />
-            </div>
-
-            <PrimaryButton class="w-full" :disabled="form.processing">
-                {{ form.processing ? 'Saving…' : 'Save new password' }}
-            </PrimaryButton>
-
-            <p class="text-center">
-                <Link
-                    :href="route('logout')"
-                    method="post"
-                    as="button"
-                    class="inline-flex min-h-12 items-center rounded-md px-2 text-base font-medium text-gray-700 underline hover:text-gray-900"
-                >
-                    Log out instead
-                </Link>
-            </p>
+            <AuthSubmitButton :processing="form.processing" busy-label="Saving…">Save new password</AuthSubmitButton>
         </form>
+
+        <p class="mt-6 border-t border-gray-200 pt-4 text-center">
+            <Link
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="inline-flex min-h-12 items-center rounded-md px-2 text-base font-medium text-gray-700 underline hover:text-gray-900"
+            >
+                Log out instead
+            </Link>
+        </p>
     </GuestLayout>
 </template>
