@@ -29,19 +29,19 @@ watch(() => [filter.type, filter.status, filter.from, filter.to], apply);
 const clear = () => Object.assign(filter, { q: '', type: '', status: '', from: '', to: '' });
 const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
+const select = 'mt-1 block w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
 </script>
 
 <template>
     <Head title="Transactions" />
 
-    <AuthenticatedLayout title="Transactions" subtitle="Everything recorded, newest first." width="7xl">
+    <AuthenticatedLayout title="Transactions" subtitle="Newest first." width="7xl">
         <template v-if="canRecord" #actions>
-            <ButtonLink :href="route('purchases.create')">Record a purchase</ButtonLink>
-            <ButtonLink :href="route('sales.create')" variant="secondary">Record a sale</ButtonLink>
-            <MoreMenu label="More ways to record">
-                <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
-                <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
+            <ButtonLink :href="route('purchases.create')">New purchase</ButtonLink>
+            <ButtonLink :href="route('sales.create')" variant="secondary">New sale</ButtonLink>
+            <MoreMenu label="More to record">
+                <MenuItem :href="route('receipts.create')">New receipt</MenuItem>
+                <MenuItem :href="route('payments.create')">New payment</MenuItem>
             </MoreMenu>
         </template>
 

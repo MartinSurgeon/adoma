@@ -46,10 +46,10 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
     <div class="min-h-screen bg-gray-100 p-4 print:bg-white print:p-0">
         <div class="mx-auto mb-4 flex max-w-[210mm] items-center justify-between print:hidden">
-            <button type="button" onclick="history.length > 1 ? history.back() : window.close()" class="min-h-[44px] rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-700">
+            <button type="button" onclick="history.length > 1 ? history.back() : window.close()" class="btn btn-secondary px-4">
                 Back
             </button>
-            <button type="button" onclick="window.print()" class="min-h-[44px] rounded-md bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800">
+            <button type="button" onclick="window.print()" class="btn btn-primary">
                 Print
             </button>
         </div>

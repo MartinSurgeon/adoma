@@ -22,16 +22,16 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 <template>
     <Head title="Stock" />
 
-    <AuthenticatedLayout title="Stock" :subtitle="`${where} · the gold held, oldest first.`" width="7xl">
+    <AuthenticatedLayout title="Stock" :subtitle="`${where} · oldest first`" width="7xl">
         <template v-if="canTransfer" #actions>
-            <ButtonLink :href="route('transfers.create')">Send gold to another branch</ButtonLink>
+            <ButtonLink :href="route('transfers.create')">Send gold</ButtonLink>
         </template>
 
         <div class="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
             <ul class="grid grid-cols-2 gap-4 @3xl:grid-cols-3">
-                <li class="col-span-2 @3xl:col-span-1"><StatCard label="Gold in stock" :value="totals.grams" unit="g" /></li>
-                <li :class="canSeeCost ? 'col-span-2 @md:col-span-1' : 'col-span-2 @3xl:col-span-1'"><StatCard label="Lots" :value="totals.lots" /></li>
-                <li v-if="canSeeCost" class="col-span-2 @md:col-span-1"><StatCard label="What it cost" :value="totals.cost" /></li>
+                <li class="col-span-2 @3xl:col-span-1"><StatCard label="Gold in stock" :value="totals.grams" unit="g" featured /></li>
+                <li :class="canSeeCost ? 'col-span-2 @md:col-span-1' : 'col-span-2 @3xl:col-span-1'"><StatCard label="Lots" :value="totals.lots" icon="stock" /></li>
+                <li v-if="canSeeCost" class="col-span-2 @md:col-span-1"><StatCard label="What it cost" :value="totals.cost" icon="cash" /></li>
             </ul>
 
             <!-- Gold sent and not yet accepted is in nobody's stock, so say where it is. -->

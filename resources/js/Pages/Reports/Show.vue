@@ -58,7 +58,7 @@ const show = () => router.get(route(`reports.${props.report}`), query(), { prese
 const downloadHref = computed(() => route(`reports.${props.report}`, query({ export: 'csv' })));
 const hasRows = (table) => table.rows.length > 0;
 const print = () => window.print();
-const select = 'mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
+const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
 </script>
 
 <template>

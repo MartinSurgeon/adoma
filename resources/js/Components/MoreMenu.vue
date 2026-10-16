@@ -14,7 +14,7 @@ defineProps({
     <PopoverMenu
         :label="label"
         placement="bottom-end"
-        button-class="inline-flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-base font-medium text-gray-800 shadow-sm hover:bg-gray-50"
+        button-class="btn btn-secondary btn-square sm:px-4"
     >
         <template #button>
             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

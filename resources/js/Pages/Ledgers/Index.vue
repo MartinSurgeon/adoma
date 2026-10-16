@@ -71,7 +71,7 @@ function toggle() {
     });
 }
 
-const select = 'mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-48';
+const select = 'mt-1 block w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-48';
 </script>
 
 <template>

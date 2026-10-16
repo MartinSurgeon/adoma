@@ -140,7 +140,7 @@ function closeSoon() {
     <div>
         <InputLabel :for="inputId" :value="label" />
 
-        <div v-if="selected" class="mt-1 flex items-center justify-between gap-3 rounded-md border border-teal-600 bg-teal-50/70 p-3.5 shadow-sm">
+        <div v-if="selected" class="mt-1 flex items-center justify-between gap-3 rounded-xl bg-teal-50/70 p-3.5 shadow-sm ring-1 ring-inset ring-teal-600/40">
             <div class="flex items-center gap-3 min-w-0">
                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-teal-800" aria-hidden="true">
                     <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -152,11 +152,7 @@ function closeSoon() {
                     <p class="text-sm text-gray-700">{{ selected.kind_label }} · {{ selected.balance }}</p>
                 </div>
             </div>
-            <button
-                type="button"
-                @click="change"
-                class="min-h-12 shrink-0 rounded-md border border-gray-300 bg-white px-4 text-base font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-            >
+            <button type="button" @click="change" class="btn btn-secondary shrink-0 px-4">
                 Change
             </button>
         </div>
@@ -175,7 +171,7 @@ function closeSoon() {
                 @focus="show"
                 @blur="closeSoon"
                 @keydown="onKey"
-                class="mt-1 block min-h-12 w-full rounded-md border-gray-300 pe-10 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
+                class="mt-1 block min-h-12 w-full rounded-lg border-gray-300 pe-10 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
             />
 
             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -192,7 +188,7 @@ function closeSoon() {
                 v-show="open"
                 :id="`${inputId}-list`"
                 role="listbox"
-                class="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+                class="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-xl bg-white py-1 shadow-xl ring-1 ring-gray-200"
             >
                 <li v-if="loading && !results.length" class="flex items-center gap-2 px-3 py-2 text-base text-gray-700">
                     <svg class="h-4 w-4 animate-spin text-teal-600" viewBox="0 0 24 24" fill="none">
@@ -246,7 +242,7 @@ function closeSoon() {
                 <select
                     :id="`${inputId}-kind`"
                     v-model="adder.kind"
-                    class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
+                    class="mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
                 >
                     <option v-for="kind in addable" :key="kind.value" :value="kind.value">{{ kind.label }}</option>
                 </select>

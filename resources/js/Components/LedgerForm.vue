@@ -50,7 +50,7 @@ function submit() {
                 <label
                     v-for="kind in kinds"
                     :key="kind.value"
-                    class="flex min-h-12 cursor-pointer items-start gap-3 rounded-md border p-3"
+                    class="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border p-3 transition"
                     :class="form.kind === kind.value ? 'border-teal-600 bg-teal-50' : 'border-gray-200 hover:bg-gray-50'"
                 >
                     <input type="radio" v-model="form.kind" :value="kind.value" class="mt-1 h-5 w-5 text-teal-700 focus:ring-teal-600" />
@@ -89,7 +89,7 @@ function submit() {
                 <select
                     id="branch_id"
                     v-model="form.branch_id"
-                    class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:max-w-md"
+                    class="mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:max-w-md"
                 >
                     <option value="" disabled>Choose a branch</option>
                     <option v-for="office in branches" :key="office.id" :value="office.id">{{ office.name }}</option>

@@ -73,7 +73,7 @@ function accessLabel(user) {
 <template>
     <Head title="Users" />
 
-    <AuthenticatedLayout title="Users" subtitle="People who can sign in to your business." width="7xl">
+    <AuthenticatedLayout title="Users" subtitle="Who can log in." width="7xl">
         <template #actions>
             <ButtonLink :href="route('users.create')">Add user</ButtonLink>
         </template>

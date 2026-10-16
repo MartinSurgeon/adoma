@@ -111,7 +111,6 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 <MoreMenu>
                     <MenuItem v-if="canRecordAnother" :href="route(`${document.type}s.create`)">Start a blank {{ noun }}</MenuItem>
                     <MenuItem :href="route('documents.print', { document: document.id, layout: 'thermal' })" external>Print small receipt</MenuItem>
-                    <MenuItem :href="route('documents.index')">All transactions</MenuItem>
                     <MenuItem v-if="canReverse" danger @click="confirming = true">{{ undoWord }} this {{ noun }}</MenuItem>
                 </MoreMenu>
             </div>

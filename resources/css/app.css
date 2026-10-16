@@ -88,9 +88,61 @@
         50% { opacity: 1; }
     }
 
-    /* A white card on the grey page. Every card, stat card and list container looks like this. */
+    /*
+     * Buttons. Every button in the app is one of these, so they all feel the same as the Log in button:
+     * a soft top-to-bottom shade, a fine inner edge, a shadow that lifts it off the page, and 48px tall.
+     *   btn-primary    the one main action on a screen
+     *   btn-secondary  the quieter choice beside it (Cancel, Print, More)
+     *   btn-danger     something that cannot be taken back without another step
+     * The keyboard focus ring is the app's one teal outline (see :focus-visible above).
+     */
+    .btn {
+        @apply inline-flex min-h-12 select-none items-center justify-center gap-2 rounded-lg px-6 text-base font-semibold transition duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .btn-primary {
+        @apply bg-gradient-to-b from-teal-700 to-teal-800 text-white shadow-md shadow-teal-900/20 ring-1 ring-inset ring-white/10 hover:from-teal-800 hover:to-teal-900 hover:shadow-lg active:to-teal-950 active:shadow-sm;
+    }
+
+    .btn-secondary {
+        @apply bg-gradient-to-b from-white to-gray-50 font-medium text-gray-800 shadow-sm ring-1 ring-inset ring-gray-300 hover:from-gray-50 hover:to-gray-100 hover:text-gray-900 hover:ring-gray-400 active:to-gray-200;
+    }
+
+    .btn-danger {
+        @apply bg-gradient-to-b from-red-600 to-red-700 text-white shadow-md shadow-red-900/20 ring-1 ring-inset ring-white/10 hover:from-red-700 hover:to-red-800 hover:shadow-lg active:to-red-900 active:shadow-sm;
+    }
+
+    /* A square button that holds only an icon, such as the three dots of More on a phone. */
+    .btn-square {
+        @apply min-w-12 px-3;
+    }
+
+    /*
+     * Cards. A white card on the grey page, with rounded corners, a hairline edge and a soft two-layer shadow.
+     * card-link is a card you can click: it lifts a little and its edge turns teal under the pointer.
+     */
     .card {
-        @apply rounded-lg bg-white shadow-sm ring-1 ring-gray-100;
+        @apply rounded-xl bg-white ring-1 ring-gray-200/80;
+        box-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 2px 6px -1px rgb(16 24 40 / 0.06);
+    }
+
+    .card-link {
+        @apply transition duration-150 ease-out hover:-translate-y-0.5 hover:ring-teal-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0;
+    }
+
+    .card-link:hover {
+        box-shadow: 0 2px 4px rgb(16 24 40 / 0.05), 0 12px 24px -6px rgb(16 24 40 / 0.12);
+    }
+
+    /* The dark teal card with gold, for the one figure that matters most on a page (the gold in stock). */
+    .card-feature {
+        @apply relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-800 via-teal-900 to-emerald-950 text-white ring-1 ring-teal-950/10;
+        box-shadow: 0 4px 10px -2px rgb(4 47 46 / 0.25), 0 12px 28px -8px rgb(4 47 46 / 0.35);
+    }
+
+    /* A small rounded square that holds an icon at the start of a card or a list row. */
+    .icon-chip {
+        @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-teal-50 to-teal-100/70 text-teal-800 ring-1 ring-inset ring-teal-200/60;
     }
 
     /* Every table in the app. Header in plain words, rows with room to breathe, numbers on the right. */
@@ -99,7 +151,11 @@
     }
 
     .data-table thead {
-        @apply bg-gray-50 text-left text-sm font-semibold text-gray-700;
+        @apply bg-gray-50/80 text-left text-sm font-semibold text-gray-700;
+    }
+
+    .data-table tbody tr {
+        @apply transition-colors hover:bg-teal-50/40;
     }
 
     .data-table th,

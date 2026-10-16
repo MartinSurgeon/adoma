@@ -15,7 +15,7 @@ defineProps({
 
     <AuthenticatedLayout
         title="Add a user"
-        subtitle="You will get a temporary password to give them. They choose their own when they first sign in."
+        subtitle="They get a temporary password and choose their own at first login."
         :back="{ href: route('users.index'), label: 'Users' }"
         width="3xl"
     >

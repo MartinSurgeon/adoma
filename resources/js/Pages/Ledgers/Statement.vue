@@ -36,7 +36,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
     <AuthenticatedLayout
         :title="ledger.name"
-        :subtitle="`${ledger.kind_label} · showing ${covers}`"
+        :subtitle="`${ledger.kind_label} · ${covers}`"
         :back="{ href: route('ledgers.index'), label: 'Ledgers' }"
         width="5xl"
     >

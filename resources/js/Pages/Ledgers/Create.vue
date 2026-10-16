@@ -17,7 +17,7 @@ defineProps({
 
     <AuthenticatedLayout
         title="Add a ledger"
-        subtitle="A ledger is an account for a person, bank or cost you record transactions against."
+        subtitle="A customer, supplier, bank or cost you deal with."
         :back="{ href: route('ledgers.index'), label: 'Ledgers' }"
         width="3xl"
     >

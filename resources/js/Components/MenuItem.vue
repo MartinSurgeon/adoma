@@ -43,7 +43,8 @@ defineProps({
     min-height: 3rem;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem; /* the menu has a little padding, so each entry is a rounded row inside it */
     font-size: 1rem;
 }
 .menu-item:focus {

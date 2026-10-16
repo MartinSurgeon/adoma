@@ -52,7 +52,7 @@ function submit() {
         [props.method](props.action);
 }
 
-const select = 'block min-h-12 rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
+const select = 'block min-h-12 rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
 </script>
 
 <template>
@@ -88,7 +88,7 @@ const select = 'block min-h-12 rounded-md border-gray-300 text-base shadow-sm fo
                 <p class="text-base font-medium text-gray-900">Branches and role in each</p>
                 <p class="mt-1 text-sm text-gray-700">Leave a branch on "No access" if this person should not see it.</p>
 
-                <div class="mt-3 divide-y divide-gray-200 rounded-md border border-gray-200">
+                <div class="mt-3 divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200">
                     <div
                         v-for="office in branches"
                         :key="office.id"

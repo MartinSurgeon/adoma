@@ -1,7 +1,7 @@
 <script setup>
 /**
  * The one button on the sign-in screens: full width, with a spinner and different words while it works,
- * and an arrow that says "this takes you in".
+ * and an arrow that says "this takes you in". Its look is .btn-primary, shared by every main button.
  */
 defineProps({
     processing: { type: Boolean, default: false },
@@ -10,12 +10,7 @@ defineProps({
 </script>
 
 <template>
-    <button
-        type="submit"
-        class="group flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-teal-700 to-teal-800 px-6 text-base font-semibold text-white shadow-lg shadow-teal-900/20 ring-1 ring-inset ring-white/10 transition hover:from-teal-800 hover:to-teal-900 active:to-teal-950 disabled:cursor-wait disabled:opacity-80"
-        :disabled="processing"
-        :aria-busy="processing"
-    >
+    <button type="submit" class="btn btn-primary group w-full shadow-lg disabled:cursor-wait disabled:opacity-80" :disabled="processing" :aria-busy="processing">
         <svg v-if="processing" class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />

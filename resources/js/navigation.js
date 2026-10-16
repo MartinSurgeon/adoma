@@ -18,14 +18,14 @@ export function useNavigation() {
 
     const is = (...names) => names.some((name) => route().current(name));
 
-    // What can be recorded, with a few words on each so nobody has to guess which one they need.
+    // What can be recorded. Each has two or three words under it, so nobody has to guess which one they need.
     const newItems = computed(() =>
         [
-            { key: 'purchase', label: 'Purchase', hint: 'Gold bought from a supplier', href: route('purchases.create'), icon: 'purchase', active: is('purchases.*'), show: canRecord.value },
-            { key: 'sale', label: 'Sale', hint: 'Gold sold to a customer', href: route('sales.create'), icon: 'sale', active: is('sales.*'), show: canRecord.value },
-            { key: 'receipt', label: 'Receipt', hint: 'Money that came in', href: route('receipts.create'), icon: 'receipt', active: is('receipts.*'), show: canRecord.value },
-            { key: 'payment', label: 'Payment', hint: 'Money that went out', href: route('payments.create'), icon: 'payment', active: is('payments.*'), show: canRecord.value },
-            { key: 'transfer', label: 'Transfer', hint: 'Gold sent to another branch', href: route('transfers.create'), icon: 'transfer', active: is('transfers.create'), show: canTransfer.value },
+            { key: 'purchase', label: 'Purchase', hint: 'Buy gold', href: route('purchases.create'), icon: 'purchase', active: is('purchases.*'), show: canRecord.value },
+            { key: 'sale', label: 'Sale', hint: 'Sell gold', href: route('sales.create'), icon: 'sale', active: is('sales.*'), show: canRecord.value },
+            { key: 'receipt', label: 'Receipt', hint: 'Money in', href: route('receipts.create'), icon: 'receipt', active: is('receipts.*'), show: canRecord.value },
+            { key: 'payment', label: 'Payment', hint: 'Money out', href: route('payments.create'), icon: 'payment', active: is('payments.*'), show: canRecord.value },
+            { key: 'transfer', label: 'Transfer', hint: 'Gold to a branch', href: route('transfers.create'), icon: 'transfer', active: is('transfers.create'), show: canTransfer.value },
         ].filter((item) => item.show),
     );
 

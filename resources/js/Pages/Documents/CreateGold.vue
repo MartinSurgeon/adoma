@@ -180,7 +180,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
                 <p class="text-base text-gray-700">Type how many grams to sell from each purchase, or press All. A purchase can be sold in part, and what you leave stays in stock.</p>
                 <!-- One row per purchase: what it is on the left, how much to sell on the right. In a narrow space the
                      "Sell" box moves under the details instead of off the edge of the screen. -->
-                <ul class="mt-3 divide-y divide-gray-200 rounded-md ring-1 ring-gray-200">
+                <ul class="mt-3 divide-y divide-gray-200 overflow-hidden rounded-xl ring-1 ring-gray-200">
                     <li
                         v-for="row in form.lots"
                         :key="row.id"
@@ -211,7 +211,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
                             <span class="text-base text-gray-700" aria-hidden="true">g</span>
                             <button
                                 type="button"
-                                class="min-h-12 rounded-md px-3 text-base font-medium text-teal-800 underline hover:bg-teal-50"
+                                class="min-h-12 rounded-lg px-3 text-base font-medium text-teal-800 underline hover:bg-teal-50"
                                 :aria-label="`Sell all ${lotInfo[row.id].remaining_text} g of ${lotInfo[row.id].number ?? 'this purchase'}`"
                                 @click="takeAll(row)"
                             >
@@ -260,7 +260,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
             </div>
 
             <!-- Worked out from the boxes above. Read only, shaded, and right under them. -->
-            <div class="mt-4 rounded-md bg-gray-50 p-4 ring-1 ring-gray-200">
+            <div class="mt-4 rounded-xl bg-gray-50 p-4 ring-1 ring-inset ring-gray-200">
                 <div class="flex items-center justify-between pb-2 border-b border-gray-200/80">
                     <span class="text-sm font-semibold uppercase tracking-wider text-gray-700">Calculated figures</span>
                     <span v-if="working" class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700">
@@ -288,7 +288,7 @@ const submit = () => form.post(route(`${props.type}s.store`));
                 </dl>
             </div>
 
-            <div v-if="showOverride" class="mt-4 rounded-md bg-amber-50 p-4 ring-1 ring-amber-300">
+            <div v-if="showOverride" class="mt-4 rounded-xl bg-amber-50 p-4 ring-1 ring-inset ring-amber-300">
                 <label class="flex min-h-12 cursor-pointer items-center gap-3 text-base font-medium text-gray-900">
                     <input id="karat_override" type="checkbox" v-model="form.karat_override" class="h-6 w-6 rounded border-gray-400 text-teal-700 focus:ring-teal-600" />
                     Allow this karat (above 24)
@@ -310,18 +310,18 @@ const submit = () => form.post(route(`${props.type}s.store`));
                     <TextInput id="price" class="mt-1 block w-full text-right tabular-nums" inputmode="decimal" autocomplete="off" placeholder="0.00" v-model="form.price" required />
                     <InputError class="mt-2" :message="form.errors.price || problem('price')" />
                 </div>
-                <div class="rounded-lg bg-teal-50/80 p-5 ring-1 ring-teal-200/80 shadow-sm">
+                <div class="card-feature p-5">
                     <div class="flex items-center justify-between">
-                        <p class="text-sm font-medium uppercase tracking-wide text-teal-900">{{ words.owes }}</p>
-                        <span v-if="working" class="h-2 w-2 rounded-full bg-teal-500 animate-pulse" aria-hidden="true"></span>
+                        <p class="text-sm font-medium uppercase tracking-wide text-amber-200">{{ words.owes }}</p>
+                        <span v-if="working" class="h-2 w-2 animate-pulse rounded-full bg-amber-300" aria-hidden="true"></span>
                     </div>
-                    <p class="mt-1 text-3xl font-bold tabular-nums text-teal-950">{{ figures?.amount_text ?? (working ? 'Working it out…' : '—') }}</p>
+                    <p class="mt-1 text-3xl font-bold tabular-nums text-white">{{ figures?.amount_text ?? (working ? 'Working it out…' : '—') }}</p>
                 </div>
             </div>
         </FormSection>
 
         <template #summary>
-            <div class="rounded-lg bg-teal-50 p-6 ring-1 ring-teal-100">
+            <div class="rounded-xl bg-gradient-to-b from-teal-50 to-white p-6 shadow-sm ring-1 ring-inset ring-teal-100">
                 <h2 class="text-lg font-semibold text-gray-900">Summary</h2>
 
                 <Banner v-if="notEnoughStock" variant="warning" class="mt-4">

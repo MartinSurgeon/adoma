@@ -53,7 +53,7 @@ function confirm() {
 
     <AuthenticatedLayout
         title="Incoming gold"
-        :subtitle="`Gold other branches have sent to ${office}. It joins your stock only when you accept it.`"
+        :subtitle="`Sent to ${office}. It joins your stock when you accept it.`"
         width="5xl"
     >
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">

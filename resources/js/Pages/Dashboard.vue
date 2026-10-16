@@ -6,6 +6,7 @@ import Banner from '@/Components/Banner.vue';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import MenuItem from '@/Components/MenuItem.vue';
 import MoreMenu from '@/Components/MoreMenu.vue';
+import NavIcon from '@/Components/NavIcon.vue';
 import StatCard from '@/Components/StatCard.vue';
 
 const props = defineProps({
@@ -26,6 +27,16 @@ const waiting = computed(() => Number(usePage().props.tenancy?.incoming_transfer
 const isEmpty = computed(() => props.stats.every((s) => s.count === 0) && props.recent.length === 0);
 
 const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// A picture for each count and each kind of transaction, so they are found by shape before they are read.
+const statIcon = { Customers: 'users', Suppliers: 'truck', Banks: 'bank', 'Cash accounts': 'cash' };
+const typeIcon = { purchase: 'purchase', sale: 'sale', receipt: 'receipt', payment: 'payment', transfer: 'transfer', transfer_in: 'transfer' };
+
+// Teal for what comes in, amber for what goes out, grey for what was undone.
+const tone = (item) => {
+    if (item.status === 'reversed' || item.is_reversal) return 'bg-gray-100 text-gray-600 ring-gray-200';
+    return ['purchase', 'receipt', 'transfer_in'].includes(item.type) ? 'bg-teal-50 text-teal-800 ring-teal-200' : 'bg-amber-50 text-amber-800 ring-amber-200';
+};
 </script>
 
 <template>
@@ -38,28 +49,27 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 <Link :href="route('transfers.incoming')" class="mt-1 inline-flex min-h-12 items-center font-medium underline">Review and accept</Link>
             </Banner>
 
-            <!-- 1. What you have. The stock total opens the page, in the same card as every other figure. -->
+            <!-- 1. What you have: the gold first, in the dark card, then the counts. -->
             <section aria-labelledby="have-heading">
                 <h2 id="have-heading" class="text-lg font-semibold text-gray-900">What you have</h2>
-                <!-- Sized by the room the page has: the stock on its own row, then the four counts, or all five in one row. -->
+                <!-- Sized by the room the page has: the gold on its own row, then the four counts, or all five in one row. -->
                 <ul class="mt-3 grid grid-cols-2 gap-4 @3xl:grid-cols-4 @6xl:grid-cols-5">
                     <li class="col-span-2 @3xl:col-span-4 @6xl:col-span-1">
-                        <StatCard label="Gold in stock" :value="goldInStock" unit="g" :featured="true" />
+                        <StatCard label="Gold in stock" :value="goldInStock" unit="g" featured :href="route('stock.index')">
+                            <!-- The total is made of separate kinds of gold, kept apart in the stock. Each kind stays on one
+                                 line; the line breaks between kinds when the card is narrow. -->
+                            <template v-for="(part, index) in goldByForm" :key="part.label">
+                                <span class="whitespace-nowrap">{{ part.label }} <span class="font-semibold tabular-nums text-white">{{ part.grams }}</span></span>
+                                <span v-if="index < goldByForm.length - 1" aria-hidden="true"> · </span>
+                            </template>
+                        </StatCard>
                     </li>
                     <li v-for="stat in stats" :key="stat.label">
-                        <StatCard :label="stat.label" :value="stat.count" :href="stat.href" />
+                        <StatCard :label="stat.label" :value="stat.count" :href="stat.href" :icon="statIcon[stat.label] ?? 'ledgers'" />
                     </li>
                 </ul>
 
-                <!-- The total is made of separate kinds of gold, kept apart in the stock. -->
-                <p v-if="goldByForm.length" class="mt-3 text-base text-gray-700">
-                    Of the gold in stock:
-                    <template v-for="(part, index) in goldByForm" :key="part.label">
-                        <span class="font-semibold tabular-nums text-gray-900">{{ part.label }} {{ part.grams }} g</span><span v-if="index < goldByForm.length - 1"> · </span>
-                    </template>
-                </p>
-
-                <!-- Looking at every branch: how much gold each one holds, with a way to see the lots. -->
+                <!-- Looking at every branch: how much gold each one holds. -->
                 <div v-if="stockByOffice && stockByOffice.length" class="card mt-4 overflow-x-auto">
                     <table class="data-table">
                         <thead>
@@ -76,28 +86,21 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                         </tbody>
                     </table>
                 </div>
-                <Link :href="route('stock.index')" class="mt-2 inline-flex min-h-12 items-center text-base font-medium text-teal-800 hover:underline">
-                    See the gold lot by lot
-                </Link>
             </section>
 
             <!-- 2. What to do next: one main action, one quieter one, the rest in More. -->
             <section aria-labelledby="next-heading" class="card p-6">
                 <h2 id="next-heading" class="text-lg font-semibold text-gray-900">
-                    {{ isEmpty && canCreate ? 'Start by adding your first ledger' : 'Record a transaction' }}
+                    {{ isEmpty && canCreate ? 'Start by adding your first ledger' : 'Record' }}
                 </h2>
-                <p class="mt-1 text-base text-gray-700">
-                    {{ isEmpty && canCreate
-                        ? 'A ledger is an account for a customer, supplier, bank or cost. Add the ones you deal with most.'
-                        : 'Gold you bought or sold, or money that came in or went out.' }}
+                <p v-if="isEmpty && canCreate" class="mt-1 text-base text-gray-700">
+                    A ledger is a customer, supplier, bank or cost you deal with.
                 </p>
 
                 <div class="mt-4 flex flex-wrap items-center gap-3">
                     <template v-if="isEmpty && canCreate">
                         <ButtonLink :href="route('ledgers.create')">
-                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
+                            <NavIcon name="plus" class="h-5 w-5" stroke-width="2" />
                             Add a ledger
                         </ButtonLink>
                         <ButtonLink :href="route('ledgers.index')" variant="secondary">Find a ledger</ButtonLink>
@@ -105,24 +108,17 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
                     <template v-else-if="canRecord">
                         <ButtonLink :href="route('purchases.create')">
-                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" />
-                            </svg>
-                            Record a purchase
+                            <NavIcon name="purchase" class="h-5 w-5" stroke-width="2" />
+                            Purchase
                         </ButtonLink>
                         <ButtonLink :href="route('sales.create')" variant="secondary">
-                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M12 15V3m0 0L8 7m4-4l4 4M4 17v3h16v-3" />
-                            </svg>
-                            Record a sale
+                            <NavIcon name="sale" class="h-5 w-5" stroke-width="2" />
+                            Sale
                         </ButtonLink>
-                        <MoreMenu label="More ways to record">
-                            <MenuItem :href="route('receipts.create')">Record a receipt</MenuItem>
-                            <MenuItem :href="route('payments.create')">Record a payment</MenuItem>
-                            <MenuItem v-if="canTransfer" :href="route('transfers.create')">Send gold to another branch</MenuItem>
-                            <MenuItem v-if="canCreate" :href="route('ledgers.create')">Add a ledger</MenuItem>
-                            <MenuItem :href="route('ledgers.index')">Find a ledger</MenuItem>
-                            <MenuItem :href="route('reports.index')">Reports</MenuItem>
+                        <MoreMenu label="More to record">
+                            <MenuItem :href="route('receipts.create')"><NavIcon name="receipt" class="h-5 w-5 text-teal-800" />Receipt</MenuItem>
+                            <MenuItem :href="route('payments.create')"><NavIcon name="payment" class="h-5 w-5 text-teal-800" />Payment</MenuItem>
+                            <MenuItem v-if="canTransfer" :href="route('transfers.create')"><NavIcon name="transfer" class="h-5 w-5 text-teal-800" />Transfer</MenuItem>
                         </MoreMenu>
                     </template>
 
@@ -139,28 +135,19 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     <Link
                         v-if="recent.length"
                         :href="route('documents.index')"
-                        class="inline-flex min-h-12 items-center text-sm font-medium text-teal-800 hover:underline"
+                        class="-me-2 inline-flex min-h-12 items-center gap-1 rounded-lg px-2 text-base font-medium text-teal-800 hover:bg-teal-50"
                     >
-                        See all transactions &rarr;
+                        See all
+                        <NavIcon name="chevronRight" class="h-5 w-5" stroke-width="2" />
                     </Link>
                 </div>
 
-                <ul v-if="recent.length" class="mt-4 divide-y divide-gray-100">
+                <ul v-if="recent.length" class="-mx-2 mt-3 divide-y divide-gray-100">
                     <li v-for="item in recent" :key="item.id">
-                        <Link :href="route('documents.show', item.id)" class="group flex min-h-12 items-center justify-between gap-4 rounded-md py-3.5 px-2 transition hover:bg-gray-50">
+                        <Link :href="route('documents.show', item.id)" class="group flex min-h-12 items-center justify-between gap-4 rounded-lg px-2 py-3 transition hover:bg-gray-50">
                             <div class="flex min-w-0 items-center gap-3">
-                                <span
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold"
-                                    :class="[
-                                        item.status === 'reversed' || item.is_reversal
-                                            ? 'border-gray-200 bg-gray-100 text-gray-600'
-                                            : item.type === 'purchase' || item.type === 'receipt'
-                                              ? 'border-teal-200 bg-teal-50 text-teal-800'
-                                              : 'border-amber-200 bg-amber-50 text-amber-800',
-                                    ]"
-                                    aria-hidden="true"
-                                >
-                                    {{ item.type_label?.charAt(0) ?? 'T' }}
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset" :class="tone(item)" aria-hidden="true">
+                                    <NavIcon :name="typeIcon[item.type] ?? 'transactions'" class="h-5 w-5" />
                                 </span>
                                 <span class="min-w-0">
                                     <span class="block truncate text-base font-medium text-gray-900 group-hover:text-teal-900">{{ item.party ?? item.type_label }}</span>
@@ -176,12 +163,10 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     </li>
                 </ul>
 
-                <div v-else class="mt-6 flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 p-8 text-center">
-                    <svg class="h-10 w-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <p class="mt-2 text-base font-medium text-gray-900">No activity yet</p>
-                    <p class="mt-1 text-sm text-gray-600">Once you record purchases, sales, or cash movements, they will show here.</p>
+                <div v-else class="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 p-8 text-center">
+                    <span class="icon-chip h-12 w-12" aria-hidden="true"><NavIcon name="transactions" class="h-6 w-6" /></span>
+                    <p class="mt-3 text-base font-medium text-gray-900">Nothing recorded yet</p>
+                    <p class="mt-1 text-base text-gray-700">Purchases, sales and payments will show here.</p>
                 </div>
             </section>
         </div>

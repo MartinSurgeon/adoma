@@ -74,7 +74,7 @@ const submit = () => form.post(route('transfers.store'));
 
 <template>
     <TransactionLayout
-        title="Send gold to another branch"
+        title="Send gold to a branch"
         submit-label="Send gold"
         :processing="form.processing"
         :blocked="blocked"
@@ -93,7 +93,7 @@ const submit = () => form.post(route('transfers.store'));
                     <select
                         id="to"
                         v-model="form.to_branch_id"
-                        class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
+                        class="mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600"
                     >
                         <option value="" disabled>Choose a branch</option>
                         <option v-for="o in offices" :key="o.id" :value="o.id">{{ o.name }}</option>
@@ -126,7 +126,7 @@ const submit = () => form.post(route('transfers.store'));
             />
             <InputError class="mt-2" :message="form.errors.weight || (quote && !quote.ok && quote.enough !== false && !quote.field ? quote.message : '')" />
 
-            <dl class="mt-4 grid grid-cols-2 gap-4 rounded-md bg-gray-50 p-4 ring-1 ring-gray-200">
+            <dl class="mt-4 grid grid-cols-2 gap-4 rounded-xl bg-gray-50 p-4 ring-1 ring-inset ring-gray-200">
                 <div>
                     <dt class="text-sm text-gray-700">Taken from</dt>
                     <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900">
@@ -149,10 +149,10 @@ const submit = () => form.post(route('transfers.store'));
                     <p class="mt-1 text-sm text-gray-700">The same price a sale uses. Each lot is priced by its own karat.</p>
                     <InputError class="mt-2" :message="form.errors.price || problem('price')" />
                 </div>
-                <div class="rounded-lg bg-teal-50/80 p-5 ring-1 ring-teal-200/80 shadow-sm">
-                    <p class="text-sm font-medium uppercase tracking-wide text-teal-900">{{ destination ?? 'The other branch' }} will owe you</p>
-                    <p class="mt-1 text-3xl font-bold tabular-nums text-teal-950">{{ quote?.ok && quote.amount ? quote.amount : working ? 'Working it out…' : '—' }}</p>
-                    <p v-if="quote?.ok && quote.profit" class="mt-2 text-base font-medium" :class="quote.is_loss ? 'text-red-800' : 'text-green-800'">
+                <div class="card-feature p-5">
+                    <p class="relative text-sm font-medium uppercase tracking-wide text-amber-200">{{ destination ?? 'The other branch' }} will owe you</p>
+                    <p class="relative mt-1 text-3xl font-bold tabular-nums text-white">{{ quote?.ok && quote.amount ? quote.amount : working ? 'Working it out…' : '—' }}</p>
+                    <p v-if="quote?.ok && quote.profit" class="mt-2 text-base font-medium" :class="quote.is_loss ? 'text-red-200' : 'text-emerald-200'">
                         {{ quote.is_loss ? 'A loss of' : 'You make' }} {{ quote.profit }} on it
                     </p>
                 </div>
@@ -160,7 +160,7 @@ const submit = () => form.post(route('transfers.store'));
         </FormSection>
 
         <template #summary>
-            <div class="rounded-lg bg-teal-50 p-6 ring-1 ring-teal-100">
+            <div class="rounded-xl bg-gradient-to-b from-teal-50 to-white p-6 shadow-sm ring-1 ring-inset ring-teal-100">
                 <h2 class="text-lg font-semibold text-gray-900">Summary</h2>
 
                 <Banner v-if="stockProblem" variant="warning" class="mt-4">

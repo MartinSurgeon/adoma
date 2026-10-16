@@ -37,7 +37,7 @@ function switchOffice(event) {
                 <select
                     id="office-switcher"
                     :value="current"
-                    class="min-h-12 w-full max-w-[9.5rem] truncate rounded-md border-gray-300 py-2 pe-9 ps-10 text-base font-medium text-gray-800 shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:max-w-[15rem]"
+                    class="min-h-12 w-full max-w-[9.5rem] truncate rounded-lg border-gray-300 py-2 pe-9 ps-10 text-base font-medium text-gray-800 shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:max-w-[15rem]"
                     @change="switchOffice"
                 >
                     <option v-if="tenancy.can_view_all" value="all">All branches</option>

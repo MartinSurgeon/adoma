@@ -17,7 +17,7 @@ defineProps({
 <template>
     <Head title="My profile" />
 
-    <AuthenticatedLayout title="My profile" subtitle="Your name, the email you sign in with, and your password." width="3xl">
+    <AuthenticatedLayout title="My profile" subtitle="Name, email and password." width="3xl">
         <div class="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
             <div class="card p-6">
                 <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" />

@@ -122,7 +122,7 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel for="cash" :value="words.cash" />
-                    <select id="cash" v-model="form.cash_ledger_id" class="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600">
+                    <select id="cash" v-model="form.cash_ledger_id" class="mt-1 block w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600">
                         <option v-for="ledger in cashLedgers" :key="ledger.id" :value="ledger.id">{{ ledger.name }}</option>
                     </select>
                     <InputError class="mt-2" :message="form.errors.cash_ledger_id" />
@@ -156,7 +156,7 @@ const effect = computed(() => (props.type === 'receipt' ? 'goes up' : 'goes down
         </FormSection>
 
         <template #summary>
-            <div class="rounded-lg bg-teal-50/80 p-6 ring-1 ring-teal-200/80 shadow-sm">
+            <div class="rounded-xl bg-gradient-to-b from-teal-50 to-white p-6 shadow-sm ring-1 ring-inset ring-teal-100">
                 <h2 class="text-lg font-semibold text-gray-900">Summary</h2>
                 <dl class="mt-4 space-y-4 text-base">
                     <div>

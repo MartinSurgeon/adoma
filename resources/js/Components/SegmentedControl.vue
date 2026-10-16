@@ -15,15 +15,20 @@ const model = defineModel();
 </script>
 
 <template>
-    <div class="mt-1 grid overflow-hidden rounded-md border border-gray-300 sm:inline-flex" :style="{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }">
+    <!-- A tray with the chosen option raised in it, shaded like the main buttons. -->
+    <div
+        class="mt-1 grid gap-1 rounded-xl bg-gray-100 p-1 ring-1 ring-inset ring-gray-200 sm:inline-flex"
+        :style="{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }"
+    >
         <label
-            v-for="(option, index) in options"
+            v-for="option in options"
             :key="String(option.value)"
-            class="flex min-h-12 cursor-pointer items-center justify-center px-4 py-2 text-center text-base font-medium leading-snug has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-inset has-[:focus-visible]:ring-amber-400 sm:px-6"
-            :class="[
-                model === option.value ? 'bg-teal-700 text-white' : 'bg-white text-gray-800 hover:bg-gray-50',
-                index > 0 ? 'border-s border-gray-300' : '',
-            ]"
+            class="flex min-h-12 cursor-pointer items-center justify-center rounded-lg px-4 py-2 text-center text-base font-medium leading-snug transition has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-teal-600 sm:px-6"
+            :class="
+                model === option.value
+                    ? 'bg-gradient-to-b from-teal-700 to-teal-800 font-semibold text-white shadow-md shadow-teal-900/20 ring-1 ring-inset ring-white/10'
+                    : 'text-gray-800 hover:bg-white hover:shadow-sm'
+            "
         >
             <input v-model="model" type="radio" :name="name" :value="option.value" class="sr-only" />
             {{ option.label }}

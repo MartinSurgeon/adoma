@@ -141,7 +141,7 @@ defineExpose({ close });
                 :id="id"
                 ref="menu"
                 role="menu"
-                class="fixed z-[60] max-h-[calc(100vh-1rem)] overflow-y-auto rounded-lg bg-white py-1 shadow-lg ring-1 ring-gray-200"
+                class="fixed z-[60] max-h-[calc(100vh-1rem)] overflow-y-auto rounded-xl bg-white p-1 shadow-xl ring-1 ring-gray-200"
                 :class="menuClass"
                 :style="{ top: position.top + 'px', left: position.left + 'px' }"
                 @click="close()"

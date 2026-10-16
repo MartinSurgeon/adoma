@@ -49,24 +49,28 @@ function go() {
 }
 
 const linkClass = (item) => [
-    'group relative flex min-h-12 items-center rounded-md text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
+    'group relative flex min-h-12 items-center rounded-lg text-base font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
     props.collapsed ? 'mx-auto h-12 w-12 justify-center' : 'gap-3 px-3',
-    item.active ? 'bg-teal-800 text-white' : 'text-teal-50 hover:bg-teal-800/60 hover:text-white',
+    item.active ? 'bg-white/10 text-white shadow-sm ring-1 ring-inset ring-white/10' : 'text-teal-50 hover:bg-white/5 hover:text-white',
 ];
 </script>
 
 <template>
     <div class="flex h-full flex-col">
         <!-- The brand, and room for the drawer's close button. -->
-        <div class="flex h-16 shrink-0 items-center" :class="collapsed ? 'justify-center px-2' : 'justify-between gap-2 pe-2 ps-6'">
+        <div class="flex h-16 shrink-0 items-center" :class="collapsed ? 'justify-center px-2' : 'justify-between gap-2 pe-2 ps-4'">
             <Link
                 :href="route('dashboard')"
-                class="inline-flex min-h-12 items-center rounded-md text-xl font-semibold tracking-tight text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                class="inline-flex min-h-12 items-center rounded-lg text-xl font-semibold tracking-tight text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                 :aria-label="collapsed ? 'Adoma, home' : undefined"
                 @click="go"
             >
-                <span v-if="collapsed" class="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-800 text-xl font-bold" aria-hidden="true">A<span class="text-amber-400">.</span></span>
-                <template v-else>Adoma<span class="text-amber-400" aria-hidden="true">.</span></template>
+                <!-- The same gold "A" as on the sign-in screen. -->
+                <span
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-lg font-bold text-teal-950 shadow-lg shadow-black/25"
+                    aria-hidden="true"
+                >A</span>
+                <span v-if="!collapsed" class="ms-3">Adoma<span class="text-amber-400" aria-hidden="true">.</span></span>
             </Link>
             <slot name="brand-end" />
         </div>
@@ -79,9 +83,10 @@ const linkClass = (item) => [
                 :label="collapsed ? 'New' : null"
                 menu-class="w-80 max-w-[calc(100vw-1rem)]"
                 :button-class="[
-                    'flex min-h-12 items-center rounded-md bg-white text-base font-semibold text-teal-900 shadow-sm hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
+                    // Gold, the brand's highlight: the one thing in the menu that starts work rather than finding it.
+                    'flex min-h-12 items-center rounded-lg bg-gradient-to-b from-amber-200 to-amber-400 text-base font-semibold text-teal-950 shadow-lg shadow-black/25 ring-1 ring-inset ring-white/40 transition hover:from-amber-100 hover:to-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white',
                     collapsed ? 'mx-auto h-12 w-12 justify-center' : 'w-full gap-3 px-3',
-                    recording ? 'ring-2 ring-amber-400' : '',
+                    recording ? 'outline outline-2 outline-offset-2 outline-amber-300/70' : '',
                 ]"
                 @open="hideTip"
             >
@@ -93,11 +98,8 @@ const linkClass = (item) => [
                     </template>
                 </template>
 
-                <p class="px-4 pb-1 pt-2 text-sm font-semibold text-gray-700">Record a new…</p>
                 <MenuItem v-for="item in newItems" :key="item.key" :href="item.href" :current="item.active" @click="go">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-800">
-                        <NavIcon :name="item.icon" class="h-5 w-5" />
-                    </span>
+                    <span class="icon-chip" aria-hidden="true"><NavIcon :name="item.icon" class="h-5 w-5" /></span>
                     <span class="min-w-0">
                         <span class="block font-medium">{{ item.label }}</span>
                         <span class="block text-sm text-gray-700">{{ item.hint }}</span>
@@ -139,7 +141,7 @@ const linkClass = (item) => [
                 <button
                     v-else
                     type="button"
-                    class="mt-4 flex min-h-12 w-full items-center gap-3 rounded-md px-3 text-base font-medium text-teal-100 hover:bg-teal-800/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    class="mt-4 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-base font-medium text-teal-100 transition-colors hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                     :aria-expanded="adminShown"
                     aria-controls="nav-admin"
                     @click="adminGroupOpen = !adminShown"
@@ -176,7 +178,7 @@ const linkClass = (item) => [
         <Teleport to="body">
             <div
                 v-if="tip"
-                class="pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow-lg print:hidden"
+                class="pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow-lg print:hidden"
                 :style="{ top: tip.top + 'px', left: tip.left + 'px' }"
                 aria-hidden="true"
             >

@@ -40,8 +40,8 @@ const drawerOpen = ref(false);
 const drawer = ref(null);
 
 const menuLabel = computed(() => {
-    if (!isWide.value) return 'Open the menu';
-    return sidebarCollapsed.value ? 'Show the menu names' : 'Fold the menu to icons';
+    if (!isWide.value) return 'Open menu';
+    return sidebarCollapsed.value ? 'Expand menu' : 'Collapse menu';
 });
 
 function pressMenu() {
@@ -130,7 +130,7 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
 
         <!-- Sidebar, wide screens. Folds to icons; the width is shared with the page through --sidebar-width. -->
         <div
-            class="fixed inset-y-0 left-0 z-30 hidden flex-col bg-teal-900 print:hidden lg:flex motion-safe:transition-[width] motion-safe:duration-200"
+            class="fixed inset-y-0 left-0 z-30 hidden flex-col bg-gradient-to-b from-teal-900 to-teal-950 print:hidden lg:flex motion-safe:transition-[width] motion-safe:duration-200"
             style="width: var(--sidebar-width)"
         >
             <SidebarNav :collapsed="sidebarCollapsed" />
@@ -146,14 +146,14 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
             >
                 <div v-if="drawerOpen" id="menu-drawer" class="fixed inset-0 z-50 print:hidden lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
                     <div class="absolute inset-0 bg-gray-900/50" aria-hidden="true" @click="closeDrawer()"></div>
-                    <div ref="drawer" class="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-teal-900 shadow-xl">
+                    <div ref="drawer" class="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-gradient-to-b from-teal-900 to-teal-950 shadow-2xl">
                         <SidebarNav @navigate="closeDrawer(false)">
                             <template #brand-end>
                                 <button
                                     type="button"
                                     data-autofocus
-                                    class="inline-flex h-12 w-12 items-center justify-center rounded-md text-teal-50 hover:bg-teal-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                                    aria-label="Close the menu"
+                                    class="inline-flex h-12 w-12 items-center justify-center rounded-lg text-teal-50 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                                    aria-label="Close menu"
                                     @click="closeDrawer()"
                                 >
                                     <NavIcon name="close" class="h-6 w-6" />
@@ -171,7 +171,7 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                 <button
                     ref="menuButton"
                     type="button"
-                    class="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    class="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                     :aria-label="menuLabel"
                     :title="menuLabel"
                     :aria-expanded="isWide ? !sidebarCollapsed : drawerOpen"
@@ -183,8 +183,9 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                     <span v-if="incoming > 0" class="absolute right-2 top-2 h-3 w-3 rounded-full bg-amber-500 ring-2 ring-white lg:hidden" aria-hidden="true"></span>
                 </button>
 
-                <Link :href="route('dashboard')" class="inline-flex min-h-12 shrink-0 items-center rounded-md px-1 text-lg font-semibold text-teal-900 lg:hidden">
-                    Adoma<span class="text-amber-700" aria-hidden="true">.</span>
+                <Link :href="route('dashboard')" class="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-lg px-1 text-lg font-semibold text-teal-900 lg:hidden">
+                    <span class="hidden h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-base font-bold text-teal-950 shadow-sm min-[400px]:flex" aria-hidden="true">A</span>
+                    <span>Adoma<span class="text-amber-700" aria-hidden="true">.</span></span>
                 </Link>
 
                 <div class="ms-auto flex min-w-0 items-center gap-1 sm:gap-3">
@@ -193,7 +194,7 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                     <PopoverMenu
                         placement="bottom-end"
                         menu-class="w-72 max-w-[calc(100vw-1rem)]"
-                        button-class="inline-flex min-h-12 min-w-12 items-center gap-2 rounded-md px-1.5 text-base font-medium text-gray-800 hover:bg-gray-100 sm:px-2"
+                        button-class="inline-flex min-h-12 min-w-12 items-center gap-2 rounded-lg px-1.5 text-base font-medium text-gray-800 hover:bg-gray-100 sm:px-2"
                     >
                         <template #button="{ open }">
                             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-base font-semibold text-teal-900" aria-hidden="true">{{ initial }}</span>
@@ -225,7 +226,7 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                     <Link
                         v-if="back"
                         :href="back.href"
-                        class="-ms-2 mb-1 inline-flex min-h-12 items-center gap-2 rounded-md px-2 text-base font-medium text-teal-800 hover:bg-teal-50 hover:text-teal-900 print:hidden"
+                        class="-ms-2 mb-1 inline-flex min-h-12 items-center gap-2 rounded-lg px-2 text-base font-medium text-teal-800 hover:bg-teal-50 hover:text-teal-900 print:hidden"
                     >
                         <NavIcon name="back" class="h-5 w-5" />
                         {{ back.label }}
@@ -266,17 +267,17 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                         button-class="flex min-h-[56px] w-full flex-col items-center justify-center gap-1 px-1 text-sm font-semibold text-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-600"
                     >
                         <template #button>
-                            <span class="flex h-8 w-12 items-center justify-center rounded-full bg-teal-700 text-white" aria-hidden="true">
+                            <span
+                                class="flex h-8 w-12 items-center justify-center rounded-full bg-gradient-to-b from-teal-700 to-teal-800 text-white shadow-md shadow-teal-900/25 ring-1 ring-inset ring-white/10"
+                                aria-hidden="true"
+                            >
                                 <NavIcon name="plus" class="h-6 w-6" stroke-width="2.2" />
                             </span>
                             New
                         </template>
 
-                        <p class="px-4 pb-1 pt-2 text-sm font-semibold text-gray-700">Record a new…</p>
                         <MenuItem v-for="choice in newItems" :key="choice.key" :href="choice.href" :current="choice.active">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-800">
-                                <NavIcon :name="choice.icon" class="h-5 w-5" />
-                            </span>
+                            <span class="icon-chip" aria-hidden="true"><NavIcon :name="choice.icon" class="h-5 w-5" /></span>
                             <span class="min-w-0">
                                 <span class="block font-medium">{{ choice.label }}</span>
                                 <span class="block text-sm text-gray-700">{{ choice.hint }}</span>

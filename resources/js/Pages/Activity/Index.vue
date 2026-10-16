@@ -30,21 +30,21 @@ function show(value) {
 <template>
     <Head title="Activity" />
 
-    <AuthenticatedLayout title="Activity" subtitle="Who did what, newest first. Entries cannot be changed or removed." width="5xl">
+    <AuthenticatedLayout title="Activity" subtitle="Who did what, newest first." width="5xl">
         <div class="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
             <div class="card p-4">
                 <label for="type" class="block text-base font-medium text-gray-700">Show</label>
                 <select
                     id="type"
                     v-model="selected"
-                    class="mt-1 block min-h-12 w-full rounded-md border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-64"
+                    class="mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600 sm:w-64"
                 >
                     <option value="">Everything</option>
                     <option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option>
                 </select>
             </div>
 
-            <ul class="divide-y divide-gray-100 overflow-hidden rounded-lg bg-white shadow-sm">
+            <ul class="card divide-y divide-gray-100 overflow-hidden">
                 <li v-for="log in logs.data" :key="log.id" class="p-4">
                     <p class="text-base text-gray-900">
                         <span class="font-semibold">{{ log.actor }}</span> {{ log.description }}
