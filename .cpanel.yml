@@ -5,9 +5,9 @@
 # screens in public/build). The app runs from ~/adoma, whose public folder is the subdomain's document root.
 # The server's own .env and storage/ are never in Git and are never touched here.
 #
-# Every step names its own full paths: some cPanel versions run each step on its own, so nothing set in one step
-# can be relied on in the next. PHP is the server's PHP 8.3 (Namecheap/CloudLinux path): if `ls /opt/alt/` shows
-# another version, change php83 below, everywhere.
+# Every step names its own full paths, so each one can be read, and run by hand in the Terminal, on its own.
+# PHP is the server's PHP 8.3 (Namecheap/CloudLinux path): if `ls /opt/alt/` shows
+# another version, change php83 below, everywhere. Composer is the copy in ~/bin/composer.phar (docs/DEPLOY.md, B2).
 deployment:
   tasks:
     - '/bin/mkdir -p $HOME/adoma/bootstrap/cache'
@@ -16,7 +16,7 @@ deployment:
     # The code. The first time only, storage/ is copied too; after that it holds the server's own data.
     - '/bin/rsync -a --delete --exclude=.git --exclude=.env --exclude=/storage/ --exclude=/vendor/ --exclude=/node_modules/ --exclude=/tests/ --exclude=/bootstrap/cache/ --exclude=/error_log --exclude=/public/error_log ./ $HOME/adoma/'
     - 'if [ ! -d $HOME/adoma/storage/framework ]; then /bin/cp -r storage $HOME/adoma/; fi'
-    - 'cd $HOME/adoma && /opt/alt/php83/usr/bin/php /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader --no-interaction'
+    - 'cd $HOME/adoma && /opt/alt/php83/usr/bin/php -d memory_limit=1G $HOME/bin/composer.phar install --no-dev --optimize-autoloader --no-interaction'
     # Only once .env exists (made by hand after the first deploy): update the database, then cache settings and routes.
     - 'if [ -f $HOME/adoma/.env ]; then cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan migrate --force && /opt/alt/php83/usr/bin/php artisan optimize; fi'
     - 'if [ -f $HOME/adoma/.env ]; then cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan up; fi; true'
