@@ -1,5 +1,5 @@
 ---
-# What cPanel does on "Deploy HEAD Commit" (cPanel → Git Version Control → Manage → Pull or Deploy).
+# What cPanel does on "Deploy HEAD Commit" (cPanel > Git Version Control > Manage > Pull or Deploy).
 #
 # The clone lives in ~/repositories/passion, on the "production" branch (made by scripts/release.ps1, with the built
 # screens in public/build). The app runs from ~/adoma, whose public folder is the subdomain's document root.
