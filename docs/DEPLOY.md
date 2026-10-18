@@ -67,7 +67,7 @@ padlock (a few minutes).
    empty** (cPanel Git cannot use a key with a password) → **Generate Key**.
 2. Back on Manage SSH Keys, beside `github.pub`: **Manage** → **Authorize**.
 3. Beside `github.pub`: **View/Download** → copy the whole key (it starts `ssh-rsa` or `ssh-ed25519`).
-4. GitHub → repository `passion` → **Settings** → **Deploy keys** → **Add deploy key**. Title `Namecheap`, paste
+4. GitHub → repository `adoma` → **Settings** → **Deploy keys** → **Add deploy key**. Title `Namecheap`, paste
    the key, leave **Allow write access** off → **Add key**.
 5. cPanel → **Terminal**:
    ```
