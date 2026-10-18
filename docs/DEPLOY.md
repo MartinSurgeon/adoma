@@ -6,7 +6,7 @@ screens on your own computer and send them up with the code, because the server 
 **Rehearsed on 17 Oct 2026:** these exact steps were run on a clean copy, in production mode, on Apache. The owner
 signed in with the temporary password, chose a new one, and saved a purchase (PCH-CEN-000001).
 
-What you need: the cPanel login, access to the GitHub repository `MartinSurgeon/passion`, and about an hour.
+What you need: the cPanel login, access to the GitHub repository `MartinSurgeon/adoma`, and about an hour.
 Below, `<user>` is your cPanel username (shown top right in cPanel) and `app.yourdomain.com` is the address the
 client will use.
 
@@ -75,14 +75,14 @@ padlock (a few minutes).
    chmod 600 ~/.ssh/config
    ssh -T git@github.com
    ```
-   Type `yes` when asked. You should see *"Hi MartinSurgeon/passion! You've successfully authenticated"*.
+   Type `yes` when asked. You should see *"Hi MartinSurgeon/adoma! You've successfully authenticated"*.
    If it hangs or says "Connection refused", Namecheap is blocking the connection: ask their support to allow
    outgoing SSH to github.com on port 22, or ask your developer to switch to an access-token address.
 
 **B7. Clone.** cPanel → **Git Version Control** → **Create**:
 - Clone a Repository: **on**
-- Clone URL: `git@github.com:MartinSurgeon/passion.git` (public repository: `https://github.com/MartinSurgeon/passion.git`)
-- Repository Path: `/home/<user>/repositories/passion`
+- Clone URL: `git@github.com:MartinSurgeon/adoma.git` (public repository: `https://github.com/MartinSurgeon/adoma.git`)
+- Repository Path: `/home/<user>/repositories/adoma`
 - Repository Name: `adoma` → **Create**.
 
 Then **Manage** (beside it) → **Basic Information** → **Checked-Out Branch**: `production` → **Update**.
