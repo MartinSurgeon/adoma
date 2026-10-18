@@ -1,0 +1,1 @@
+import{a}from"./app-4rnwb7j-.js";import{h as t,c as e,U as n}from"./confirm-B1HIC1Rr.js";async function l(){const o=t();await e({title:"Log out?",body:o?n:"You will need your email and password to log in again.",confirmLabel:"Log out",cancelLabel:"Stay logged in",danger:o})&&a.post(route("logout"))}export{l};
