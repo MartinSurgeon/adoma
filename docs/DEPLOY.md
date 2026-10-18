@@ -37,16 +37,18 @@ You should see `Released <code>.` at the end. On GitHub, the branch list now has
 - Under **Extensions**, make sure these are ticked: `bcmath`, `ctype`, `fileinfo`, `mbstring`, `openssl`, `pdo_mysql`,
   `tokenizer`, `xml`, `zip`.
 
-**B2. Check two paths `.cpanel.yml` relies on.** cPanel → **Terminal**, and type:
+**B2. PHP, and Composer (which installs the PHP packages).** cPanel → **Terminal**, and type:
 
 ```
 ls /opt/alt/php83/usr/bin/php
-ls /opt/cpanel/composer/bin/composer
+mkdir -p ~/bin && curl -sS -o ~/bin/composer.phar https://getcomposer.org/download/latest-stable/composer.phar
+/opt/alt/php83/usr/bin/php ~/bin/composer.phar --version
 ```
 
-Both should print the path back. If the first says "No such file", type `ls /opt/alt/`, note the PHP 8.x folder
-you see (for example `php84`), and change the `PHP=` line in `.cpanel.yml` to match, then repeat A2.
-If the second fails, tell your developer before going on.
+The first line should print the path back. If it says "No such file", type `ls /opt/alt/`, note the PHP 8.x folder
+you see (for example `php84`), and change every `php83` in `.cpanel.yml` to match, then repeat A2.
+The last line should print `Composer version 2...`. (Namecheap does not provide Composer where cPanel usually
+keeps it, so the deploy uses this copy in your home folder.)
 
 **B3. Database.** cPanel → **MySQL Database Wizard**:
 1. Database name: e.g. `adoma` (cPanel makes it `<user>_adoma`).
