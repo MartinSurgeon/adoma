@@ -191,6 +191,13 @@ server's `.env` and stored data are never touched.
 | "Access denied for user" | The `DB_` lines in `.env` do not match B3. Fix them, then in the Terminal run `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan optimize`. |
 | Deploy HEAD Commit is greyed out | The clone has uncommitted changes on the server, or is not on `production`. Check B7's branch. |
 | The page shows "being updated" and stays | A deploy stopped halfway. In the Terminal: `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan up`, then deploy again. |
+| A black "404 Not Found" page from LiteSpeed (not Adoma's own page) | Either the document root is not `/adoma/public` (B4), or `~/adoma` is private to the account: `chmod 755 ~/adoma ~/adoma/public`. |
+| Deploy says it is complete, but nothing changed | Read the newest log: `tail -30 ~/.cpanel/logs/$(ls -t ~/.cpanel/logs/ \| grep -i deploy \| head -1)`. |
+| "The system cannot deploy" | `cd ~/repositories/adoma && git status --short` must print nothing. Delete any stray file it lists (usually `error_log`); if files show as deleted (`D`), run `git reset --hard HEAD`. Never change files in that folder by hand. |
+| "Could not open input file: …composer…" | B2's `composer.phar` download was missed. Run it, then deploy again. |
+| "No APP_KEY variable was found" | `.env` has no `APP_KEY=` line: `echo 'APP_KEY=' >> ~/adoma/.env`, then `key:generate --force` again. |
+| "Specified key was too long; max key length is 1000 bytes" | The server's code is older than the InnoDB setting. Pull and deploy the latest release, run `php artisan config:clear`, then `migrate:fresh --force` (only on an empty or throwaway database). |
+| "Table 'users' already exists" during a deploy | A first database build stopped halfway. On a new, empty install: `php artisan migrate:fresh --force`. Never on a database with real data: ask your developer. |
 
 After changing `.env` at any time, run `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan optimize` so the change
 takes effect.
