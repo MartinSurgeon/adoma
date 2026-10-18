@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# PHP on shared hosting writes these wherever a command runs; they must never block a cPanel deploy.
+error_log
