@@ -6,13 +6,14 @@ namespace App\Domain\Reports;
  * One table of a report, as the screen shows it and as the spreadsheet download writes it.
  *
  * Every report is built from these, so they all look and behave alike. A cell is the text people read.
- * A row is a list of cells in the order of the columns, or a heading that spans the table.
+ * A row is a list of cells in the order of the columns, a heading that spans the table (a band), or the subtotal
+ * that closes a band.
  */
 final class ReportTable
 {
     /**
      * @param  list<array{label: string, number?: bool}>  $columns  number: a figure, shown on the right
-     * @param  list<list<string>|array{heading: string}>  $rows
+     * @param  list<list<string>|array{heading: string}|array{subtotal: list<string>}>  $rows
      * @param  list<string>|null  $totals  a row of cells under the table
      */
     public function __construct(
@@ -47,7 +48,7 @@ final class ReportTable
                 continue;
             }
 
-            $lines[] = $clean($row);
+            $lines[] = $clean($row['subtotal'] ?? $row);
         }
 
         if ($this->totals !== null) {

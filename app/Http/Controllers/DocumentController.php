@@ -215,7 +215,8 @@ class DocumentController extends Controller
             'density' => $format($line->density),
             'karat' => $format($line->karat),
             // What a purchase was paid at (karat less the deduction), and its purity out of 24: the sheet's I and J.
-            'paid_karat' => $format($line->paid_karat),
+            'paid_karat' => (float) $line->formulaSet->karat_deduction > 0 ? $format($line->paid_karat) : null,
+            'karat_deduction' => (float) $line->formulaSet->karat_deduction > 0 ? $format($line->formulaSet->karat_deduction) : null,
             'purity' => Money::format(intdiv(Money::fromDb($line->paid_karat ?? $line->karat) * 100, 24)),
             // A karat above 24 that an admin allowed: who, and why.
             'karat_override' => $line->karat_overridden_by === null ? null : [

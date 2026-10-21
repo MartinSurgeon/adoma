@@ -16,6 +16,7 @@ use App\Domain\Tenancy\Role;
 use App\Domain\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -109,32 +110,69 @@ class ReportController extends Controller
 
         $amountTotal = Money::fromDb($totals->amount);
 
+        // The client's own sales sheet, column for column (his "Density" is the water weight, and his "1st" and "Main"
+        // karat are the density and the karat), in the names the purchase and sale forms use. A band for each form of gold.
         $columns = array_values(array_filter([
-            ['label' => 'Date'], ['label' => 'Number'], ['label' => 'Customer'],
+            ['label' => 'No.'], ['label' => 'Date'], ['label' => 'Customer'],
             $all ? ['label' => 'Branch'] : null,
-            ['label' => 'Form'], ['label' => 'Weight (g)', 'number' => true], ['label' => 'Karat', 'number' => true],
+            ['label' => 'Weight (g)', 'number' => true], ['label' => 'Water weight (g)', 'number' => true],
+            ['label' => 'Price', 'number' => true], ['label' => 'Pounds', 'number' => true],
+            ['label' => 'Density', 'number' => true], ['label' => 'Karat', 'number' => true],
             ['label' => 'Amount (GH₵)', 'number' => true],
             $showCost ? ['label' => 'Cost (GH₵)', 'number' => true] : null,
             $showCost ? ['label' => 'Profit (GH₵)', 'number' => true] : null,
         ]));
 
-        $table = new ReportTable('Sales', $columns, $rows->take(self::LIMIT)->map(function (Document $d) use ($all, $showCost, $costs) {
-            $amount = Money::fromDb($d->total);
-            $cost = $costs[$d->id] ?? 0;
+        $line = function (string $first, array $cells) use ($all) {
+            return array_values(array_filter([$first, '', '', $all ? '' : null, ...$cells], fn ($cell) => $cell !== null));
+        };
 
-            return array_values(array_filter([
-                $this->day($d->date), $d->number, $d->ledger?->name,
-                $all ? $d->branch?->name : null,
-                ucfirst((string) $d->goldLine?->form), $this->grams($d->goldLine?->weight_g), $this->figure($d->goldLine?->karat),
-                Money::format($amount),
-                $showCost ? Money::format($cost) : null,
-                $showCost ? $this->signed($amount - $cost) : null,
-            ], fn ($cell) => $cell !== null));
-        })->values()->all(), array_values(array_filter([
-            'Total', '', '', $all ? '' : null, '', $this->grams($totals->weight), '', Money::format($amountTotal),
-            $showCost ? Money::format($costTotal) : null,
-            $showCost ? $this->signed($amountTotal - $costTotal) : null,
-        ], fn ($cell) => $cell !== null)));
+        $bands = [];
+        $listed = $rows->take(self::LIMIT)->groupBy(fn (Document $d) => (string) $d->goldLine?->form);
+
+        foreach (['raw' => 'Raw gold', 'refined' => 'Refined gold', 'mixed' => 'Raw and refined together'] as $form => $name) {
+            $sales = $listed->get($form);
+
+            if ($sales === null) {
+                continue;
+            }
+
+            $bands[] = ['heading' => $name];
+            $sums = ['weight' => 0, 'pounds' => 0, 'amount' => 0, 'cost' => 0];
+
+            foreach ($sales as $d) {
+                $gold = $d->goldLine;
+                $amount = Money::fromDb($d->total);
+                $cost = $costs[$d->id] ?? 0;
+                $sums['weight'] += Money::fromDb($gold?->weight_g);
+                $sums['pounds'] += Money::fromDb($gold?->pounds);
+                $sums['amount'] += $amount;
+                $sums['cost'] += $cost;
+
+                $bands[] = array_values(array_filter([
+                    $d->number, $this->day($d->date), $d->ledger?->name,
+                    $all ? $d->branch?->name : null,
+                    $this->grams($gold?->weight_g), $gold?->water_weight_g === null ? '—' : $this->grams($gold->water_weight_g),
+                    $this->figure($gold?->price), $this->figure($gold?->pounds),
+                    $gold?->density === null ? '—' : $this->figure($gold->density), $this->figure($gold?->karat),
+                    Money::format($amount),
+                    $showCost ? Money::format($cost) : null,
+                    $showCost ? $this->signed($amount - $cost) : null,
+                ], fn ($cell) => $cell !== null));
+            }
+
+            $bands[] = ['subtotal' => $line($name, [
+                Money::format($sums['weight']), '', '', Money::format($sums['pounds']), '', '', Money::format($sums['amount']),
+                ...($showCost ? [Money::format($sums['cost']), $this->signed($sums['amount'] - $sums['cost'])] : []),
+            ])];
+        }
+
+        $totalPounds = (int) $documents()->join('gold_lines', 'gold_lines.document_id', '=', 'documents.id')->sum(DB::raw('gold_lines.pounds * 100'));
+
+        $table = new ReportTable('Sales', $columns, $bands, $line('Total', [
+            $this->grams($totals->weight), '', '', Money::format($totalPounds), '', '', Money::format($amountTotal),
+            ...($showCost ? [Money::format($costTotal), $this->signed($amountTotal - $costTotal)] : []),
+        ]));
 
         return $this->respond($request, 'sales', 'Sales', $period, [$table], array_values(array_filter([
             ['label' => 'Sales', 'value' => (string) (int) $totals->n],

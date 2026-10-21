@@ -31,7 +31,7 @@ const rows = computed(() => {
         list.push(['Pounds', props.gold.pounds]);
         if (props.gold.density) list.push(['Density', props.gold.density]);
         list.push(['Karat', props.gold.karat]);
-        if (props.gold.paid_karat) list.push(['Karat paid', props.gold.paid_karat]);
+        if (props.gold.paid_karat) list.push([`Karat (−${props.gold.karat_deduction})`, props.gold.paid_karat]);
         list.push(['Purity', `${props.gold.purity}%`], [`Price per pound at ${props.gold.base_karat} karat`, props.gold.price]);
     }
 
