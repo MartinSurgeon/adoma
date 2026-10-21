@@ -40,7 +40,7 @@ class SetupBusiness extends Command
     public function handle(): int
     {
         if (Tenant::query()->exists()) {
-            $this->error('This server already has a business. Add branches and people inside Adoma instead.');
+            $this->error('This server already has a business. Add branches and people inside Karl instead.');
 
             return self::FAILURE;
         }

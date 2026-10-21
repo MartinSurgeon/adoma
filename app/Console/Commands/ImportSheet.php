@@ -31,7 +31,7 @@ use Throwable;
  *     php artisan adoma:import-sheet "storage/app/imports/2010 (current).xlsx"
  *     php artisan adoma:import-sheet --remove
  *
- * The sheet has a Date, Supplier, Weight_Both, Volume (the water weight) and Price on each row; Adoma works out the rest
+ * The sheet has a Date, Supplier, Weight_Both, Volume (the water weight) and Price on each row; Karl works out the rest
  * with the business's own formula, so every purchase reads exactly like one entered by hand. Each is posted at the head
  * office on its own date, and marked with a key ("sheet-2010:row-12"): running the import again adds nothing twice, and
  * --remove finds exactly what it added. Suppliers it had to create are noted, and removed with it if nothing else uses them.
@@ -239,7 +239,7 @@ class ImportSheet extends Command
         $ids = Document::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('idempotency_key', 'like', "{$key}:row-%")->pluck('id');
 
         if ($ids->isEmpty()) {
-            $this->info('Nothing from this import is in Adoma.');
+            $this->info('Nothing from this import is in Karl.');
 
             return self::SUCCESS;
         }

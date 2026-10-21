@@ -4,6 +4,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ButtonLink from '@/Components/ButtonLink.vue';
 import NavIcon from '@/Components/NavIcon.vue';
+import KarlMark from '@/Components/KarlMark.vue';
 
 /**
  * An error, as a page of the app: what happened in plain words, and a way on. The words come from the server
@@ -43,8 +44,8 @@ function act() {
     <component :is="framed ? AuthenticatedLayout : 'div'" :class="framed ? undefined : 'flex min-h-screen flex-col bg-gray-50'">
         <div class="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-16">
             <Link v-if="!framed" href="/" class="mb-6 inline-flex min-h-12 items-center gap-3 self-center rounded-lg px-1 text-2xl font-semibold tracking-tight text-teal-900">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-lg font-bold text-teal-950 shadow-sm" aria-hidden="true">A</span>
-                <span>Adoma<span class="text-amber-700" aria-hidden="true">.</span></span>
+                <KarlMark class="h-11 w-11 shrink-0" />
+                <span>Karl<span class="text-amber-700" aria-hidden="true">.</span></span>
             </Link>
 
             <section class="card p-6 text-center sm:p-10" aria-labelledby="error-title">

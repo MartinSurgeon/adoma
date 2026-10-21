@@ -6,6 +6,7 @@ import NavIcon from '@/Components/NavIcon.vue';
 import PopoverMenu from '@/Components/PopoverMenu.vue';
 import { useNavigation } from '@/navigation';
 import { adminGroupOpen } from '@/sidebar';
+import KarlMark from '@/Components/KarlMark.vue';
 
 /**
  * The sidebar's contents: the brand, one "New" menu for recording, the places to go, and the admin pages folded away.
@@ -62,15 +63,12 @@ const linkClass = (item) => [
             <Link
                 :href="route('dashboard')"
                 class="inline-flex min-h-12 items-center rounded-lg text-xl font-semibold tracking-tight text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                :aria-label="collapsed ? 'Adoma, home' : undefined"
+                :aria-label="collapsed ? 'Karl, home' : undefined"
                 @click="go"
             >
-                <!-- The same gold "A" as on the sign-in screen. -->
-                <span
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-lg font-bold text-teal-950 shadow-lg shadow-black/25"
-                    aria-hidden="true"
-                >A</span>
-                <span v-if="!collapsed" class="ms-3">Adoma<span class="text-amber-400" aria-hidden="true">.</span></span>
+                <!-- Karl, the same as on the sign-in screen. -->
+                <KarlMark class="h-10 w-10 shrink-0 drop-shadow" />
+                <span v-if="!collapsed" class="ms-3">Karl<span class="text-amber-400" aria-hidden="true">.</span></span>
             </Link>
             <slot name="brand-end" />
         </div>

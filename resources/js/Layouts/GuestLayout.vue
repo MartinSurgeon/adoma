@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import ConfirmHost from '@/Components/ConfirmHost.vue';
 import GoldBarsArt from '@/Components/GoldBarsArt.vue';
+import KarlMark from '@/Components/KarlMark.vue';
 
 /**
  * The frame for signing in and choosing a password.
@@ -25,15 +26,15 @@ const points = [
         <!-- Exactly the height of the window: the drawing takes whatever room the words leave, so nothing is cut off. -->
         <aside
             class="relative hidden overflow-hidden bg-gradient-to-br from-teal-900 via-teal-950 to-emerald-950 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[52%] lg:flex-col lg:p-10 xl:w-[55%] xl:p-14"
-            aria-label="About Adoma"
+            aria-label="About Karl"
         >
             <div class="auth-dots pointer-events-none absolute inset-0" aria-hidden="true"></div>
             <div class="pointer-events-none absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-amber-400/10 blur-3xl" aria-hidden="true"></div>
             <div class="pointer-events-none absolute -bottom-48 -left-24 h-[26rem] w-[26rem] rounded-full bg-teal-400/10 blur-3xl" aria-hidden="true"></div>
 
             <Link href="/" class="relative inline-flex min-h-12 shrink-0 items-center gap-3 self-start rounded-lg focus-visible:outline-amber-400">
-                <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-xl font-bold text-teal-950 shadow-lg shadow-black/20" aria-hidden="true">A</span>
-                <span class="text-2xl font-semibold tracking-tight">Adoma<span class="text-amber-400" aria-hidden="true">.</span></span>
+                <KarlMark class="h-12 w-12 shrink-0 drop-shadow-lg" />
+                <span class="text-2xl font-semibold tracking-tight">Karl<span class="text-amber-400" aria-hidden="true">.</span></span>
             </Link>
 
             <div class="relative mx-auto min-h-0 w-full max-w-[34rem] flex-1 py-6">
@@ -68,8 +69,8 @@ const points = [
                 <!-- In the band's open corner, clear of the card that rises over the bottom of the band. -->
                 <GoldBarsArt class="pointer-events-none absolute right-0 top-2 h-auto w-36 sm:right-8 sm:w-44" aria-hidden="true" />
                 <Link href="/" class="relative inline-flex min-h-12 items-center gap-3 rounded-lg focus-visible:outline-amber-400">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-lg font-bold text-teal-950 shadow-lg shadow-black/20" aria-hidden="true">A</span>
-                    <span class="text-2xl font-semibold tracking-tight">Adoma<span class="text-amber-400" aria-hidden="true">.</span></span>
+                    <KarlMark class="h-11 w-11 shrink-0 drop-shadow-lg" />
+                    <span class="text-2xl font-semibold tracking-tight">Karl<span class="text-amber-400" aria-hidden="true">.</span></span>
                 </Link>
                 <p class="relative mt-2 max-w-[11rem] text-base text-teal-100 sm:max-w-xs">Gold trading and accounting</p>
             </div>
@@ -81,7 +82,7 @@ const points = [
             </main>
 
             <footer class="px-6 pb-6 pt-8 text-center text-sm text-gray-600 lg:px-12 lg:text-left xl:px-16">
-                © {{ year }} Adoma · Gold trading and accounting
+                © {{ year }} Karl · Gold trading and accounting
             </footer>
         </div>
 
