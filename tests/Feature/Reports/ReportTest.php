@@ -21,6 +21,8 @@ use Tests\Support\World;
 
 beforeEach(function () {
     $this->w = World::build();
+    // The figures below come from the client's earlier sheet, which had no karat deduction.
+    $this->w->earlierSheetFormula();
 
     $this->bright = rpLedger($this->w->kumasi, 'Bright', LedgerKind::Supplier);
     $this->black = rpLedger($this->w->kumasi, 'Black', LedgerKind::Supplier);
@@ -142,20 +144,22 @@ it('lists the sales of the period, and gives managers the cost and the profit', 
 
     expect($amount)->toBe(151133400)->and($cost)->toBeGreaterThan(0)
         ->and(collect($props['tables'][0]['columns'])->pluck('label')->all())
-        ->toBe(['Date', 'Number', 'Customer', 'Form', 'Weight (g)', 'Karat', 'Amount (GH₵)', 'Cost (GH₵)', 'Profit (GH₵)'])
-        ->and(rpRows($props))->toBe([[
-            '25 Mar 2026', $this->s1->number, 'Passion Gold', 'Raw', '1,000.00', '22.45', '1,511,334.00',
-            Money::format($cost), Money::format($amount - $cost),
-        ]])
-        ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '', '1,000.00', '', '1,511,334.00', Money::format($cost), Money::format($amount - $cost)])
+        // The client's own sales sheet, column for column, in the names the forms use.
+        ->toBe(['No.', 'Date', 'Customer', 'Weight (g)', 'Water weight (g)', 'Price', 'Pounds', 'Density', 'Karat', 'Amount (GH₵)', 'Cost (GH₵)', 'Profit (GH₵)'])
+        ->and(rpRows($props))->toBe([
+            ['heading' => 'Raw gold'],
+            [$this->s1->number, '25 Mar 2026', 'Passion Gold', '1,000.00', '54.70', '12,000.00', '129.03', '18.28', '22.45', '1,511,334.00', Money::format($cost), Money::format($amount - $cost)],
+            ['subtotal' => ['Raw gold', '', '', '1,000.00', '', '', '129.03', '', '', '1,511,334.00', Money::format($cost), Money::format($amount - $cost)]],
+        ])
+        ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '1,000.00', '', '', '129.03', '', '', '1,511,334.00', Money::format($cost), Money::format($amount - $cost)])
         ->and(collect($props['stats'])->pluck('label')->all())->toBe(['Sales', 'Gold sold', 'Total amount', 'Profit']);
 });
 
 it('keeps the cost and the profit from clerks and viewers, who see the sales without them', function (string $who) {
     $props = rpProps($this->actingAs($this->w->{$who})->get(route('reports.sales', rpMarch()))->assertOk());
 
-    expect(collect($props['tables'][0]['columns'])->pluck('label')->all())->toBe(['Date', 'Number', 'Customer', 'Form', 'Weight (g)', 'Karat', 'Amount (GH₵)'])
-        ->and(rpRows($props)[0])->toHaveCount(7)
+    expect(collect($props['tables'][0]['columns'])->pluck('label')->all())->toBe(['No.', 'Date', 'Customer', 'Weight (g)', 'Water weight (g)', 'Price', 'Pounds', 'Density', 'Karat', 'Amount (GH₵)'])
+        ->and(rpRows($props)[1])->toHaveCount(10)
         ->and(collect($props['stats'])->pluck('label')->all())->toBe(['Sales', 'Gold sold', 'Total amount'])
         ->and(json_encode($props))->not->toContain('Profit');
 })->with(['kumasiClerk', 'kumasiViewer']);
@@ -328,4 +332,20 @@ it('does not download an empty supplier report when no one is chosen', function 
     // Nothing to write: it shows the page that asks who.
     $this->actingAs($this->w->kumasiClerk)->get(route('reports.supplier', ['export' => 'csv']))->assertOk()
         ->assertInertia(fn ($page) => $page->component('Reports/Show')->where('person', null));
+});
+
+it('gives each form of gold sold its own band and subtotal, refined gold without a water weight or density', function () {
+    $this->actingAs($this->w->kumasiManager)->post(route('sales.store'), [
+        'date' => '2026-03-26', 'ledger_id' => $this->buyer->id, 'form' => 'refined', 'weight' => '100.00', 'water_weight' => '',
+        'karat' => '22', 'price' => '12000', 'note' => '', 'idempotency_key' => (string) Str::uuid(),
+    ])->assertSessionHasNoErrors();
+
+    $rows = rpRows(rpProps($this->actingAs($this->w->kumasiClerk)->get(route('reports.sales', rpMarch()))->assertOk()));
+
+    expect(collect($rows)->pluck('heading')->filter()->values()->all())->toBe(['Raw gold', 'Refined gold'])
+        ->and(collect($rows)->pluck('subtotal')->filter()->pluck(0)->all())->toBe(['Raw gold', 'Refined gold'])
+        ->and($rows[4][3])->toBe('100.00')
+        ->and($rows[4][4])->toBe('—')
+        ->and($rows[4][7])->toBe('—')
+        ->and($rows[4][8])->toBe('22.00');
 });

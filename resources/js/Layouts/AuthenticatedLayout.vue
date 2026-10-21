@@ -11,6 +11,7 @@ import SidebarNav from '@/Components/SidebarNav.vue';
 import { logOut } from '@/logout';
 import { useNavigation } from '@/navigation';
 import { sidebarCollapsed } from '@/sidebar';
+import KarlMark from '@/Components/KarlMark.vue';
 
 /**
  * The frame around every signed-in page.
@@ -190,8 +191,8 @@ const initial = computed(() => (user.value?.name ?? '?').trim().charAt(0).toUppe
                 </button>
 
                 <Link :href="route('dashboard')" class="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-lg px-1 text-lg font-semibold text-teal-900 lg:hidden">
-                    <span class="hidden h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 text-base font-bold text-teal-950 shadow-sm min-[400px]:flex" aria-hidden="true">A</span>
-                    <span>Adoma<span class="text-amber-700" aria-hidden="true">.</span></span>
+                    <KarlMark class="hidden h-9 w-9 shrink-0 min-[400px]:block" />
+                    <span>Karl<span class="text-amber-700" aria-hidden="true">.</span></span>
                 </Link>
 
                 <div class="ms-auto flex min-w-0 items-center gap-1 sm:gap-3">

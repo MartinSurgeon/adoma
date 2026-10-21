@@ -137,6 +137,7 @@ const review = computed(() => {
             { label: 'Date', value: longDay(form.date) },
             { label: 'Gold', value: gold },
             ...(f ? [{ label: choosing.value ? 'Average karat' : 'Karat', value: f.karat }] : []),
+            ...(f?.paid_karat ? [{ label: `Karat (−${f.karat_deduction})`, value: f.paid_karat }] : []),
             { label: 'Price per pound', value: cedis(form.price) },
             { label: props.words.owes, value: f?.amount_text ?? '—', strong: true },
         ],
@@ -204,7 +205,7 @@ const review = computed(() => {
 
             <!-- The exact purchases being sold, and how much of each. What is not chosen stays in stock. -->
             <div v-if="choosing">
-                <p class="text-base text-gray-700">Type how many grams to sell from each purchase, or press All. A purchase can be sold in part, and what you leave stays in stock.</p>
+                <p class="text-base text-gray-700">Type how many grams to sell from each purchase, or press Sell all. A purchase can be sold in part, and what you leave stays in stock.</p>
                 <!-- One row per purchase: what it is on the left, how much to sell on the right. In a narrow space the
                      "Sell" box moves under the details instead of off the edge of the screen. -->
                 <ul class="mt-3 divide-y divide-gray-200 overflow-hidden rounded-xl ring-1 ring-gray-200">
@@ -238,11 +239,11 @@ const review = computed(() => {
                             <span class="text-base text-gray-700" aria-hidden="true">g</span>
                             <button
                                 type="button"
-                                class="min-h-12 rounded-lg px-3 text-base font-medium text-teal-800 underline hover:bg-teal-50"
+                                class="btn btn-secondary whitespace-nowrap px-4"
                                 :aria-label="`Sell all ${lotInfo[row.id].remaining_text} g of ${lotInfo[row.id].number ?? 'this purchase'}`"
                                 @click="takeAll(row)"
                             >
-                                All
+                                Sell all
                             </button>
                         </div>
                     </li>
@@ -299,18 +300,29 @@ const review = computed(() => {
                     </span>
                     <span v-else-if="figures" class="text-sm font-medium text-green-800">✓ Updated</span>
                 </div>
-                <dl class="mt-3 grid grid-cols-3 gap-4">
+                <!-- As many figures as apply, side by side, each wide enough for its label on one line. -->
+                <dl class="mt-3 grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-4">
                     <div>
                         <dt class="text-sm font-medium text-gray-600">Pounds</dt>
                         <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.pounds) }}</dd>
                     </div>
-                    <div>
+                    <!-- Only raw gold weighed in water has a density; refined gold and chosen purchases already have their karat. -->
+                    <div v-if="isRaw && !choosing">
                         <dt class="text-sm font-medium text-gray-600">Density</dt>
-                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ isRaw && !choosing ? dash(figures?.density) : 'Not used' }}</dd>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.density) }}</dd>
                     </div>
                     <div>
                         <dt class="text-sm font-medium text-gray-600">{{ choosing ? 'Average karat' : 'Karat' }}</dt>
                         <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.karat) }}</dd>
+                    </div>
+                    <!-- A purchase is paid at the karat less the business's deduction (0.16), as the client's sheet does. -->
+                    <div v-if="!isSale">
+                        <dt class="whitespace-nowrap text-sm font-medium text-gray-600">Karat (−{{ figures?.karat_deduction ?? '0.16' }})</dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.paid_karat) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-600">Purity</dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ figures?.purity ? `${figures.purity}%` : '—' }}</dd>
                     </div>
                 </dl>
             </div>

@@ -16,6 +16,9 @@ deployment:
     # The code. The first time only, storage/ is copied too; after that it holds the server's own data.
     - '/bin/rsync -a --delete --exclude=.git --exclude=.env --exclude=/storage/ --exclude=/vendor/ --exclude=/node_modules/ --exclude=/tests/ --exclude=/bootstrap/cache/ --exclude=/error_log --exclude=/public/error_log ./ $HOME/adoma/'
     - 'if [ ! -d $HOME/adoma/storage/framework ]; then /bin/cp -r storage $HOME/adoma/; fi'
+    # The web server runs as another user: it must be able to enter the app folder to reach public/ (755). The copy
+    # above gives ~/adoma the clone's own folder permissions, which on Namecheap are private to the account.
+    - '/bin/chmod 755 $HOME/adoma $HOME/adoma/public'
     - 'cd $HOME/adoma && /opt/alt/php83/usr/bin/php -d memory_limit=1G $HOME/bin/composer.phar install --no-dev --optimize-autoloader --no-interaction'
     # Only once .env exists (made by hand after the first deploy): update the database, then cache settings and routes.
     - 'if [ -f $HOME/adoma/.env ]; then cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan migrate --force && /opt/alt/php83/usr/bin/php artisan optimize; fi'

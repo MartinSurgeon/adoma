@@ -57,6 +57,18 @@ const query = (extra = {}) => Object.fromEntries(Object.entries({ ...filter, ...
 const show = () => router.get(route(`reports.${props.report}`), query(), { preserveScroll: true });
 const downloadHref = computed(() => route(`reports.${props.report}`, query({ export: 'csv' })));
 const hasRows = (table) => table.rows.length > 0;
+const countRows = (table) => table.rows.filter((r) => !r.heading && !r.subtotal).length;
+
+// A document number ("Number" or "No.") reads best in even-width letters, kept on one line.
+const isReference = (label) => ['Number', 'No.'].includes(label);
+
+// For a card: the row's words (date, number, name) on one line, and its figures that are not empty, the amount marked main.
+const words = (table, cells) => cells.filter((cell, i) => !table.columns[i]?.number && cell !== '').join(' · ');
+const figuresOf = (table, cells) =>
+    cells
+        .map((value, i) => ({ value, label: table.columns[i]?.label, number: table.columns[i]?.number }))
+        .filter((cell) => cell.number && cell.value !== '')
+        .map((cell) => ({ ...cell, main: /^Amount/.test(cell.label ?? '') }));
 const print = () => window.print();
 const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
 </script>
@@ -124,11 +136,12 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
             <section v-for="table in tables" :key="table.title" class="table-card">
                 <div class="table-title">
                     <h2 class="text-lg font-semibold text-gray-900">{{ table.title }}</h2>
-                    <p v-if="hasRows(table)" class="text-sm text-gray-700">{{ table.rows.filter((r) => !r.heading).length }} {{ table.rows.filter((r) => !r.heading).length === 1 ? 'row' : 'rows' }}</p>
+                    <p v-if="hasRows(table)" class="text-sm text-gray-700">{{ countRows(table) }} {{ countRows(table) === 1 ? 'row' : 'rows' }}</p>
                 </div>
 
-                <div class="overflow-x-auto">
-                <table class="data-table">
+                <!-- Room enough: the table, with a band for each group and its subtotal. -->
+                <div class="hidden overflow-x-auto @4xl:block">
+                <table class="data-table" :class="{ 'data-table-wide': table.columns.length > 9 }">
                     <thead>
                         <tr>
                             <th v-for="column in table.columns" :key="column.label" scope="col" :class="{ num: column.number }">{{ column.label }}</th>
@@ -139,14 +152,17 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                             <tr v-if="row.heading" class="group-row">
                                 <th scope="colgroup" :colspan="table.columns.length">{{ row.heading }}</th>
                             </tr>
+                            <tr v-else-if="row.subtotal" class="bg-gray-50 font-semibold">
+                                <td v-for="(cell, i) in row.subtotal" :key="i" :class="{ num: table.columns[i]?.number, 'whitespace-nowrap': true }">{{ cell }}</td>
+                            </tr>
                             <tr v-else>
                                 <td
                                     v-for="(cell, i) in row"
                                     :key="i"
                                     :class="{
                                         num: table.columns[i]?.number,
-                                        'whitespace-nowrap': table.columns[i]?.number || ['Date', 'Number'].includes(table.columns[i]?.label),
-                                        ref: table.columns[i]?.label === 'Number',
+                                        'whitespace-nowrap': table.columns[i]?.number || isReference(table.columns[i]?.label) || table.columns[i]?.label === 'Date',
+                                        ref: isReference(table.columns[i]?.label),
                                     }"
                                 >
                                     {{ cell }}
@@ -157,12 +173,38 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                             <td :colspan="table.columns.length" class="py-8 text-center text-gray-700">Nothing in this period.</td>
                         </tr>
                     </tbody>
-                    <tfoot v-if="table.totals">
+                    <tfoot v-if="table.totals && hasRows(table)">
                         <tr>
                             <td v-for="(cell, i) in table.totals" :key="i" :class="{ num: table.columns[i]?.number }">{{ cell }}</td>
                         </tr>
                     </tfoot>
                 </table>
+                </div>
+
+                <!-- A narrow screen: one card per row, its words on top and its figures underneath, the amount largest. -->
+                <div class="border-t border-gray-100 @4xl:hidden">
+                    <p v-if="!hasRows(table)" class="px-4 py-8 text-center text-gray-700">Nothing in this period.</p>
+                    <template v-for="(row, index) in table.rows" :key="`card-${index}`">
+                        <h3 v-if="row.heading" class="border-b border-gray-200 bg-teal-50/60 px-4 py-2.5 text-sm font-semibold text-teal-900">{{ row.heading }}</h3>
+                        <div v-else class="border-b border-gray-100 px-4 py-4" :class="{ 'bg-gray-50': row.subtotal }">
+                            <p class="text-base" :class="row.subtotal ? 'font-semibold text-gray-900' : 'text-gray-900'">{{ words(table, row.subtotal ?? row) }}</p>
+                            <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                                <div v-for="figure in figuresOf(table, row.subtotal ?? row)" :key="figure.label" :class="{ 'col-span-2': figure.main }">
+                                    <dt class="text-sm text-gray-700">{{ figure.label }}</dt>
+                                    <dd class="tabular-nums text-gray-900" :class="figure.main ? 'text-lg font-semibold' : 'text-base'">{{ figure.value }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </template>
+                    <div v-if="table.totals && hasRows(table)" class="bg-gray-50 px-4 py-4">
+                        <p class="text-base font-semibold text-gray-900">{{ words(table, table.totals) }}</p>
+                        <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div v-for="figure in figuresOf(table, table.totals)" :key="figure.label" :class="{ 'col-span-2': figure.main }">
+                                <dt class="text-sm text-gray-700">{{ figure.label }}</dt>
+                                <dd class="font-semibold tabular-nums text-gray-900" :class="figure.main ? 'text-lg' : 'text-base'">{{ figure.value }}</dd>
+                            </div>
+                        </dl>
+                    </div>
                 </div>
             </section>
 

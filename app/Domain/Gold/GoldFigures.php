@@ -24,6 +24,7 @@ final readonly class GoldFigures
         public ?int $bigH = null,         // grams x 100: the weight with the particles taken out, which goes with the water weight
         public ?string $overrideReason = null,   // why an admin allowed a karat above 24
         public ?int $overriddenBy = null,        // the admin's user id
+        public ?int $paidKaratH = null,          // karat x 100 a purchase is paid at (karat less the deduction); null for a sale
     ) {
     }
 
@@ -38,8 +39,17 @@ final readonly class GoldFigures
     {
         return new self(
             $this->form, $this->weightH, $this->waterH, $this->poundsH, $this->densityH, $this->karatH,
-            $this->priceH, $this->amountCedis, $this->formula, $this->bigH, $reason, $userId,
+            $this->priceH, $this->amountCedis, $this->formula, $this->bigH, $reason, $userId, $this->paidKaratH,
         );
+    }
+
+    /**
+     * The gold's purity in percent, x 100: the karat it is paid or sold at, out of 24, cut off as the sheet's
+     * Purity (%) column shows it to two places (its I / 0.24).
+     */
+    public function purityH(): int
+    {
+        return intdiv(($this->paidKaratH ?? $this->karatH) * 100, 24);
     }
 
     /** The amount in pesewas, ready for the books. */
@@ -59,6 +69,9 @@ final readonly class GoldFigures
             'pounds' => Money::decimal($this->poundsH),
             'density' => $this->densityH === null ? null : Money::decimal($this->densityH),
             'karat' => Money::decimal($this->karatH),
+            'paid_karat' => $this->paidKaratH === null ? null : Money::decimal($this->paidKaratH),
+            'karat_deduction' => $this->paidKaratH === null ? null : Money::decimal($this->karatH - $this->paidKaratH),
+            'purity' => Money::decimal($this->purityH()),
             'above_max_karat' => $this->isAboveMaxKarat(),
             'price' => Money::decimal($this->priceH),
             'amount' => Money::decimal($this->amountCents()),

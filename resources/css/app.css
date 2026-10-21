@@ -236,6 +236,13 @@
         @apply cursor-pointer;
     }
 
+    /* A table with many columns, such as the sales report: tighter spacing, and every cell on one line, so a wide
+       screen fits all of it. The type stays the same size. */
+    .data-table-wide td,
+    .data-table-wide th {
+        @apply whitespace-nowrap px-2.5;
+    }
+
     /* A list whose rows each hold a 48px link: the link sets the height, so the cells need little room of their own. */
     .data-table-compact td {
         @apply py-1;

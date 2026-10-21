@@ -92,7 +92,7 @@ class SaveGoldDocumentRequest extends FormRequest
                     if ($this->choosesLots()) {
                         [$this->figures, $this->picks] = self::calculateLots($this->user(), (array) $this->input('lots'), (string) $this->input('price'));
                     } else {
-                        $this->figures = self::calculate($this->user(), $this->input());
+                        $this->figures = self::calculate($this->user(), $this->input(), $this->route('type') === DocumentType::Purchase->value);
                     }
                 } catch (CalculationError $error) {
                     $validator->errors()->add($error->field, $error->getMessage());
@@ -187,15 +187,15 @@ class SaveGoldDocumentRequest extends FormRequest
      * Raw gold gets its karat from the density. Refined gold has its karat typed in. A karat above 24 is refused unless
      * the user is an admin who ticked the override; anyone else is told to ask one.
      */
-    public static function calculate(User $user, array $input): GoldFigures
+    public static function calculate(User $user, array $input, bool $purchase = false): GoldFigures
     {
         $formula = FormulaSet::currentFor($user->tenant_id);
         $allow = $user->isTenantAdmin() && filter_var($input['karat_override'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         try {
             return ($input['form'] ?? '') === 'refined'
-                ? GoldCalculator::refined($formula, (string) ($input['weight'] ?? ''), (string) ($input['karat'] ?? ''), (string) ($input['price'] ?? ''), $allow)
-                : GoldCalculator::raw($formula, (string) ($input['weight'] ?? ''), (string) ($input['water_weight'] ?? ''), (string) ($input['price'] ?? ''), $input['big_weight'] ?? null, $allow);
+                ? GoldCalculator::refined($formula, (string) ($input['weight'] ?? ''), (string) ($input['karat'] ?? ''), (string) ($input['price'] ?? ''), $allow, $purchase)
+                : GoldCalculator::raw($formula, (string) ($input['weight'] ?? ''), (string) ($input['water_weight'] ?? ''), (string) ($input['price'] ?? ''), $input['big_weight'] ?? null, $allow, $purchase);
         } catch (CalculationError $error) {
             if (! $error->overridable) {
                 throw $error;

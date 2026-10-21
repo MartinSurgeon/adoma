@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 21.2 243.8 86.8" role="img">
+  <title>Karl</title>
+  <!-- Karl: K, r and l in Inter ExtraBold; the "a" is a jeweller's loupe; the full stop is a bar of gold. -->
+  <path d="M22.90 100L5.66 100L5.66 27.25L22.90 27.25L22.90 45.12L22.61 62.70Q22.66 62.55 22.75 62.40L22.75 62.40Q24.80 58.84 27.37 55.22Q29.93 51.61 33.50 47.12L33.50 47.12L49.71 27.25L70.41 27.25L44.04 58.69L71.44 100L51.17 100L32.18 69.97L22.90 80.47L22.90 100Z" fill="#ffffff"/>
+  <circle cx="100.12" cy="72.71" r="23.09" fill="#7fd0bf" stroke="#ffffff" stroke-width="11.40"/>
+  <path d="M87.42 62.31 A16.63 16.63 0 0 1 98.97 56.08" fill="none" stroke="#ffffff" stroke-width="3.80" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="108.90" cy="81.02" r="2.28" fill="#ffffff" opacity="0.8"/>
+  <rect x="118.47" y="45.41" width="19.00" height="54.59" rx="2.28" fill="#ffffff"/>
+  <path d="M159.62 100L142.58 100L142.58 45.41L159.14 45.41L159.14 55.37L159.72 55.37Q161.19 49.95 164.58 47.34Q167.97 44.73 172.47 44.73L172.47 44.73Q173.64 44.73 174.93 44.87Q176.23 45.02 177.30 45.31L177.30 45.31L177.30 60.16Q176.08 59.72 174.10 59.50Q172.12 59.28 170.56 59.28L170.56 59.28Q167.44 59.28 164.95 60.67Q162.46 62.06 161.04 64.50Q159.62 66.94 159.62 70.21L159.62 70.21L159.62 100Z" fill="#ffffff"/>
+  <path d="M181.08 27.25L198.12 27.25L198.12 100L181.08 100L181.08 27.25Z" fill="#ffffff"/>
+  <path d="M209.78046875 84 H227.78046875 L231.78046875 100 H205.78046875 Z" fill="#f2b632" stroke="#6b4206" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

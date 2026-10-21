@@ -4,11 +4,13 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ config('app.name', 'Karl') }}</title>
 
         {{-- Nothing here comes from another website. The typeface, styles and scripts are all built into the app's own
              files, so the screens look and work the same on a local network with no internet. --}}
         <meta name="theme-color" content="#134e4a">
+        {{-- Karl, in the browser tab. --}}
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 
         <!-- Scripts -->
         @routes

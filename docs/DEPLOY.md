@@ -191,6 +191,46 @@ server's `.env` and stored data are never touched.
 | "Access denied for user" | The `DB_` lines in `.env` do not match B3. Fix them, then in the Terminal run `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan optimize`. |
 | Deploy HEAD Commit is greyed out | The clone has uncommitted changes on the server, or is not on `production`. Check B7's branch. |
 | The page shows "being updated" and stays | A deploy stopped halfway. In the Terminal: `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan up`, then deploy again. |
+| A black "404 Not Found" page from LiteSpeed (not Adoma's own page) | Either the document root is not `/adoma/public` (B4), or `~/adoma` is private to the account: `chmod 755 ~/adoma ~/adoma/public`. |
+| Deploy says it is complete, but nothing changed | Read the newest log: `tail -30 ~/.cpanel/logs/$(ls -t ~/.cpanel/logs/ \| grep -i deploy \| head -1)`. |
+| "The system cannot deploy" | `cd ~/repositories/adoma && git status --short` must print nothing. Delete any stray file it lists (usually `error_log`); if files show as deleted (`D`), run `git reset --hard HEAD`. Never change files in that folder by hand. |
+| "Could not open input file: …composer…" | B2's `composer.phar` download was missed. Run it, then deploy again. |
+| "No APP_KEY variable was found" | `.env` has no `APP_KEY=` line: `echo 'APP_KEY=' >> ~/adoma/.env`, then `key:generate --force` again. |
+| "Specified key was too long; max key length is 1000 bytes" | The server's code is older than the InnoDB setting. Pull and deploy the latest release, run `php artisan config:clear`, then `migrate:fresh --force` (only on an empty or throwaway database). |
+| "Table 'users' already exists" during a deploy | A first database build stopped halfway. On a new, empty install: `php artisan migrate:fresh --force`. Never on a database with real data: ask your developer. |
 
 After changing `.env` at any time, run `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan optimize` so the change
 takes effect.
+
+---
+
+## Importing the client's purchases sheet (and removing it later)
+
+`adoma:import-sheet` posts each row of the client's sheet (Date, Supplier, Weight_Both, Volume, Price) as a purchase at
+a branch (or split between two), on its own date, with Adoma's own figures. Running it twice adds nothing twice, and `--remove` takes
+out exactly what it added.
+
+While the import is in, those purchases count like any other: the suppliers are owed their amounts, and the gold is
+in that branch's stock. A sale that takes "the oldest gold first" will take it from this imported gold, and once that
+happens the import can no longer be removed (Adoma refuses, and names the sales to reverse first). **Remove it before
+real trading starts at those branches.**
+
+1. Deploy the latest release (above).
+2. cPanel → **File Manager** → `adoma/storage/app` → create a folder **`imports`** → upload the `.xlsx` into it.
+3. **Terminal**:
+   ```
+   cd ~/adoma
+   /opt/alt/php83/usr/bin/php artisan adoma:import-sheet "storage/app/imports/2010 (current).xlsx" --branch=KUM --split=SUN
+   ```
+   `--branch` is the code of the branch the purchases are from (the client: Kumasi), and `--split` a second branch
+   that takes about half the gold by weight (Sunyani). Use the codes your branches have under **Admin > Branches**,
+   and add the second branch there first. Leave both out to put everything in the head office.
+   It says how many purchases came in, how many match the sheet's own amounts, which rows were over 100 kg, and
+   which were left out (such as the sheet's totals row).
+4. **To remove it later**:
+   ```
+   cd ~/adoma
+   /opt/alt/php83/usr/bin/php artisan adoma:import-sheet --remove --branch=KUM
+   ```
+   Type `yes` to confirm. The suppliers it created go too, if nothing else uses them, and purchase numbers carry on
+   with no gap.

@@ -68,6 +68,20 @@ final class World
         return $user;
     }
 
+    /**
+     * The client's earlier sheet, with no karat deduction, as formula version 1. Tests written from that sheet's rows use
+     * it; a new business starts with the current sheet's 0.16 instead (FormulaSet::DEFAULTS).
+     */
+    public function earlierSheetFormula(): void
+    {
+        foreach ([$this->adoma, $this->other] as $tenant) {
+            \App\Domain\Gold\FormulaSet::createDefaultFor($tenant);
+
+            // Formula versions refuse to change through the model, so the test sets this one in the table itself.
+            DB::table('formula_sets')->where('tenant_id', $tenant->id)->where('version', 1)->update(['karat_deduction' => 0]);
+        }
+    }
+
     /** Rows written straight to the table so no scope or trait is involved. */
     public function seedProbes(): void
     {

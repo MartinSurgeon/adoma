@@ -23,10 +23,12 @@ class FormulaSet extends Model
         'density_offset' => '10.51',
         'karat_factor' => '52.838',
         'karat_base' => 23,
+        // Taken off the karat before a purchase is priced: the sheet's "Karat (-0.7%)" column.
+        'karat_deduction' => '0.16',
     ];
 
     protected $fillable = [
-        'tenant_id', 'version', 'grams_per_pound', 'density_offset', 'karat_factor', 'karat_base', 'effective_from', 'created_by',
+        'tenant_id', 'version', 'grams_per_pound', 'density_offset', 'karat_factor', 'karat_base', 'karat_deduction', 'effective_from', 'created_by',
     ];
 
     protected function casts(): array
@@ -34,6 +36,7 @@ class FormulaSet extends Model
         return [
             'effective_from' => 'date', 'karat_base' => 'integer',
             'grams_per_pound' => 'decimal:2', 'density_offset' => 'decimal:2', 'karat_factor' => 'decimal:3',
+            'karat_deduction' => 'decimal:2',
         ];
     }
 
