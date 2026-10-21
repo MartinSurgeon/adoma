@@ -195,6 +195,8 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                     <div><dt class="text-gray-700">Form</dt><dd class="mt-1 font-medium capitalize text-gray-900">{{ gold.form }}</dd></div>
                     <div><dt class="text-gray-700">Weight</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.weight }} g</dd></div>
                     <div><dt class="text-gray-700">Karat</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.karat }}</dd></div>
+                    <div v-if="gold.paid_karat"><dt class="text-gray-700">Karat paid</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.paid_karat }}</dd></div>
+                    <div><dt class="text-gray-700">Purity</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.purity }}%</dd></div>
                     <div><dt class="text-gray-700">Pounds</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.pounds }}</dd></div>
                     <div class="col-span-2 sm:col-span-4"><dt class="text-gray-700">Price per pound at {{ gold.base_karat }} karat</dt><dd class="mt-1 font-medium tabular-nums text-gray-900">{{ gold.price }}</dd></div>
                 </dl>

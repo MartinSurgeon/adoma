@@ -31,7 +31,7 @@ class GoldCalculationController extends Controller
                 return response()->json(['ok' => true, 'figures' => $figures->toArray(), 'stock_ok' => true]);
             }
 
-            $figures = SaveGoldDocumentRequest::calculate($request->user(), $request->only(['form', 'weight', 'big_weight', 'water_weight', 'karat', 'price', 'karat_override']));
+            $figures = SaveGoldDocumentRequest::calculate($request->user(), $request->only(['form', 'weight', 'big_weight', 'water_weight', 'karat', 'price', 'karat_override']), $type === 'purchase');
         } catch (CalculationError $error) {
             return response()->json([
                 'ok' => false, 'field' => $error->field, 'message' => $error->getMessage(),

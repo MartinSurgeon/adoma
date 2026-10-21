@@ -512,6 +512,7 @@ final class PostingService
             'pounds' => Money::decimal($figures->poundsH),
             'density' => $figures->densityH === null ? null : Money::decimal($figures->densityH),
             'karat' => Money::decimal($figures->karatH),
+            'paid_karat' => $figures->paidKaratH === null ? null : Money::decimal($figures->paidKaratH),
             'karat_override_reason' => $figures->isAboveMaxKarat() ? $figures->overrideReason : null,
             'karat_overridden_by' => $figures->isAboveMaxKarat() ? $figures->overriddenBy : null,
             'price' => Money::decimal($figures->priceH),

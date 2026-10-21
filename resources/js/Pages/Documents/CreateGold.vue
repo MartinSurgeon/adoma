@@ -137,6 +137,7 @@ const review = computed(() => {
             { label: 'Date', value: longDay(form.date) },
             { label: 'Gold', value: gold },
             ...(f ? [{ label: choosing.value ? 'Average karat' : 'Karat', value: f.karat }] : []),
+            ...(f?.paid_karat ? [{ label: 'Karat paid', value: `${f.paid_karat} (less ${f.karat_deduction})` }] : []),
             { label: 'Price per pound', value: cedis(form.price) },
             { label: props.words.owes, value: f?.amount_text ?? '—', strong: true },
         ],
@@ -299,7 +300,7 @@ const review = computed(() => {
                     </span>
                     <span v-else-if="figures" class="text-sm font-medium text-green-800">✓ Updated</span>
                 </div>
-                <dl class="mt-3 grid grid-cols-3 gap-4">
+                <dl class="mt-3 grid grid-cols-3 gap-4 sm:grid-cols-5">
                     <div>
                         <dt class="text-sm font-medium text-gray-600">Pounds</dt>
                         <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.pounds) }}</dd>
@@ -311,6 +312,15 @@ const review = computed(() => {
                     <div>
                         <dt class="text-sm font-medium text-gray-600">{{ choosing ? 'Average karat' : 'Karat' }}</dt>
                         <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.karat) }}</dd>
+                    </div>
+                    <!-- A purchase is paid at the karat less the business's deduction (0.16), as the client's sheet does. -->
+                    <div v-if="!isSale">
+                        <dt class="text-sm font-medium text-gray-600">Karat paid<span v-if="figures?.karat_deduction" class="font-normal"> (−{{ figures.karat_deduction }})</span></dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ dash(figures?.paid_karat) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-600">Purity</dt>
+                        <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900" :class="{ 'opacity-60': working }">{{ figures?.purity ? `${figures.purity}%` : '—' }}</dd>
                     </div>
                 </dl>
             </div>

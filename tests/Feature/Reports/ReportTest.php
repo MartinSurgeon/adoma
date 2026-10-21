@@ -21,6 +21,8 @@ use Tests\Support\World;
 
 beforeEach(function () {
     $this->w = World::build();
+    // The figures below come from the client's earlier sheet, which had no karat deduction.
+    $this->w->earlierSheetFormula();
 
     $this->bright = rpLedger($this->w->kumasi, 'Bright', LedgerKind::Supplier);
     $this->black = rpLedger($this->w->kumasi, 'Black', LedgerKind::Supplier);

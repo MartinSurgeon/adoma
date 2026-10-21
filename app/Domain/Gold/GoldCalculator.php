@@ -14,6 +14,11 @@ use InvalidArgumentException;
  *   karat   = TRUNC(((density - 10.51) * 52.838) / density, 2)
  *   amount  = TRUNC((karat / 23) * price * pounds, 0)
  *
+ * A purchase is paid at the karat less a deduction (0.16 in the sheet, its "Karat (-0.7%)" column):
+ *
+ *   paid karat = karat - 0.16                       purchases only; a sale is priced at the karat itself
+ *   amount     = TRUNC((paid karat / 23) * price * pounds, 0)
+ *
  * Every step is cut off, never rounded, exactly as the sheet does, and each step uses the
  * already-cut figure from the step before. The constants come from a FormulaSet, so they can
  * change without touching this code.
@@ -37,7 +42,7 @@ final class GoldCalculator
 
     public const MAX_KARAT_WITH_OVERRIDE = 30;
 
-    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null, bool $allowAboveMax = false): GoldFigures
+    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null, bool $allowAboveMax = false, bool $purchase = false): GoldFigures
     {
         $weightH = self::positive($weight, 'The weight', self::MAX_WEIGHT_G, 'weight');
         $waterH = self::positive($waterWeight, 'The water weight', self::MAX_WEIGHT_G, 'water_weight');
@@ -69,10 +74,10 @@ final class GoldCalculator
 
         self::assertKarat($karatH, $densityH, $allowAboveMax);
 
-        return self::finish($formula, 'raw', $weightH, $waterH, $densityH, $karatH, $priceH, $bigH);
+        return self::finish($formula, 'raw', $weightH, $waterH, $densityH, $karatH, $priceH, $bigH, $purchase);
     }
 
-    public static function refined(FormulaSet $formula, string $weight, string $karat, string $price, bool $allowAboveMax = false): GoldFigures
+    public static function refined(FormulaSet $formula, string $weight, string $karat, string $price, bool $allowAboveMax = false, bool $purchase = false): GoldFigures
     {
         $weightH = self::positive($weight, 'The weight', self::MAX_WEIGHT_G, 'weight');
         $karatH = self::positive($karat, 'The karat', self::MAX_KARAT_WITH_OVERRIDE, 'karat');
@@ -80,7 +85,7 @@ final class GoldCalculator
 
         self::assertKarat($karatH, null, $allowAboveMax);
 
-        return self::finish($formula, 'refined', $weightH, null, null, $karatH, $priceH);
+        return self::finish($formula, 'refined', $weightH, null, null, $karatH, $priceH, null, $purchase);
     }
 
     /**
@@ -110,16 +115,24 @@ final class GoldCalculator
         return new GoldFigures(count($forms) === 1 ? $forms[0] : 'mixed', $weightH, null, self::poundsFor($formula, $weightH), null, $karatH, $priceH, $amountCedis, $formula);
     }
 
-    private static function finish(FormulaSet $formula, string $form, int $weightH, ?int $waterH, ?int $densityH, int $karatH, int $priceH, ?int $bigH = null): GoldFigures
+    private static function finish(FormulaSet $formula, string $form, int $weightH, ?int $waterH, ?int $densityH, int $karatH, int $priceH, ?int $bigH = null, bool $purchase = false): GoldFigures
     {
         $poundsH = self::poundsFor($formula, $weightH);
-        $amountCedis = self::amountFor($formula, $weightH, $karatH, $priceH);
+
+        // A purchase is paid at the karat less the formula's deduction; a sale at the karat itself.
+        $paidKaratH = $purchase ? $karatH - self::hundredths((string) ($formula->karat_deduction ?? '0')) : null;
+
+        if ($paidKaratH !== null && $paidKaratH <= 0) {
+            throw new CalculationError('The karat is too low to buy at once the deduction is taken off. Check the weights.', $densityH === null ? 'karat' : 'water_weight');
+        }
+
+        $amountCedis = self::amountFor($formula, $weightH, $paidKaratH ?? $karatH, $priceH);
 
         if ($amountCedis <= 0) {
             throw new CalculationError('The amount works out to nothing. Check the weight and the price.', 'price');
         }
 
-        return new GoldFigures($form, $weightH, $waterH, $poundsH, $densityH, $karatH, $priceH, $amountCedis, $formula, $bigH);
+        return new GoldFigures($form, $weightH, $waterH, $poundsH, $densityH, $karatH, $priceH, $amountCedis, $formula, $bigH, paidKaratH: $paidKaratH);
     }
 
     /** TRUNC(weight / 7.75, 2), in hundredths. */

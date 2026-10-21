@@ -30,7 +30,9 @@ const rows = computed(() => {
         if (props.gold.water_weight) list.push(['Water weight', `${props.gold.water_weight} g`]);
         list.push(['Pounds', props.gold.pounds]);
         if (props.gold.density) list.push(['Density', props.gold.density]);
-        list.push(['Karat', props.gold.karat], [`Price per pound at ${props.gold.base_karat} karat`, props.gold.price]);
+        list.push(['Karat', props.gold.karat]);
+        if (props.gold.paid_karat) list.push(['Karat paid', props.gold.paid_karat]);
+        list.push(['Purity', `${props.gold.purity}%`], [`Price per pound at ${props.gold.base_karat} karat`, props.gold.price]);
     }
 
     return list;

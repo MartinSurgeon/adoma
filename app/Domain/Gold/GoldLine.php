@@ -21,14 +21,14 @@ class GoldLine extends Model
 
     protected $fillable = [
         'tenant_id', 'branch_id', 'document_id', 'form', 'weight_g', 'big_weight_g', 'water_weight_g', 'pounds',
-        'density', 'karat', 'karat_override_reason', 'karat_overridden_by', 'price', 'amount', 'formula_set_id',
+        'density', 'karat', 'paid_karat', 'karat_override_reason', 'karat_overridden_by', 'price', 'amount', 'formula_set_id',
     ];
 
     protected function casts(): array
     {
         return [
             'weight_g' => 'decimal:2', 'big_weight_g' => 'decimal:2', 'water_weight_g' => 'decimal:2', 'pounds' => 'decimal:2',
-            'density' => 'decimal:2', 'karat' => 'decimal:2', 'price' => 'decimal:2', 'amount' => 'decimal:2',
+            'density' => 'decimal:2', 'karat' => 'decimal:2', 'paid_karat' => 'decimal:2', 'price' => 'decimal:2', 'amount' => 'decimal:2',
         ];
     }
 
