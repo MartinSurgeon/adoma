@@ -35,6 +35,9 @@ final class GoldCalculator
     /** Limits that keep every product inside a PHP integer with room to spare. */
     public const MAX_WEIGHT_G = 100_000;
 
+    /** The most an import may allow (1 tonne): still far inside a PHP integer at every step. */
+    public const MAX_IMPORT_WEIGHT_G = 1_000_000;
+
     public const MAX_PRICE = 1_000_000;
 
     /** Karat is a share of 24, so more is a mistake in the weights. An admin may allow a little more, up to this. */
@@ -42,10 +45,12 @@ final class GoldCalculator
 
     public const MAX_KARAT_WITH_OVERRIDE = 30;
 
-    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null, bool $allowAboveMax = false, bool $purchase = false): GoldFigures
+    public static function raw(FormulaSet $formula, string $weight, string $waterWeight, string $price, ?string $bigWeight = null, bool $allowAboveMax = false, bool $purchase = false, ?int $maxWeightG = null): GoldFigures
     {
-        $weightH = self::positive($weight, 'The weight', self::MAX_WEIGHT_G, 'weight');
-        $waterH = self::positive($waterWeight, 'The water weight', self::MAX_WEIGHT_G, 'water_weight');
+        // An import of old records may allow more than the usual limit, which is there to catch typing mistakes.
+        $maxWeightG ??= self::MAX_WEIGHT_G;
+        $weightH = self::positive($weight, 'The weight', $maxWeightG, 'weight');
+        $waterH = self::positive($waterWeight, 'The water weight', $maxWeightG, 'water_weight');
         $priceH = self::positive($price, 'The price', self::MAX_PRICE, 'price');
 
         // The client weighs all the gold (that gives the pounds), takes out the particles they cannot find a volume for,
@@ -53,7 +58,7 @@ final class GoldCalculator
         $bigH = null;
 
         if ($bigWeight !== null && trim($bigWeight) !== '') {
-            $bigH = self::positive($bigWeight, 'The weight without particles', self::MAX_WEIGHT_G, 'big_weight');
+            $bigH = self::positive($bigWeight, 'The weight without particles', $maxWeightG, 'big_weight');
 
             if ($bigH > $weightH) {
                 throw new CalculationError('The weight without particles cannot be more than the full weight.', 'big_weight');

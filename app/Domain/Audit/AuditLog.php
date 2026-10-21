@@ -62,6 +62,8 @@ class AuditLog extends Model
             'deleted' => "removed $thing",
             'updated' => $this->describeChange($thing),
             'access_changed' => "changed which branches and roles $label has",
+            'sheet_imported' => 'imported '.($this->new_values['purchases'] ?? 0).' purchases from '.($this->new_values['file'] ?? 'a spreadsheet'),
+            'sheet_removed' => 'removed the '.($this->new_values['purchases'] ?? 0).' purchases imported from '.($this->new_values['file'] ?? 'a spreadsheet'),
             'login' => 'signed in',
             'logout' => 'signed out',
             'login_failed' => 'failed to sign in',
