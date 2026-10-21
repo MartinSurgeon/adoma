@@ -207,27 +207,30 @@ takes effect.
 ## Importing the client's purchases sheet (and removing it later)
 
 `adoma:import-sheet` posts each row of the client's sheet (Date, Supplier, Weight_Both, Volume, Price) as a purchase at
-the head office, on its own date, with Adoma's own figures. Running it twice adds nothing twice, and `--remove` takes
+a branch (or split between two), on its own date, with Adoma's own figures. Running it twice adds nothing twice, and `--remove` takes
 out exactly what it added.
 
 While the import is in, those purchases count like any other: the suppliers are owed their amounts, and the gold is
-in head office stock. A sale that takes "the oldest gold first" will take it from this imported gold, and once that
+in that branch's stock. A sale that takes "the oldest gold first" will take it from this imported gold, and once that
 happens the import can no longer be removed (Adoma refuses, and names the sales to reverse first). **Remove it before
-real trading starts at the head office.**
+real trading starts at those branches.**
 
 1. Deploy the latest release (above).
 2. cPanel → **File Manager** → `adoma/storage/app` → create a folder **`imports`** → upload the `.xlsx` into it.
 3. **Terminal**:
    ```
    cd ~/adoma
-   /opt/alt/php83/usr/bin/php artisan adoma:import-sheet "storage/app/imports/2010 (current).xlsx"
+   /opt/alt/php83/usr/bin/php artisan adoma:import-sheet "storage/app/imports/2010 (current).xlsx" --branch=KUM --split=SUN
    ```
+   `--branch` is the code of the branch the purchases are from (the client: Kumasi), and `--split` a second branch
+   that takes about half the gold by weight (Sunyani). Use the codes your branches have under **Admin > Branches**,
+   and add the second branch there first. Leave both out to put everything in the head office.
    It says how many purchases came in, how many match the sheet's own amounts, which rows were over 100 kg, and
    which were left out (such as the sheet's totals row).
 4. **To remove it later**:
    ```
    cd ~/adoma
-   /opt/alt/php83/usr/bin/php artisan adoma:import-sheet --remove
+   /opt/alt/php83/usr/bin/php artisan adoma:import-sheet --remove --branch=KUM
    ```
    Type `yes` to confirm. The suppliers it created go too, if nothing else uses them, and purchase numbers carry on
    with no gap.

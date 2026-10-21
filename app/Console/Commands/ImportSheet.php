@@ -43,6 +43,7 @@ class ImportSheet extends Command
         {--remove : Take out everything this import added}
         {--key=sheet-2010 : Marks the purchases of this import, so it can be run again or removed}
         {--branch= : The code of the branch to import into (default: the head office)}
+        {--split= : The code of a second branch to take about half the gold, by weight}
         {--business= : The name of the business, when the server has more than one}
         {--as= : Email of the person the purchases are recorded as entered by (default: the owner)}
         {--force : Remove without asking}';
@@ -116,6 +117,20 @@ class ImportSheet extends Command
         $problems = [];
         $large = [];
 
+        // Splitting with a second branch: each row goes to one of the two, so each holds about half the gold.
+        $split = null;
+        if ($this->option('split')) {
+            $split = Branch::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('code', strtoupper((string) $this->option('split')))->first();
+
+            if ($split === null || $split->is($branch)) {
+                $this->error($split === null ? 'There is no branch with the --split code. Add it under Admin > Branches first.' : 'Split with a different branch.');
+
+                return self::FAILURE;
+            }
+        }
+        $assigned = $split ? $this->halves($sheet, $branch, $split) : [];
+        $byBranch = [];
+
         for ($row = 2; $row <= $sheet->getHighestDataRow(); $row++) {
             $cells = fn (string $c) => $sheet->getCell("{$c}{$row}")->getValue();
             $supplier = trim((string) $cells('B'));
@@ -145,8 +160,11 @@ class ImportSheet extends Command
                     $figures = $figures->withOverride('Imported from the client\'s spreadsheet.', $user->id);
                 }
 
-                $party = $this->supplier($tenant, $branch, $supplier, $manifest);
-                $document = $posting->postPurchase($branch, $date, $party, $figures, 'From '.basename($file).", row {$row}", $rowKey, $user);
+                $target = $assigned[$row] ?? $branch;
+                app(TenantContext::class)->set($tenant, $target);
+
+                $party = $this->supplier($tenant, $target, $supplier, $manifest);
+                $document = $posting->postPurchase($target, $date, $party, $figures, 'From '.basename($file).", row {$row}", $rowKey, $user);
             } catch (Throwable $e) {
                 $problems[] = [$row, $supplier, $e->getMessage()];
 
@@ -154,6 +172,8 @@ class ImportSheet extends Command
             }
 
             $done['added']++;
+            $byBranch[$target->name][0] = ($byBranch[$target->name][0] ?? 0) + 1;
+            $byBranch[$target->name][1] = ($byBranch[$target->name][1] ?? 0) + $figures->weightH;
             $done['grams'] += $figures->weightH;
             $done['cents'] += $figures->amountCents();
 
@@ -176,8 +196,11 @@ class ImportSheet extends Command
         ], $user);
 
         $this->newLine();
-        $this->info("Imported {$done['added']} purchases into {$branch->name}".($done['already'] ? ", {$done['already']} were already in" : '').'.');
+        $this->info("Imported {$done['added']} purchases into {$branch->name}".($split ? " and {$split->name}" : '').($done['already'] ? ", {$done['already']} were already in" : '').'.');
         $this->line('  Gold:     '.Money::format($done['grams']).' g');
+        foreach ($byBranch as $name => [$count, $grams]) {
+            $this->line("    {$name}: {$count} purchases, ".Money::format($grams).' g');
+        }
         $this->line('  Amount:   GH₵ '.Money::format($done['cents']));
         $this->line('  Suppliers added: '.count($manifest['ledgers'] ?? []));
         if ($done['skipped'] > 0) {
@@ -221,6 +244,7 @@ class ImportSheet extends Command
             return self::SUCCESS;
         }
 
+        $branches = Document::withoutGlobalScopes()->whereIn('id', $ids)->distinct()->pluck('branch_id');
         $goldLines = DB::table('gold_lines')->whereIn('document_id', $ids)->pluck('id');
         $lots = DB::table('stock_lots')->whereIn('gold_line_id', $goldLines)->pluck('id');
 
@@ -244,7 +268,7 @@ class ImportSheet extends Command
 
         $manifest = $this->manifest($key);
 
-        DB::transaction(function () use ($ids, $goldLines, $lots, $manifest, $branch) {
+        DB::transaction(function () use ($ids, $goldLines, $lots, $manifest, $branches) {
             DB::table('stock_movements')->whereIn('document_id', $ids)->delete();
             DB::table('stock_lots')->whereIn('id', $lots)->delete();
             DB::table('gold_lines')->whereIn('id', $goldLines)->delete();
@@ -262,9 +286,11 @@ class ImportSheet extends Command
             }
 
             // Purchase numbers carry on from the last one left, so no gap is left where the import was.
-            $last = Document::withoutGlobalScopes()->where('branch_id', $branch->id)->where('type', DocumentType::Purchase)->pluck('number')
-                ->map(fn ($n) => (int) Str::afterLast($n, '-'))->max() ?? 0;
-            DB::table('number_sequences')->where('branch_id', $branch->id)->where('type', DocumentType::Purchase->value)->update(['next_value' => $last + 1]);
+            foreach ($branches as $branchId) {
+                $last = Document::withoutGlobalScopes()->where('branch_id', $branchId)->where('type', DocumentType::Purchase)->pluck('number')
+                    ->map(fn ($n) => (int) Str::afterLast($n, '-'))->max() ?? 0;
+                DB::table('number_sequences')->where('branch_id', $branchId)->where('type', DocumentType::Purchase->value)->update(['next_value' => $last + 1]);
+            }
         });
 
         Audit::record('sheet_removed', null, [], ['file' => $manifest['file'] ?? $key, 'purchases' => $ids->count()]);
@@ -273,6 +299,35 @@ class ImportSheet extends Command
         $this->info("Removed {$ids->count()} imported purchases.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Which branch each row goes to, so the two hold about the same weight of gold: the heaviest rows first, each to the
+     * branch with less so far. The same sheet always splits the same way, so running it again still adds nothing twice.
+     *
+     * @return array<int, Branch>  row number => branch
+     */
+    private function halves($sheet, Branch $first, Branch $second): array
+    {
+        $weights = [];
+        for ($row = 2; $row <= $sheet->getHighestDataRow(); $row++) {
+            $weight = $sheet->getCell("C{$row}")->getValue();
+            if (trim((string) $sheet->getCell("B{$row}")->getValue()) !== '' && is_numeric($weight)) {
+                $weights[$row] = (float) $weight;
+            }
+        }
+
+        uksort($weights, fn ($a, $b) => [$weights[$b], $a] <=> [$weights[$a], $b]);
+
+        $held = [0.0, 0.0];
+        $assigned = [];
+        foreach ($weights as $row => $weight) {
+            $side = $held[0] <= $held[1] ? 0 : 1;
+            $held[$side] += $weight;
+            $assigned[$row] = $side === 0 ? $first : $second;
+        }
+
+        return $assigned;
     }
 
     /** A supplier of the head office (or shared) by name, any case; created if there is none, and noted for --remove. */

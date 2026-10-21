@@ -145,3 +145,43 @@ it('refuses a sheet that is not laid out like the client\'s', function () {
     $this->artisan('adoma:import-sheet', ['--business' => 'Adoma', 'file' => $path])->expectsOutputToContain('Column A should be headed "Date"')->assertFailed();
     expect(Document::withoutGlobalScopes()->count())->toBe(0);
 });
+
+it('splits the rows between two branches so each holds about half the gold, and removes both halves', function () {
+    $rows = [
+        [45195, 'NANA KWAME', 519.47, 28.61, 5230, 336494],
+        [45195, 'ASHISH', 1545.56, 85.2, 5230, 1000341],
+        [45196, 'THEO', 2037.93, 108.82, 5215, 1371880],
+        [45196, 'GOODS', 371.35, 21, 5160, 228513],
+        [45196, 'MASTER ALEX', 125.1, 6.84, 5150, 80555],
+    ];
+    $file = importSheetFile($rows);
+
+    $this->artisan('adoma:import-sheet', ['--business' => 'Adoma', 'file' => $file, '--branch' => 'KUM', '--split' => 'CEN'])
+        ->expectsOutputToContain('Imported 5 purchases into Kumasi and Central')
+        ->assertSuccessful();
+
+    $grams = fn ($branch) => round((float) GoldLine::withoutGlobalScopes()->where('branch_id', $branch->id)->sum('weight_g'), 2);
+
+    // Heaviest first, each to the lighter side: Kumasi 2,037.93 + 371.35; Central 1,545.56 + 519.47 + 125.10.
+    expect($grams($this->w->kumasi))->toBe(2409.28)
+        ->and($grams($this->w->central))->toBe(2190.13)
+        ->and(Document::withoutGlobalScopes()->where('branch_id', $this->w->kumasi->id)->orderBy('id')->pluck('number')->all())->toBe(['PCH-KUM-000001', 'PCH-KUM-000002']);
+
+    // Again: the same rows go to the same branches, so nothing is added twice.
+    $this->artisan('adoma:import-sheet', ['--business' => 'Adoma', 'file' => $file, '--branch' => 'KUM', '--split' => 'CEN'])->assertSuccessful();
+    expect(Document::withoutGlobalScopes()->count())->toBe(5);
+
+    $this->artisan('adoma:import-sheet', ['--business' => 'Adoma', '--branch' => 'KUM', '--remove' => true, '--force' => true])->assertSuccessful();
+
+    expect(Document::withoutGlobalScopes()->count())->toBe(0)
+        ->and(NumberSequence::where('branch_id', $this->w->central->id)->where('type', 'purchase')->value('next_value'))->toBe(1)
+        ->and(NumberSequence::where('branch_id', $this->w->kumasi->id)->where('type', 'purchase')->value('next_value'))->toBe(1);
+});
+
+it('will not split with a branch that does not exist', function () {
+    $this->artisan('adoma:import-sheet', ['--business' => 'Adoma', 'file' => importSheetFile(importSheetRows()), '--branch' => 'KUM', '--split' => 'SUN'])
+        ->expectsOutputToContain('There is no branch with the --split code')
+        ->assertFailed();
+
+    expect(Document::withoutGlobalScopes()->count())->toBe(0);
+});
