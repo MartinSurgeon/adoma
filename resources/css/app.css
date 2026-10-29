@@ -89,6 +89,48 @@
     }
 
     /*
+     * "in one place." on the sign-in page: gold lettering that rises into place, then a band of light that passes
+     * over it every few seconds, as light catches a bar of gold. Still, and fully shown, for people who ask for less motion.
+     * The rise is on a wrapper, so the gold lettering itself is never blurred or moved: only its light is.
+     */
+    .gold-rise {
+        display: inline-block;
+    }
+
+    .gold-shine {
+        background-image:
+            linear-gradient(110deg, transparent 40%, rgb(255 251 235 / 0.95) 50%, transparent 60%),
+            linear-gradient(to right, theme('colors.amber.200'), theme('colors.amber.300'), theme('colors.amber.400'));
+        background-size: 250% 100%, 100% 100%;
+        background-repeat: no-repeat;
+        background-position: 100% 0, 0 0; /* the band waits just off the left edge */
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .gold-rise {
+            animation: gold-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.25s both;
+        }
+
+        .gold-shine {
+            animation: gold-sweep 6s ease-in-out 1.4s infinite;
+        }
+    }
+
+    @keyframes gold-rise {
+        from { opacity: 0; transform: translateY(0.35em); filter: blur(6px); }
+        to { opacity: 1; transform: none; filter: none; }
+    }
+
+    /* The band crosses in the first part of each turn, then rests off the right edge. */
+    @keyframes gold-sweep {
+        0% { background-position: 100% 0, 0 0; }
+        45%, 100% { background-position: 0% 0, 0 0; }
+    }
+
+    /*
      * Buttons. Every button in the app is one of these, so they all feel the same as the Log in button:
      * a soft top-to-bottom shade, a fine inner edge, a shadow that lifts it off the page, and 48px tall.
      *   btn-primary    the one main action on a screen
