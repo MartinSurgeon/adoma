@@ -60,12 +60,14 @@ it('lists the entries of the period after a balance brought forward, with a runn
     $table = $props['tables'][0];
 
     expect($props['person'])->toMatchArray(['id' => $this->bright->id, 'name' => 'Bright'])
-        ->and(collect($table['columns'])->pluck('label')->all())->toBe(['Date', 'Number', 'Type', 'Note', 'Debit', 'Credit', 'Balance'])
+        // A purchase carries its gold, so the client's gold columns come before the money. The credit is its amount.
+        ->and(collect($table['columns'])->pluck('label')->all())
+        ->toBe(['Date', 'Number', 'Type', 'Note', 'Weight (g)', 'Volume', 'Price', 'Density', 'Karat', 'Debit', 'Credit', 'Balance'])
         ->and($table['rows'])->toBe([
-            ['', '', '', 'Balance brought forward', '', '', '0.00'],
-            ['5 Mar 2026', $this->p1->number, 'Purchase', '', '', '2,795,837.00', '2,795,837.00 Cr'],
+            ['', '', '', 'Balance brought forward', '', '', '', '', '', '', '', '0.00'],
+            ['5 Mar 2026', $this->p1->number, 'Purchase', '', '2,094.25', '114.56', '10,600.00', '18.28', '22.45', '', '2,795,837.00', '2,795,837.00 Cr'],
         ])
-        ->and($table['totals'])->toBe(['Total', '', '', '', '0.00', '2,795,837.00', '2,795,837.00 Cr'])
+        ->and($table['totals'])->toBe(['Total', '', '', '', '', '', '', '', '', '0.00', '2,795,837.00', '2,795,837.00 Cr'])
         ->and(collect($props['stats'])->pluck('value', 'label')->all())->toBe([
             'Opening balance' => '0.00', 'Debits' => '0.00', 'Credits' => '2,795,837.00', 'Closing balance' => '2,795,837.00 Cr',
         ]);
@@ -75,9 +77,38 @@ it('carries everything before the period into the balance brought forward', func
     $props = lrProps($this, ['ledger_id' => $this->bright->id, 'from' => '2026-04-01', 'to' => '2026-04-30']);
 
     expect($props['tables'][0]['rows'])->toBe([
-        ['', '', '', 'Balance brought forward', '', '', '2,795,837.00 Cr'],
-        ['2 Apr 2026', $this->p2->number, 'Purchase', '', '', '805,129.00', '3,600,966.00 Cr'],
+        ['', '', '', 'Balance brought forward', '', '', '', '', '', '', '', '2,795,837.00 Cr'],
+        ['2 Apr 2026', $this->p2->number, 'Purchase', '', '599.15', '32.61', '10,600.00', '18.37', '22.60', '', '805,129.00', '3,600,966.00 Cr'],
     ])->and(collect($props['stats'])->pluck('value', 'label')['Opening balance'])->toBe('2,795,837.00 Cr');
+});
+
+it('leaves the gold columns empty on a payment, which weighed no gold', function () {
+    $cash = lrLedger($this->w->kumasi, 'Cash Kumasi', LedgerKind::Cash);
+
+    $this->actingAs($this->w->kumasiClerk)->post(route('payments.store'), [
+        'date' => '2026-03-10', 'ledger_id' => $this->bright->id, 'cash_ledger_id' => $cash->id,
+        'amount' => '1000000', 'note' => 'Part payment', 'idempotency_key' => (string) Str::uuid(),
+    ])->assertSessionHasNoErrors();
+
+    $rows = lrProps($this, ['ledger_id' => $this->bright->id, 'from' => '2026-03-01', 'to' => '2026-03-31'])['tables'][0]['rows'];
+
+    expect($rows[1][4])->toBe('2,094.25')
+        ->and(array_slice($rows[2], 2))->toBe(['Payment', 'Part payment', '', '', '', '', '', '1,000,000.00', '', '1,795,837.00 Cr']);
+});
+
+it('has no gold columns for a ledger with no gold in the period, such as the cash that paid for it', function () {
+    $cash = lrLedger($this->w->kumasi, 'Cash Kumasi', LedgerKind::Cash);
+
+    $this->actingAs($this->w->kumasiClerk)->post(route('payments.store'), [
+        'date' => '2026-03-10', 'ledger_id' => $this->bright->id, 'cash_ledger_id' => $cash->id,
+        'amount' => '1000000', 'note' => '', 'idempotency_key' => (string) Str::uuid(),
+    ])->assertSessionHasNoErrors();
+
+    $table = lrProps($this, ['ledger_id' => $cash->id, 'from' => '2026-03-01', 'to' => '2026-03-31'])['tables'][0];
+
+    expect(collect($table['columns'])->pluck('label')->all())->toBe(['Date', 'Number', 'Type', 'Note', 'Debit', 'Credit', 'Balance'])
+        ->and($table['rows'][0])->toHaveCount(7)
+        ->and($table['totals'])->toHaveCount(7);
 });
 
 it('includes the first and last day of the period, and nothing outside it', function () {
@@ -93,6 +124,7 @@ it('includes the first and last day of the period, and nothing outside it', func
 it('shows an empty period as just the balance brought forward', function () {
     $props = lrProps($this, ['ledger_id' => $this->bright->id, 'from' => '2026-05-01', 'to' => '2026-05-31']);
 
+    // No purchase or sale in the period, so no gold columns either.
     expect($props['tables'][0]['rows'])->toHaveCount(1)
         ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '', '0.00', '0.00', '3,600,966.00 Cr']);
 });

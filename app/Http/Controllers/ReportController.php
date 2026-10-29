@@ -6,6 +6,7 @@ use App\Domain\Documents\Document;
 use App\Domain\Documents\DocumentType;
 use App\Domain\Documents\JournalLine;
 use App\Domain\Documents\LedgerBalances;
+use App\Domain\Gold\GoldLine;
 use App\Domain\Ledgers\Ledger;
 use App\Domain\Ledgers\LedgerKind;
 use App\Domain\Reports\ReportPeriod;
@@ -27,11 +28,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * reads through the same scopes as everything else, and can be printed or downloaded for a spreadsheet.
  *
  * Reversed entries, and the reversals that cancel them, are left out of the lists, so a list shows what stands.
+ *
+ * Wherever a report lists gold, it shows the client's figures for it in the order of their sheet: weight, volume (their
+ * word for the water weight), price, density, karat, and the amount.
  */
 class ReportController extends Controller
 {
     /** Rows shown on screen. The totals always cover everything in the period, however many rows there are. */
     private const LIMIT = 2000;
+
+    /** The client's columns for the gold on a purchase or sale, before its amount. */
+    private const GOLD_COLUMNS = [
+        ['label' => 'Weight (g)', 'number' => true], ['label' => 'Volume', 'number' => true], ['label' => 'Price', 'number' => true],
+        ['label' => 'Density', 'number' => true], ['label' => 'Karat', 'number' => true],
+    ];
 
     public function index(Request $request): Response
     {
@@ -58,17 +68,15 @@ class ReportController extends Controller
         $columns = array_values(array_filter([
             ['label' => 'Date'], ['label' => 'Number'], ['label' => 'Supplier'],
             $all ? ['label' => 'Branch'] : null,
-            ['label' => 'Form'], ['label' => 'Weight (g)', 'number' => true], ['label' => 'Karat', 'number' => true],
-            ['label' => 'Price per pound', 'number' => true], ['label' => 'Amount (GH₵)', 'number' => true],
+            ['label' => 'Form'], ...self::GOLD_COLUMNS, ['label' => 'Amount (GH₵)', 'number' => true],
         ]));
 
         $table = new ReportTable('Purchases', $columns, $rows->take(self::LIMIT)->map(fn (Document $d) => array_values(array_filter([
             $this->day($d->date), $d->number, $d->ledger?->name,
             $all ? $d->branch?->name : null,
-            ucfirst((string) $d->goldLine?->form), $this->grams($d->goldLine?->weight_g), $this->figure($d->goldLine?->karat),
-            $this->figure($d->goldLine?->price), Money::format(Money::fromDb($d->total)),
+            ucfirst((string) $d->goldLine?->form), ...$this->goldCells($d->goldLine), Money::format(Money::fromDb($d->total)),
         ], fn ($cell) => $cell !== null)))->values()->all(), array_values(array_filter([
-            'Total', '', '', $all ? '' : null, '', $this->grams($totals->weight), '', '', Money::format(Money::fromDb($totals->amount)),
+            'Total', '', '', $all ? '' : null, '', ...$this->goldTotals($totals->weight), Money::format(Money::fromDb($totals->amount)),
         ], fn ($cell) => $cell !== null)));
 
         return $this->respond($request, 'purchases', 'Purchases', $period, [$table], [
@@ -110,12 +118,13 @@ class ReportController extends Controller
 
         $amountTotal = Money::fromDb($totals->amount);
 
-        // The client's own sales sheet, column for column (his "Density" is the water weight, and his "1st" and "Main"
-        // karat are the density and the karat), in the names the purchase and sale forms use. A band for each form of gold.
+        // The client's own sales sheet, column for column (the "Density", "1st" and "Main" karat of that sheet are the water
+        // weight, the density and the karat), with the water weight called Volume as the client now calls it, as on every
+        // report. A band for each form of gold.
         $columns = array_values(array_filter([
             ['label' => 'No.'], ['label' => 'Date'], ['label' => 'Customer'],
             $all ? ['label' => 'Branch'] : null,
-            ['label' => 'Weight (g)', 'number' => true], ['label' => 'Water weight (g)', 'number' => true],
+            ['label' => 'Weight (g)', 'number' => true], ['label' => 'Volume', 'number' => true],
             ['label' => 'Price', 'number' => true], ['label' => 'Pounds', 'number' => true],
             ['label' => 'Density', 'number' => true], ['label' => 'Karat', 'number' => true],
             ['label' => 'Amount (GH₵)', 'number' => true],
@@ -212,17 +221,15 @@ class ReportController extends Controller
         $columns = array_values(array_filter([
             ['label' => 'Date'], ['label' => 'Number'],
             $all ? ['label' => 'Branch'] : null,
-            ['label' => 'Form'], ['label' => 'Weight (g)', 'number' => true], ['label' => 'Karat', 'number' => true],
-            ['label' => 'Price per pound', 'number' => true], ['label' => 'Amount (GH₵)', 'number' => true],
+            ['label' => 'Form'], ...self::GOLD_COLUMNS, ['label' => 'Amount (GH₵)', 'number' => true],
         ]));
 
         $table = new ReportTable("Gold supplied by {$person->name}", $columns, $rows->take(self::LIMIT)->map(fn (Document $d) => array_values(array_filter([
             $this->day($d->date), $d->number,
             $all ? $d->branch?->name : null,
-            ucfirst((string) $d->goldLine?->form), $this->grams($d->goldLine?->weight_g), $this->figure($d->goldLine?->karat),
-            $this->figure($d->goldLine?->price), Money::format(Money::fromDb($d->total)),
+            ucfirst((string) $d->goldLine?->form), ...$this->goldCells($d->goldLine), Money::format(Money::fromDb($d->total)),
         ], fn ($cell) => $cell !== null)))->values()->all(), array_values(array_filter([
-            'Total', '', $all ? '' : null, '', $this->grams($totals->weight), '', '', Money::format(Money::fromDb($totals->amount)),
+            'Total', '', $all ? '' : null, '', ...$this->goldTotals($totals->weight), Money::format(Money::fromDb($totals->amount)),
         ], fn ($cell) => $cell !== null)));
 
         $balance = LedgerBalances::describe($person->kind, LedgerBalances::cents([$person->id])[$person->id]);
@@ -254,11 +261,17 @@ class ReportController extends Controller
         $opening = Money::fromDb((clone $base)->whereDate('date', '<', $period->from)->sum('debit'))
             - Money::fromDb((clone $base)->whereDate('date', '<', $period->from)->sum('credit'));
 
-        $lines = (clone $base)->with('document')
+        $lines = (clone $base)->with('document.goldLine')
             ->whereDate('date', '>=', $period->from)->whereDate('date', '<=', $period->to)
             ->orderBy('date')->orderBy('id')->limit(self::LIMIT + 1)->get();
 
         $truncated = $lines->count() > self::LIMIT;
+        $lines = $lines->take(self::LIMIT);
+
+        // A purchase or sale carries the gold it weighed, so a ledger with any in the period shows the gold columns too.
+        // A payment, a receipt or a transfer has no weighing of its own, and leaves them empty.
+        $gold = $lines->contains(fn (JournalLine $line) => $line->document?->goldLine !== null);
+        $noGold = $gold ? $this->goldCells(null) : [];
 
         // The totals cover the whole period, even when only the first rows are listed.
         $sums = (clone $base)->whereDate('date', '>=', $period->from)->whereDate('date', '<=', $period->to)
@@ -268,9 +281,9 @@ class ReportController extends Controller
         $closing = $opening + $debits - $credits;
 
         $running = $opening;
-        $rows = [['', '', '', 'Balance brought forward', '', '', Money::drCr($opening)]];
+        $rows = [['', '', '', 'Balance brought forward', ...$noGold, '', '', Money::drCr($opening)]];
 
-        foreach ($lines->take(self::LIMIT) as $line) {
+        foreach ($lines as $line) {
             $debit = Money::fromDb($line->debit);
             $credit = Money::fromDb($line->credit);
             $running += $debit - $credit;
@@ -278,14 +291,17 @@ class ReportController extends Controller
             $rows[] = [
                 $this->day($line->date), (string) $line->document?->number, (string) $line->document?->type->label(),
                 (string) $line->document?->note,
+                ...($gold ? $this->goldCells($line->document?->goldLine) : []),
                 $debit > 0 ? Money::format($debit) : '', $credit > 0 ? Money::format($credit) : '', Money::drCr($running),
             ];
         }
 
+        // The debit or the credit is the amount, so the gold columns stop at the karat.
         $table = new ReportTable($ledger->name, [
             ['label' => 'Date'], ['label' => 'Number'], ['label' => 'Type'], ['label' => 'Note'],
+            ...($gold ? self::GOLD_COLUMNS : []),
             ['label' => 'Debit', 'number' => true], ['label' => 'Credit', 'number' => true], ['label' => 'Balance', 'number' => true],
-        ], $rows, ['Total', '', '', '', Money::format($debits), Money::format($credits), Money::drCr($closing)]);
+        ], $rows, ['Total', '', '', '', ...$noGold, Money::format($debits), Money::format($credits), Money::drCr($closing)]);
 
         return $this->respond($request, 'ledger', 'Ledger report', $period, [$table], [
             ['label' => 'Opening balance', 'value' => Money::drCr($opening)],
@@ -474,6 +490,34 @@ class ReportController extends Controller
 
         return $user->isTenantAdmin()
             || ($context->branchId() !== null && ($user->roleIn($context->branchId())?->atLeast(Role::Manager) ?? false));
+    }
+
+    /**
+     * The gold columns' cells for one transaction. Refined gold has its karat typed in, so it has no volume or density
+     * (a dash), and an entry with no gold has nothing in them at all.
+     *
+     * @return list<string>
+     */
+    private function goldCells(?GoldLine $gold): array
+    {
+        if ($gold === null) {
+            return array_fill(0, count(self::GOLD_COLUMNS), '');
+        }
+
+        return [
+            $this->grams($gold->weight_g), $gold->water_weight_g === null ? '—' : $this->grams($gold->water_weight_g),
+            $this->figure($gold->price), $gold->density === null ? '—' : $this->figure($gold->density), $this->figure($gold->karat),
+        ];
+    }
+
+    /**
+     * The gold columns' cells under a list: the weight adds up, the rest are each transaction's own.
+     *
+     * @return list<string>
+     */
+    private function goldTotals(mixed $weight): array
+    {
+        return [$this->grams($weight), ...array_slice($this->goldCells(null), 1)];
     }
 
     private function day(mixed $date): string

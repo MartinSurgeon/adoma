@@ -86,13 +86,14 @@ it('lists the purchases of the period, oldest first, with the figures people loo
 
     expect($props['title'])->toBe('Purchases')->and($props['covers'])->toBe('Kumasi')
         ->and($props['period'])->toMatchArray(['from' => '2026-03-01', 'to' => '2026-03-31', 'label' => '1 Mar 2026 to 31 Mar 2026'])
+        // The client's figures, in the order of their sheet: weight, volume (the water weight), price, density, karat, amount.
         ->and(collect($props['tables'][0]['columns'])->pluck('label')->all())
-        ->toBe(['Date', 'Number', 'Supplier', 'Form', 'Weight (g)', 'Karat', 'Price per pound', 'Amount (GH₵)'])
+        ->toBe(['Date', 'Number', 'Supplier', 'Form', 'Weight (g)', 'Volume', 'Price', 'Density', 'Karat', 'Amount (GH₵)'])
         ->and(rpRows($props))->toBe([
-            ['5 Mar 2026', $this->p1->number, 'Bright', 'Raw', '2,094.25', '22.45', '10,600.00', '2,795,837.00'],
-            ['20 Mar 2026', $this->p2->number, 'Black', 'Raw', '2,081.01', '22.45', '10,600.00', '2,778,144.00'],
+            ['5 Mar 2026', $this->p1->number, 'Bright', 'Raw', '2,094.25', '114.56', '10,600.00', '18.28', '22.45', '2,795,837.00'],
+            ['20 Mar 2026', $this->p2->number, 'Black', 'Raw', '2,081.01', '113.78', '10,600.00', '18.28', '22.45', '2,778,144.00'],
         ])
-        ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '', '4,175.26', '', '', '5,573,981.00'])
+        ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '', '4,175.26', '', '', '', '', '5,573,981.00'])
         ->and(collect($props['stats'])->pluck('value', 'label')->all())
         ->toBe(['Purchases' => '2', 'Gold bought' => '4,175.26', 'Total amount' => 'GH₵ 5,573,981.00']);
 });
@@ -129,8 +130,19 @@ it('leaves out a purchase that was reversed, and the reversal, so the list shows
     $props = rpProps($this->actingAs($this->w->kumasiClerk)->get(route('reports.purchases', rpMarch()))->assertOk());
 
     expect(collect(rpRows($props))->pluck(1)->all())->toBe([$this->p1->number])
-        ->and($props['tables'][0]['totals'][7])->toBe('2,795,837.00')
+        ->and($props['tables'][0]['totals'][9])->toBe('2,795,837.00')
         ->and($props['stats'][0]['value'])->toBe('1');
+});
+
+it('shows refined gold bought with a dash for the volume and the density, which its typed-in karat does without', function () {
+    $this->actingAs($this->w->kumasiManager)->post(route('purchases.store'), [
+        'date' => '2026-03-21', 'ledger_id' => $this->black->id, 'form' => 'refined', 'weight' => '100.00', 'water_weight' => '',
+        'karat' => '22', 'price' => '10600', 'note' => '', 'idempotency_key' => (string) Str::uuid(),
+    ])->assertSessionHasNoErrors();
+
+    $refined = rpRows(rpProps($this->actingAs($this->w->kumasiClerk)->get(route('reports.purchases', rpMarch()))->assertOk()))[2];
+
+    expect(array_slice($refined, 3, 6))->toBe(['Refined', '100.00', '—', '10,600.00', '—', '22.00']);
 });
 
 // ---------------------------------------------------------------------------- the sales report
@@ -144,8 +156,8 @@ it('lists the sales of the period, and gives managers the cost and the profit', 
 
     expect($amount)->toBe(151133400)->and($cost)->toBeGreaterThan(0)
         ->and(collect($props['tables'][0]['columns'])->pluck('label')->all())
-        // The client's own sales sheet, column for column, in the names the forms use.
-        ->toBe(['No.', 'Date', 'Customer', 'Weight (g)', 'Water weight (g)', 'Price', 'Pounds', 'Density', 'Karat', 'Amount (GH₵)', 'Cost (GH₵)', 'Profit (GH₵)'])
+        // The client's own sales sheet, column for column, with the water weight called Volume as the client calls it.
+        ->toBe(['No.', 'Date', 'Customer', 'Weight (g)', 'Volume', 'Price', 'Pounds', 'Density', 'Karat', 'Amount (GH₵)', 'Cost (GH₵)', 'Profit (GH₵)'])
         ->and(rpRows($props))->toBe([
             ['heading' => 'Raw gold'],
             [$this->s1->number, '25 Mar 2026', 'Passion Gold', '1,000.00', '54.70', '12,000.00', '129.03', '18.28', '22.45', '1,511,334.00', Money::format($cost), Money::format($amount - $cost)],
@@ -158,7 +170,7 @@ it('lists the sales of the period, and gives managers the cost and the profit', 
 it('keeps the cost and the profit from clerks and viewers, who see the sales without them', function (string $who) {
     $props = rpProps($this->actingAs($this->w->{$who})->get(route('reports.sales', rpMarch()))->assertOk());
 
-    expect(collect($props['tables'][0]['columns'])->pluck('label')->all())->toBe(['No.', 'Date', 'Customer', 'Weight (g)', 'Water weight (g)', 'Price', 'Pounds', 'Density', 'Karat', 'Amount (GH₵)'])
+    expect(collect($props['tables'][0]['columns'])->pluck('label')->all())->toBe(['No.', 'Date', 'Customer', 'Weight (g)', 'Volume', 'Price', 'Pounds', 'Density', 'Karat', 'Amount (GH₵)'])
         ->and(rpRows($props)[1])->toHaveCount(10)
         ->and(collect($props['stats'])->pluck('label')->all())->toBe(['Sales', 'Gold sold', 'Total amount'])
         ->and(json_encode($props))->not->toContain('Profit');
@@ -176,8 +188,13 @@ it('shows what one supplier supplied in the period, with what they are owed now'
 
     expect($props['person'])->toBe(['id' => $this->bright->id, 'name' => 'Bright', 'kind_label' => 'Supplier'])
         ->and($props['tables'][0]['title'])->toBe('Gold supplied by Bright')
-        ->and(collect(rpRows($props))->pluck(1)->all())->toBe([$this->p1->number, $this->p3->number])
-        ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '2,693.40', '', '', '3,600,966.00'])
+        ->and(collect($props['tables'][0]['columns'])->pluck('label')->all())
+        ->toBe(['Date', 'Number', 'Form', 'Weight (g)', 'Volume', 'Price', 'Density', 'Karat', 'Amount (GH₵)'])
+        ->and(rpRows($props))->toBe([
+            ['5 Mar 2026', $this->p1->number, 'Raw', '2,094.25', '114.56', '10,600.00', '18.28', '22.45', '2,795,837.00'],
+            ['2 Apr 2026', $this->p3->number, 'Raw', '599.15', '32.61', '10,600.00', '18.37', '22.60', '805,129.00'],
+        ])
+        ->and($props['tables'][0]['totals'])->toBe(['Total', '', '', '2,693.40', '', '', '', '', '3,600,966.00'])
         // Black's gold is not in Bright's report.
         ->and(json_encode($props))->not->toContain($this->p2->number)
         ->and($props['notes'][0])->toBe('Bright now: GH₵ 3,600,966.00 · you owe them.');
@@ -274,7 +291,7 @@ it('lets an owner viewing every branch see them all, with the branch named on ea
     $props = rpProps($this->actingAs($this->w->owner)->withSession(['active_branch_id' => 'all'])->get(route('reports.purchases', rpMarch()))->assertOk());
 
     expect($props['covers'])->toBe('All branches')
-        ->and(collect($props['tables'][0]['columns'])->pluck('label')->all())->toBe(['Date', 'Number', 'Supplier', 'Branch', 'Form', 'Weight (g)', 'Karat', 'Price per pound', 'Amount (GH₵)'])
+        ->and(collect($props['tables'][0]['columns'])->pluck('label')->all())->toBe(['Date', 'Number', 'Supplier', 'Branch', 'Form', 'Weight (g)', 'Volume', 'Price', 'Density', 'Karat', 'Amount (GH₵)'])
         ->and(rpRows($props)[0][3])->toBe('Kumasi');
 });
 
@@ -309,9 +326,9 @@ it('downloads a report as a spreadsheet file, with plain numbers a spreadsheet c
         // Opens in Excel with the cedi sign intact.
         ->and(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue()
         ->and($csv)->toContain('Purchases')->toContain('Kumasi, 1 Mar 2026 to 31 Mar 2026')
-        ->toContain('Date,Number,Supplier,Form,"Weight (g)",Karat,"Price per pound","Amount (GH₵)"')
-        ->toContain('"5 Mar 2026",'.$this->p1->number.',Bright,Raw,2094.25,22.45,10600.00,2795837.00')
-        ->toContain('Total,,,,4175.26,,,5573981.00');
+        ->toContain('Date,Number,Supplier,Form,"Weight (g)",Volume,Price,Density,Karat,"Amount (GH₵)"')
+        ->toContain('"5 Mar 2026",'.$this->p1->number.',Bright,Raw,2094.25,114.56,10600.00,18.28,22.45,2795837.00')
+        ->toContain('Total,,,,4175.26,,,,,5573981.00');
 });
 
 it('downloads the sales without the cost for someone who may not see it', function () {
@@ -334,7 +351,7 @@ it('does not download an empty supplier report when no one is chosen', function 
         ->assertInertia(fn ($page) => $page->component('Reports/Show')->where('person', null));
 });
 
-it('gives each form of gold sold its own band and subtotal, refined gold without a water weight or density', function () {
+it('gives each form of gold sold its own band and subtotal, refined gold without a volume or density', function () {
     $this->actingAs($this->w->kumasiManager)->post(route('sales.store'), [
         'date' => '2026-03-26', 'ledger_id' => $this->buyer->id, 'form' => 'refined', 'weight' => '100.00', 'water_weight' => '',
         'karat' => '22', 'price' => '12000', 'note' => '', 'idempotency_key' => (string) Str::uuid(),
