@@ -160,13 +160,5 @@ const submit = () => {
                 </div>
             </div>
         </section>
-
-        <!-- Who can get in, said once, plainly. -->
-        <p class="mt-6 flex items-start gap-3 text-sm leading-relaxed text-gray-600">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" /><path d="M9 12l2 2 4-4" />
-            </svg>
-            <span><span class="font-semibold text-gray-900">Private to your business.</span> Only staff added by the owner or an admin can log in, and each person sees only their own branches.</span>
-        </p>
     </GuestLayout>
 </template>
