@@ -44,7 +44,7 @@ const points = [
             <div class="relative max-w-xl shrink-0">
                 <p class="text-balance text-4xl font-semibold leading-tight tracking-tight xl:text-[2.75rem]">
                     Every gram and every cedi,
-                    <span class="bg-gradient-to-r from-amber-200 via-amber-300 to-amber-400 bg-clip-text text-transparent">in one place.</span>
+                    <span class="gold-rise"><span class="gold-shine">in one place.</span></span>
                 </p>
                 <p class="mt-4 text-pretty text-lg text-teal-100">Purchases, sales, stock and books for all your branches.</p>
 
