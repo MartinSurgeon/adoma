@@ -51,7 +51,7 @@ const submit = () => {
 
         <header>
             <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Welcome back</h1>
-            <p class="mt-2 text-pretty text-base text-gray-700">Log in with the email and password your admin gave you.</p>
+            <p class="mt-2 text-pretty text-base text-gray-700">Log in with your work email and password.</p>
         </header>
 
         <p v-if="status" class="mt-6 flex items-start gap-3 rounded-xl bg-green-50 p-4 text-base text-green-900 ring-1 ring-green-200" role="status">
@@ -141,24 +141,32 @@ const submit = () => {
             <AuthSubmitButton :processing="form.processing" busy-label="Logging in…">Log in</AuthSubmitButton>
         </form>
 
-        <div class="mt-8 space-y-4 border-t border-gray-200 pt-6">
-            <p class="text-base text-gray-700">
-                Forgot your password?
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="inline-flex min-h-12 items-center font-medium text-teal-800 underline hover:text-teal-900"
-                >
-                    Reset it
-                </Link>
-                <template v-else>Ask your admin to reset it.</template>
-            </p>
-            <p class="flex items-start gap-3 text-sm text-gray-700">
-                <svg class="mt-0.5 h-5 w-5 shrink-0 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" /><path d="M9 12l2 2 4-4" />
-                </svg>
-                Only people your admin has added can log in, and each person sees only the branches they work in.
-            </p>
-        </div>
+        <!-- Help, quiet and below the one main action: what to do about a forgotten password. -->
+        <section class="mt-8 rounded-2xl bg-gradient-to-b from-gray-50 to-white p-5 ring-1 ring-gray-200" aria-labelledby="forgot-heading">
+            <div class="flex items-start gap-4">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-teal-700 shadow-sm ring-1 ring-gray-200" aria-hidden="true">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.03 5.91c-.56-.1-1.16.03-1.56.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.82c0-.6.24-1.17.66-1.59l6.5-6.5c.4-.4.53-1 .43-1.56A6 6 0 1121.75 8.25z" />
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <h2 id="forgot-heading" class="text-base font-semibold text-gray-900">Forgot your password?</h2>
+                    <p v-if="canResetPassword" class="mt-1 text-pretty text-sm leading-relaxed text-gray-600">
+                        <Link :href="route('password.request')" class="inline-flex min-h-12 items-center font-medium text-teal-800 underline hover:text-teal-900">Reset it</Link>
+                    </p>
+                    <p v-else class="mt-1 text-pretty text-sm leading-relaxed text-gray-600">
+                        Ask the owner or an admin of your business for a temporary password. You will choose your own as soon as you log in.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Who can get in, said once, plainly. -->
+        <p class="mt-6 flex items-start gap-3 text-sm leading-relaxed text-gray-600">
+            <svg class="mt-0.5 h-5 w-5 shrink-0 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" /><path d="M9 12l2 2 4-4" />
+            </svg>
+            <span><span class="font-semibold text-gray-900">Private to your business.</span> Only staff added by the owner or an admin can log in, and each person sees only their own branches.</span>
+        </p>
     </GuestLayout>
 </template>
