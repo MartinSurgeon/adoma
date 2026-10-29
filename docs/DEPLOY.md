@@ -192,7 +192,7 @@ server's `.env` and stored data are never touched.
 | Deploy HEAD Commit is greyed out | The clone has uncommitted changes on the server, or is not on `production`. Check B7's branch. |
 | The page shows "being updated" and stays | A deploy stopped halfway. In the Terminal: `cd ~/adoma && /opt/alt/php83/usr/bin/php artisan up`, then deploy again. |
 | A black "404 Not Found" page from LiteSpeed (not Adoma's own page) | Either the document root is not `/adoma/public` (B4), or `~/adoma` is private to the account: `chmod 755 ~/adoma ~/adoma/public`. |
-| Deploy says it is complete, but nothing changed | Read the newest log: `tail -30 ~/.cpanel/logs/$(ls -t ~/.cpanel/logs/ \| grep -i deploy \| head -1)`. |
+| Deploy says it is complete, but nothing changed | `cat ~/adoma/storage/app/deployed.txt` names the commit that went live; it should match the HEAD Commit in cPanel. If not, read the newest log: `tail -30 ~/.cpanel/logs/$(ls -t ~/.cpanel/logs/ \| grep -i deploy \| head -1)`. (Deploy files from before 29 Oct 2026 copied nothing once the app was set up: see the note at the top of `.cpanel.yml`.) |
 | "The system cannot deploy" | `cd ~/repositories/adoma && git status --short` must print nothing. Delete any stray file it lists (usually `error_log`); if files show as deleted (`D`), run `git reset --hard HEAD`. Never change files in that folder by hand. |
 | "Could not open input file: …composer…" | B2's `composer.phar` download was missed. Run it, then deploy again. |
 | "No APP_KEY variable was found" | `.env` has no `APP_KEY=` line: `echo 'APP_KEY=' >> ~/adoma/.env`, then `key:generate --force` again. |
