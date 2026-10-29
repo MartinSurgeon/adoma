@@ -5,21 +5,28 @@
 # screens in public/build). The app runs from ~/adoma, whose public folder is the subdomain's document root.
 # The server's own .env and storage/ are never in Git and are never touched here.
 #
-# Every step names its own full paths, so each one can be read, and run by hand in the Terminal, on its own.
-# PHP is the server's PHP 8.3 (Namecheap/CloudLinux path): if `ls /opt/alt/` shows
-# another version, change php83 below, everywhere. Composer is the copy in ~/bin/composer.phar (docs/DEPLOY.md, B2).
+# cPanel runs these tasks one after another in ONE shell, so a "cd" in one task would still apply in the next. Every
+# task that changes folder does it inside ( ... ), and every path is written in full. (Without that, the "cd ~/adoma"
+# of the maintenance step made the copy below copy ~/adoma onto itself, and deploys silently changed nothing.)
+#
+# PHP is the server's PHP 8.3 (Namecheap/CloudLinux path): if `ls /opt/alt/` shows another version, change php83 below,
+# everywhere. Composer is the copy in ~/bin/composer.phar (docs/DEPLOY.md, B2).
 deployment:
   tasks:
+    - 'echo "Deploying: $(git -C $HOME/repositories/adoma log --oneline -1)"'
     - '/bin/mkdir -p $HOME/adoma/bootstrap/cache'
     # While files change, visitors see "being updated" instead of a half-copied app.
-    - 'if [ -f $HOME/adoma/.env ] && [ -d $HOME/adoma/vendor ]; then cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan down --retry=15; fi; true'
-    # The code. The first time only, storage/ is copied too; after that it holds the server's own data.
-    - '/bin/rsync -a --delete --exclude=.git --exclude=.env --exclude=/storage/ --exclude=/vendor/ --exclude=/node_modules/ --exclude=/tests/ --exclude=/bootstrap/cache/ --exclude=/error_log --exclude=/public/error_log ./ $HOME/adoma/'
-    - 'if [ ! -d $HOME/adoma/storage/framework ]; then /bin/cp -r storage $HOME/adoma/; fi'
+    - 'if [ -f $HOME/adoma/.env ] && [ -d $HOME/adoma/vendor ]; then (cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan down --retry=15); fi; true'
+    # The code, from the clone named in full. Only if the clone is really there, since --delete would otherwise empty the
+    # app. The first time only, storage/ is copied too; after that it holds the server's own data.
+    - 'test -f $HOME/repositories/adoma/artisan && /bin/rsync -a --delete --exclude=.git --exclude=.env --exclude=/storage/ --exclude=/vendor/ --exclude=/node_modules/ --exclude=/tests/ --exclude=/bootstrap/cache/ --exclude=/error_log --exclude=/public/error_log $HOME/repositories/adoma/ $HOME/adoma/'
+    - 'if [ ! -d $HOME/adoma/storage/framework ]; then /bin/cp -r $HOME/repositories/adoma/storage $HOME/adoma/; fi'
     # The web server runs as another user: it must be able to enter the app folder to reach public/ (755). The copy
     # above gives ~/adoma the clone's own folder permissions, which on Namecheap are private to the account.
     - '/bin/chmod 755 $HOME/adoma $HOME/adoma/public'
-    - 'cd $HOME/adoma && /opt/alt/php83/usr/bin/php -d memory_limit=1G $HOME/bin/composer.phar install --no-dev --optimize-autoloader --no-interaction'
+    - '(cd $HOME/adoma && /opt/alt/php83/usr/bin/php -d memory_limit=1G $HOME/bin/composer.phar install --no-dev --optimize-autoloader --no-interaction)'
     # Only once .env exists (made by hand after the first deploy): update the database, then cache settings and routes.
-    - 'if [ -f $HOME/adoma/.env ]; then cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan migrate --force && /opt/alt/php83/usr/bin/php artisan optimize; fi'
-    - 'if [ -f $HOME/adoma/.env ]; then cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan up; fi; true'
+    - 'if [ -f $HOME/adoma/.env ]; then (cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan migrate --force && /opt/alt/php83/usr/bin/php artisan optimize); fi'
+    - 'if [ -f $HOME/adoma/.env ]; then (cd $HOME/adoma && /opt/alt/php83/usr/bin/php artisan up); fi; true'
+    # Which commit is live, to check in one line: cat ~/adoma/storage/app/deployed.txt
+    - 'git -C $HOME/repositories/adoma log --oneline -1 > $HOME/adoma/storage/app/deployed.txt && echo "Live now: $(cat $HOME/adoma/storage/app/deployed.txt)"'
