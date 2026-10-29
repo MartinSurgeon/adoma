@@ -9,7 +9,7 @@ import { Link } from '@inertiajs/vue3';
 const props = defineProps({
     href: { type: String, required: true },
     variant: { type: String, default: 'primary' }, // primary or secondary
-    external: { type: Boolean, default: false },   // opens in a new tab, for printing
+    external: { type: Boolean, default: false },   // opens in a new tab
 });
 
 const classes = computed(() => ['btn', props.variant === 'primary' ? 'btn-primary' : 'btn-secondary']);

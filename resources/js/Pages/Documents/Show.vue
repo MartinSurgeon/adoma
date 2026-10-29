@@ -96,7 +96,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
             <!-- One main action, one quieter one, the rest under More. -->
             <div class="flex flex-wrap items-center gap-3">
-                <ButtonLink :href="route('documents.print', { document: document.id, layout: 'a4' })" external>
+                <ButtonLink :href="route('documents.print', { document: document.id, layout: 'a4' })">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
                     </svg>
@@ -110,7 +110,7 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
                 </ButtonLink>
                 <MoreMenu>
                     <MenuItem v-if="canRecordAnother" :href="route(`${document.type}s.create`)">Start a blank {{ noun }}</MenuItem>
-                    <MenuItem :href="route('documents.print', { document: document.id, layout: 'thermal' })" external>Print small receipt</MenuItem>
+                    <MenuItem :href="route('documents.print', { document: document.id, layout: 'thermal' })">Print small receipt</MenuItem>
                     <MenuItem v-if="canReverse" danger @click="confirming = true">{{ undoWord }} this {{ noun }}</MenuItem>
                 </MoreMenu>
             </div>

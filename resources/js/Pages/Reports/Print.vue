@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 
 /**
  * A report on paper, opened from the report's print menu with the same period and branch.
@@ -34,6 +34,11 @@ const page = computed(() => {
 const paper = computed(() => (thermal.value ? 'w-[80mm] p-3' : sideways.value ? 'w-[297mm] p-[10mm]' : 'w-[210mm] p-[15mm]'));
 const bar = computed(() => (thermal.value ? 'max-w-[80mm]' : sideways.value ? 'max-w-[297mm]' : 'max-w-[210mm]'));
 
+// Back to the report this came from, with the same period and person: a link, so it works in every browser.
+const backHref = computed(() =>
+    route(`reports.${props.report}`, Object.fromEntries(Object.entries({ from: props.period.from, to: props.period.to, ledger_id: props.person?.id }).filter(([, v]) => v))),
+);
+
 const figure = (stat) => [stat.value, stat.unit].filter(Boolean).join(' '); // 1,495.18 g
 const hasRows = (table) => table.rows.length > 0;
 const isReference = (label) => ['Number', 'No.'].includes(label);
@@ -56,9 +61,9 @@ const figuresOf = (table, cells) =>
 
     <div class="min-h-screen bg-gray-100 p-4 print:bg-white print:p-0">
         <div class="mx-auto mb-4 flex items-center justify-between gap-3 print:hidden" :class="bar">
-            <button type="button" onclick="history.length > 1 ? history.back() : window.close()" class="btn btn-secondary px-4">
+            <Link :href="backHref" class="btn btn-secondary px-4">
                 Back
-            </button>
+            </Link>
             <button type="button" onclick="window.print()" class="btn btn-primary">
                 Print
             </button>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
     document: Object,
@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const thermal = computed(() => props.layout === 'thermal');
+const backHref = computed(() => route('documents.show', props.document.id)); // the transaction this came from
 const title = computed(() => ({ payment: 'Payment voucher', purchase: 'Purchase slip', sale: 'Sales receipt' })[props.document.type] ?? 'Receipt');
 const partyLabel = computed(() => ({ receipt: 'Received from', payment: 'Paid to', purchase: 'Bought from', sale: 'Sold to' })[props.document.type] ?? 'With');
 const rows = computed(() => {
@@ -48,9 +49,9 @@ const day = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 
 
     <div class="min-h-screen bg-gray-100 p-4 print:bg-white print:p-0">
         <div class="mx-auto mb-4 flex max-w-[210mm] items-center justify-between print:hidden">
-            <button type="button" onclick="history.length > 1 ? history.back() : window.close()" class="btn btn-secondary px-4">
+            <Link :href="backHref" class="btn btn-secondary px-4">
                 Back
-            </button>
+            </Link>
             <button type="button" onclick="window.print()" class="btn btn-primary">
                 Print
             </button>
