@@ -247,4 +247,33 @@
     .data-table-compact td {
         @apply py-1;
     }
+
+    /* Printed straight from a page (Ctrl+P): the whole table on the paper, in smaller type and tighter rows, with no
+       card around it. Reports also have their own printouts (Reports/Print), laid out for paper from the start. */
+    @media print {
+        .table-card {
+            overflow: visible;
+            box-shadow: none;
+        }
+        .data-table,
+        .data-table thead th,
+        .data-table .group-row th,
+        .data-table .ref {
+            font-size: 11px;
+        }
+        .data-table th,
+        .data-table td,
+        .data-table thead th,
+        .data-table tr > :first-child,
+        .data-table tr > :last-child,
+        .data-table tfoot td {
+            padding: 4px 5px;
+        }
+        .data-table-wide td:not(.num):not(.whitespace-nowrap) {
+            white-space: normal;
+        }
+        .data-table tr {
+            break-inside: avoid;
+        }
+    }
 }

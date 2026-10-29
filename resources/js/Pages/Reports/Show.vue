@@ -13,7 +13,7 @@ import TextInput from '@/Components/TextInput.vue';
 
 /**
  * One page for every report, so they all look and work alike: a period, a few figures, then the tables.
- * Each table can be printed, and downloaded for a spreadsheet.
+ * It can be printed (on an A4 sheet, or as a small receipt) and downloaded for a spreadsheet.
  */
 const props = defineProps({
     report: String,
@@ -56,6 +56,9 @@ function choosePreset(event) {
 const query = (extra = {}) => Object.fromEntries(Object.entries({ ...filter, ...extra }).filter(([, v]) => v));
 const show = () => router.get(route(`reports.${props.report}`), query(), { preserveScroll: true });
 const downloadHref = computed(() => route(`reports.${props.report}`, query({ export: 'csv' })));
+// On paper: exactly the period and person on screen, even if the form above has been changed and not yet shown.
+const printHref = (layout) =>
+    route(`reports.${props.report}`, Object.fromEntries(Object.entries({ from: props.period.from, to: props.period.to, ledger_id: props.person?.id, print: layout }).filter(([, v]) => v)));
 const hasRows = (table) => table.rows.length > 0;
 const countRows = (table) => table.rows.filter((r) => !r.heading && !r.subtotal).length;
 
@@ -69,7 +72,6 @@ const figuresOf = (table, cells) =>
         .map((value, i) => ({ value, label: table.columns[i]?.label, number: table.columns[i]?.number }))
         .filter((cell) => cell.number && cell.value !== '')
         .map((cell) => ({ ...cell, main: /^Amount/.test(cell.label ?? '') }));
-const print = () => window.print();
 const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base shadow-sm focus:border-teal-600 focus:ring-teal-600';
 </script>
 
@@ -80,12 +82,13 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
         <template #subtitle>{{ covers }} · {{ period.label }}<span v-if="person"> · {{ person.name }}</span></template>
         <template v-if="tables.length" #actions>
             <MoreMenu label="Print or download this report">
-                <MenuItem @click="print">Print this report</MenuItem>
+                <MenuItem :href="printHref('a4')" external>Print this report</MenuItem>
+                <MenuItem :href="printHref('thermal')" external>Print small receipt</MenuItem>
                 <MenuItem :href="downloadHref" external>Download for a spreadsheet</MenuItem>
             </MoreMenu>
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-6xl space-y-4 px-4 py-8 sm:px-6 lg:px-8 print:p-0">
             <!-- The period, and for the supplier report, who. -->
             <form class="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5 lg:items-end print:hidden" @submit.prevent="show">
                 <div v-if="picker" class="sm:col-span-2 lg:col-span-5">
@@ -140,7 +143,8 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                 </div>
 
                 <!-- Room enough: the table, with a band for each group and its subtotal. -->
-                <div class="hidden overflow-x-auto @4xl:block">
+                <!-- Printed straight from this page (Ctrl+P), it is always the table, never the cards. -->
+                <div class="hidden overflow-x-auto @4xl:block print:block print:overflow-visible">
                 <table class="data-table" :class="{ 'data-table-wide': table.columns.length > 9 }">
                     <thead>
                         <tr>
@@ -182,7 +186,7 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
                 </div>
 
                 <!-- A narrow screen: one card per row, its words on top and its figures underneath, the amount largest. -->
-                <div class="border-t border-gray-100 @4xl:hidden">
+                <div class="border-t border-gray-100 @4xl:hidden print:hidden">
                     <p v-if="!hasRows(table)" class="px-4 py-8 text-center text-gray-700">Nothing in this period.</p>
                     <template v-for="(row, index) in table.rows" :key="`card-${index}`">
                         <h3 v-if="row.heading" class="border-b border-gray-200 bg-teal-50/60 px-4 py-2.5 text-sm font-semibold text-teal-900">{{ row.heading }}</h3>
