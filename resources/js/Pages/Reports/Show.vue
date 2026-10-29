@@ -82,8 +82,8 @@ const select = 'mt-1 block min-h-12 w-full rounded-lg border-gray-300 text-base 
         <template #subtitle>{{ covers }} · {{ period.label }}<span v-if="person"> · {{ person.name }}</span></template>
         <template v-if="tables.length" #actions>
             <MoreMenu label="Print or download this report">
-                <MenuItem :href="printHref('a4')" external>Print this report</MenuItem>
-                <MenuItem :href="printHref('thermal')" external>Print small receipt</MenuItem>
+                <MenuItem :href="printHref('a4')">Print this report</MenuItem>
+                <MenuItem :href="printHref('thermal')">Print small receipt</MenuItem>
                 <MenuItem :href="downloadHref" external>Download for a spreadsheet</MenuItem>
             </MoreMenu>
         </template>
