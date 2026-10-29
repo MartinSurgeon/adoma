@@ -6,7 +6,7 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 
 defineProps({
     canResetPassword: {
@@ -140,25 +140,5 @@ const submit = () => {
 
             <AuthSubmitButton :processing="form.processing" busy-label="Logging in…">Log in</AuthSubmitButton>
         </form>
-
-        <!-- Help, quiet and below the one main action: what to do about a forgotten password. -->
-        <section class="mt-8 rounded-2xl bg-gradient-to-b from-gray-50 to-white p-5 ring-1 ring-gray-200" aria-labelledby="forgot-heading">
-            <div class="flex items-start gap-4">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-teal-700 shadow-sm ring-1 ring-gray-200" aria-hidden="true">
-                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.03 5.91c-.56-.1-1.16.03-1.56.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.82c0-.6.24-1.17.66-1.59l6.5-6.5c.4-.4.53-1 .43-1.56A6 6 0 1121.75 8.25z" />
-                    </svg>
-                </span>
-                <div class="min-w-0">
-                    <h2 id="forgot-heading" class="text-base font-semibold text-gray-900">Forgot your password?</h2>
-                    <p v-if="canResetPassword" class="mt-1 text-pretty text-sm leading-relaxed text-gray-600">
-                        <Link :href="route('password.request')" class="inline-flex min-h-12 items-center font-medium text-teal-800 underline hover:text-teal-900">Reset it</Link>
-                    </p>
-                    <p v-else class="mt-1 text-pretty text-sm leading-relaxed text-gray-600">
-                        Ask the owner or an admin of your business for a temporary password. You will choose your own as soon as you log in.
-                    </p>
-                </div>
-            </div>
-        </section>
     </GuestLayout>
 </template>
