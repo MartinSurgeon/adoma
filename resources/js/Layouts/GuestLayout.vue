@@ -14,9 +14,9 @@ import KarlMark from '@/Components/KarlMark.vue';
 const year = new Date().getFullYear();
 
 const points = [
-    'Gold valued with your own formulas, lot by lot',
-    'Each branch\'s stock and books kept apart',
-    'Every change recorded, with who made it',
+    'Gold valued by your own formulas, lot by lot',
+    'Each branch\'s stock and books, kept separate',
+    'Every change recorded, with who made it and when',
 ];
 </script>
 
@@ -81,8 +81,13 @@ const points = [
                 </div>
             </main>
 
-            <footer class="px-6 pb-6 pt-8 text-center text-sm text-gray-600 lg:px-12 lg:text-left xl:px-16">
-                © {{ year }} Karl · Gold trading and accounting
+            <!-- Lined up with the form above it, not with the edge of the page. -->
+            <footer class="px-4 pb-6 pt-8 sm:px-6 lg:px-12 xl:px-16">
+                <div class="mx-auto flex max-w-md justify-center text-sm text-gray-600 lg:max-w-[26rem] lg:justify-between">
+                    <span>© {{ year }} Karl</span>
+                    <!-- Smaller screens already say it in the band at the top. -->
+                    <span class="hidden lg:inline">Gold trading and accounting</span>
+                </div>
             </footer>
         </div>
 

@@ -6,7 +6,7 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 
 defineProps({
     canResetPassword: {
@@ -51,7 +51,7 @@ const submit = () => {
 
         <header>
             <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Welcome back</h1>
-            <p class="mt-2 text-pretty text-base text-gray-700">Log in with the email and password your admin gave you.</p>
+            <p class="mt-2 text-pretty text-base text-gray-700">Log in with your work email and password.</p>
         </header>
 
         <p v-if="status" class="mt-6 flex items-start gap-3 rounded-xl bg-green-50 p-4 text-base text-green-900 ring-1 ring-green-200" role="status">
@@ -140,25 +140,5 @@ const submit = () => {
 
             <AuthSubmitButton :processing="form.processing" busy-label="Logging in…">Log in</AuthSubmitButton>
         </form>
-
-        <div class="mt-8 space-y-4 border-t border-gray-200 pt-6">
-            <p class="text-base text-gray-700">
-                Forgot your password?
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="inline-flex min-h-12 items-center font-medium text-teal-800 underline hover:text-teal-900"
-                >
-                    Reset it
-                </Link>
-                <template v-else>Ask your admin to reset it.</template>
-            </p>
-            <p class="flex items-start gap-3 text-sm text-gray-700">
-                <svg class="mt-0.5 h-5 w-5 shrink-0 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" /><path d="M9 12l2 2 4-4" />
-                </svg>
-                Only people your admin has added can log in, and each person sees only the branches they work in.
-            </p>
-        </div>
     </GuestLayout>
 </template>
