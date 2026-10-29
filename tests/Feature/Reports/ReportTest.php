@@ -366,3 +366,33 @@ it('gives each form of gold sold its own band and subtotal, refined gold without
         ->and($rows[4][7])->toBe('—')
         ->and($rows[4][8])->toBe('22.00');
 });
+
+// ---------------------------------------------------------------------------------- printing
+
+it('prints a report on an A4 sheet or as a small receipt, with the same figures as the screen', function (string $layout) {
+    $this->travelTo(now()->setDate(2026, 10, 29)->setTime(14, 5));
+    $screen = rpProps($this->actingAs($this->w->kumasiClerk)->get(route('reports.purchases', rpMarch()))->assertOk());
+
+    $this->actingAs($this->w->kumasiClerk)->get(route('reports.purchases', rpMarch(['print' => $layout])))->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Reports/Print')
+            ->where('layout', $layout)
+            ->where('business', 'Adoma')
+            ->where('printed', 'Printed 29 Oct 2026, 14:05 by '.$this->w->kumasiClerk->name)
+            ->where('title', 'Purchases')
+            ->where('covers', 'Kumasi')
+            ->where('tables', $screen['tables'])
+            ->where('stats', $screen['stats']));
+})->with(['a4', 'thermal']);
+
+it('prints the sales without the cost for someone who may not see it', function () {
+    $tables = rpProps($this->actingAs($this->w->kumasiClerk)->get(route('reports.sales', rpMarch(['print' => 'a4'])))->assertOk())['tables'];
+
+    expect(collect($tables[0]['columns'])->pluck('label')->all())->not->toContain('Cost (GH₵)')->not->toContain('Profit (GH₵)');
+});
+
+it('shows the report page for a print layout it does not know, and for a supplier report with no one chosen', function () {
+    $this->actingAs($this->w->kumasiClerk)->get(route('reports.purchases', rpMarch(['print' => 'poster'])))->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Reports/Show')->missing('layout'));
+    $this->actingAs($this->w->kumasiClerk)->get(route('reports.supplier', ['print' => 'a4']))->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Reports/Show')->where('person', null));
+});

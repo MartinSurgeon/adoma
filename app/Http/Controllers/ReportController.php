@@ -432,7 +432,10 @@ class ReportController extends Controller
             return $this->download($key, $title, $period, $tables);
         }
 
-        return Inertia::render('Reports/Show', array_merge([
+        // The same report on paper: an A4 sheet with the whole table, or a small receipt for an 80mm receipt printer.
+        $print = in_array($request->query('print'), ['a4', 'thermal'], true) && $tables !== [] ? $request->query('print') : null;
+
+        return Inertia::render($print ? 'Reports/Print' : 'Reports/Show', array_merge([
             'report' => $key,
             'title' => $title,
             'covers' => $this->covers(),
@@ -443,7 +446,11 @@ class ReportController extends Controller
             'truncated' => false,
             'notes' => [],
             'person' => null,
-        ], $extra));
+        ], $print ? [
+            'layout' => $print,
+            'business' => app(TenantContext::class)->tenant()?->name,
+            'printed' => sprintf('Printed %s by %s', now()->format('j M Y, H:i'), $request->user()->name),
+        ] : [], $extra));
     }
 
     /** A spreadsheet file: opens in Excel with the accents and the cedi sign intact. */
