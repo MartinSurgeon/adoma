@@ -151,3 +151,38 @@ it('keeps JSON errors for requests that ask for JSON', function () {
         ->assertNotFound()
         ->assertJsonMissingPath('component');
 });
+
+// A form sent from a page left open longer than a session lasts. Tests skip the real token check, so this stands in for it.
+function expiredForm(): void
+{
+    Route::middleware('web')->post('/_expired', fn () => throw new \Illuminate\Session\TokenMismatchException('CSRF token mismatch.'));
+}
+
+it('opens the login page again, email kept, when it was left open too long', function () {
+    expiredForm();
+
+    $this->from('/login')->withHeader('X-Inertia', 'true')
+        ->post('/_expired', ['email' => 'clerk@example.com', 'password' => 'secret'])
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'The page had been open a long time, so it was refreshed. Log in again.');
+
+    $this->flushHeaders()->get(route('login'))->assertInertia(fn ($page) => $page
+        ->component('Auth/Login')
+        ->where('email', 'clerk@example.com')
+        ->where('status', 'The page had been open a long time, so it was refreshed. Log in again.'));
+});
+
+it('sends someone still signed in back to the page, with a note, when it was left open too long', function () {
+    expiredForm();
+
+    $this->actingAs($this->w->owner)->from('/documents')->withHeader('X-Inertia', 'true')
+        ->post('/_expired')
+        ->assertRedirect('/documents')
+        ->assertSessionHas('notice', 'The page had been open a long time, so it was refreshed. Try again.');
+});
+
+it('keeps the JSON answer for an expired page asked for as JSON', function () {
+    expiredForm();
+
+    $this->postJson('/_expired')->assertStatus(419);
+});

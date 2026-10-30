@@ -8,17 +8,21 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
-defineProps({
+const props = defineProps({
     canResetPassword: {
         type: Boolean,
     },
     status: {
         type: String,
     },
+    email: {
+        type: String,
+        default: null,
+    },
 });
 
 const form = useForm({
-    email: '',
+    email: props.email ?? '',
     password: '',
     remember: false,
 });

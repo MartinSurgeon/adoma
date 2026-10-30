@@ -23,6 +23,7 @@ class AuthenticatedSessionController extends Controller
             // so the "forgot password" link stays hidden until email is set up.
             'canResetPassword' => false,
             'status' => session('status'),
+            'email' => old('email'), // kept when an expired page is opened again
         ]);
     }
 

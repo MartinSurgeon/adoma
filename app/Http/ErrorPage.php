@@ -24,7 +24,9 @@ use Throwable;
  * Not found and not allowed replace the page: it cannot be used. A passing trouble (a crash, the system being
  * updated) replaces a page that was being opened, but never a form that was being sent: Inertia's box then
  * opens over the form, and closing it leaves the form and everything typed into it, ready to send again.
- * (An expired page, 419, only happens when a form is sent, so it is left to that box too.)
+ *
+ * An expired page (419: a form sent from a page left open longer than a session lasts, such as the login page
+ * left open overnight) is not shown as an error at all: the page is opened again, fresh, with a note to try again.
  */
 final class ErrorPage
 {
@@ -35,6 +37,11 @@ final class ErrorPage
     public static function respond(Response $response, Throwable $e, Request $request): Response
     {
         $status = $response->getStatusCode();
+
+        if ($status === 419 && (! $request->expectsJson() || $request->inertia())) {
+            return self::expired($request);
+        }
+
         $shown = in_array($status, self::PAGE_UNUSABLE, true) || ($request->isMethodSafe() && in_array($status, self::PASSING, true));
 
         if (! $shown || ($request->expectsJson() && ! $request->inertia())) {
@@ -46,6 +53,21 @@ final class ErrorPage
         }
 
         return AfterBranchSwitch::landing($request, $e, $status) ?? self::page($request, $e, $status);
+    }
+
+    /**
+     * Signed out by then (the usual case): back to the login page, the email still filled in. Still signed in
+     * (the page was older than the last sign-in): back to the page it was sent from.
+     */
+    private static function expired(Request $request): Response
+    {
+        if ($request->user() === null) {
+            return redirect()->route('login')
+                ->withInput($request->only('email'))
+                ->with('status', 'The page had been open a long time, so it was refreshed. Log in again.');
+        }
+
+        return redirect()->back()->with('notice', 'The page had been open a long time, so it was refreshed. Try again.');
     }
 
     private static function page(Request $request, Throwable $e, int $status): Response
